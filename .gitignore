@@ -1,0 +1,17 @@
+# Claude Code agent configuration
+.claude/*
+!.claude/skills/
+!.claude/agents/
+.claude/worktrees/
+
+# Dependencies & build outputs
+node_modules/
+/dist/
+/build/
+
+# Operating system and IDE metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
