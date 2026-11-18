@@ -1,15 +1,67 @@
-# CONTEXT — ULBS-Laborator vocabulary
+# CONTEXT — P18 Student Carpooling vocabulary
 
 <!-- graffino-agentic:begin v1 -->
 > The approved terms for this project. Use each term exactly as defined, in the part
 > of speech given. Never swap in a synonym; never use a word on an _Avoid_ line.
 <!-- graffino-agentic:end -->
 
+---
+
+## Platform domain terms
+
+**Ride** (noun) — A single trip published by a driver, with an origin, an ordered list of intermediate stops, a destination, a schedule, seat count, and pricing. A ride is either a one-off instance or a materialised instance of a recurring rule.
+_Avoid_: trip (as a primary term), journey, course
+
+**Recurring ride** (noun) — A ride defined by a weekly recurrence rule (selected days + optional end date) stored alongside its exceptions. Individual dates are materialised as ride instances on demand when searched.
+_Avoid_: repeating trip, scheduled ride, cron ride
+
+**Ride instance** (noun) — A concrete ride row in the database materialised from a recurring ride rule for a specific date. Bookings, stop edits, and chat attach to the instance, not the rule.
+_Avoid_: occurrence, event
+
+**Stop** (noun) — An ordered waypoint on a ride (origin, intermediate, or destination), each with a name, geocoded coordinates, and an estimated arrival time.
+_Avoid_: waypoint, checkpoint, location (when referring to a stop)
+
+**Segment** (noun) — The portion of a ride between two consecutive stops. Seat availability, pricing, and booking scope are all computed per segment.
+_Avoid_: leg, interval, stretch
+
+**Booking** (noun) — A passenger's reservation of a seat on a specific segment range of a ride, with a lifecycle status.
+_Avoid_: reservation (as a primary term), ticket, slot
+
+**Booking status** (noun, one of) — `pending` · `confirmed` · `rejected` · `cancelled` · `pending_reconfirmation`. Use these exact strings in code, database columns, and documentation.
+
+**Seriousness score** (noun) — A numerical reputation metric attached to each user account, decreased by cancellation-policy violations (−0.10 for driver, −0.05 for passenger). Distinct from the star rating.
+_Avoid_: trust score, reliability score, reputation score
+
+**Star rating** (noun) — The 1–5 mutual rating left by a driver and passenger after ride completion. Displayed on profiles as an average with ride count.
+_Avoid_: score (when referring to the star rating), review score
+
+**University badge** (noun) — The verified label shown on a profile when the account's email domain matches an allowed university domain. Set at registration; not re-validated afterwards.
+_Avoid_: verified badge, email badge, verification mark
+
+**Reconfirmation deadline** (noun) — The timestamp by which a passenger in `pending_reconfirmation` status must accept or decline a stop change, after which the booking auto-lapses. Computed as: if modified > 2 h before departure → `min(now + 6 h, departure − 2 h)`; if modified ≤ 2 h before departure → `min(now + 30 min, departure)`.
+_Avoid_: timeout, expiry
+
+**Report** (noun) — A moderation record filed by a user against a user, a ride, or a chat message, with a fixed reason and optional free-text detail.
+_Avoid_: complaint, flag, ticket
+
+**Moderator** (noun) — A role that can view and resolve/dismiss reports, cancel or remove rides, and suspend/unsuspend accounts.
+_Avoid_: admin (when referring specifically to the moderator role)
+
+**Admin** (noun) — A role that has all moderator permissions and can additionally manage user roles (promote/demote moderators) and view platform statistics.
+_Avoid_: super-admin, root
+
+**Geocoding cache** (noun) — The `geocoding_cache` MySQL table that stores resolved forward and reverse geocoding results to avoid repeated calls to Nominatim/Photon and persist results across server restarts.
+_Avoid_: cache table, geo cache
+
+**Segment price** (noun) — The cost assigned to one segment of a ride, computed proportionally to that segment's distance relative to the total ride distance and the driver's declared trip cost.
+_Avoid_: fare, leg price, partial price
+
+---
+
+## Legacy / coursework terms (kept for earlier lab assignments)
+
 **Laborator** (noun) — An individual practical assignment or lab session module.
 _Avoid_: homework, tasklet, ticket
-
-**Student** (noun) — Author of the coursework and repository owner.
-_Avoid_: developer, client
 
 **Assignment** (noun) — The specific problem set or coursework requirements issued by the instructor.
 _Avoid_: issue, story, epic
