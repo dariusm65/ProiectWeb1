@@ -29,7 +29,7 @@ _Avoid_: reservation (as a primary term), ticket, slot
 
 **Booking status** (noun, one of) — `pending` · `confirmed` · `rejected` · `cancelled` · `pending_reconfirmation`. Use these exact strings in code, database columns, and documentation.
 
-**Seriousness score** (noun) — A numerical reputation metric attached to each user account, decreased by cancellation-policy violations (−0.10 for driver, −0.05 for passenger). Distinct from the star rating.
+**Seriousness score** (noun) — A percentage-based reputation metric (0%–100%, start 100%) computed on read from infraction events. Decreased by late cancellations (−5 percentage points for driver, −3 percentage points for passenger) and recovered by +1 percentage point per full 7 days without new infractions. Distinct from the star rating.
 _Avoid_: trust score, reliability score, reputation score
 
 **Star rating** (noun) — The 1–5 mutual rating left by a driver and passenger after ride completion. Displayed on profiles as an average with ride count.

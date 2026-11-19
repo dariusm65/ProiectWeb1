@@ -69,8 +69,8 @@ A web platform that lets students share rides between campus and home cities. Dr
 
 | Actor | Trigger | Consequence |
 |---|---|---|
-| Driver | Cancels on the day of departure (confirmed passengers exist) | Immediate passenger notification; −0.10 seriousness score; "Recent Cancellation" badge (30 days); 7-day ride-publishing block |
-| Passenger | Cancels < 4 h before departure | −0.05 seriousness score; pays 50 % of booked segment price (capped at 20 lei) |
+| Driver | Cancels on the day of departure (confirmed passengers exist) | Immediate passenger notification; −5 percentage points seriousness score; "Recent Cancellation" badge (30 days); 7-day ride-publishing block |
+| Passenger | Cancels < 4 h before departure | −3 percentage points seriousness score; pays 50 % of booked segment price (capped at 20 lei) |
 
 ### Search radius
 Default **1 km**, expandable by the passenger up to **5 km**.

@@ -50,3 +50,26 @@ After the interview, the user asked for:
 ### Open questions remaining after this session
 - **Q-002** — Exact university email domain allowlist (proposed list in entry; `investigating`)
 - **Q-003** — Should driver be notified when a passenger's reconfirmation deadline lapses? (proposed yes; `investigating`)
+
+---
+
+## Session 2026-11-19 (Part 2) — Technical decisions refinement and gap closure
+
+### What was asked
+The user requested an audit of 6 specific items across `README.md`, `PATTERNS.md`, `CONTEXT.md`, and `DECISIONS.md`, followed by proposals and approvals:
+1. Realign D-001 with React + Vite and semantic HTML.
+2. Amend D-003 to require versioned SQL migrations and an idempotent seed script running both locally and on live deployment.
+3. Amend D-004 to explicitly state that university email verification is format/domain check only without inbox verification.
+4. Amend D-005 to separate the pure function unit tests (8+ cases) from database integration tests for concurrency / `SELECT FOR UPDATE`.
+5. Add decisions for:
+   - D-013: Password hashing with bcrypt (salt factor ≥ 10) and server-side RBAC checks.
+   - D-014: Server-side validation using Zod and React XSS prevention (no `dangerouslySetInnerHTML`).
+   - D-015: GitHub Actions CI with MySQL service container.
+   - D-016: Dual reputation model with seriousness score as a percentage (0%–100%, start 100%) computed on read from infraction events (−5 pp driver, −3 pp passenger, +1 pp per 7 clean days recovery), late cancellation penalties, and penalty fees outside the D-010 fare cap.
+   - D-017: Search radius default 1 km up to 5 km.
+6. Add Q-004 (live hosting platform) and Q-005 (unverified guesses for Timișoara and Bucharest student email domains).
+
+### Changes recorded
+- `docs/agents/DECISIONS.md`: updated D-001, D-003, D-004, D-005; added D-013 through D-017 (with D-016 recording the offline settlement and seat-refill known limitation).
+- `docs/agents/OPEN-QUESTIONS.md`: added Q-004, Q-005, and answered Q-006 (passenger cancellation fee offline settlement and trip cost cap limitation).
+- Run `python3 docs/agents/tools/ledger-lint.py --fix` (passed, 0 errors).

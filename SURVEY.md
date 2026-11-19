@@ -155,8 +155,8 @@ Alte răspunsuri: 3
 | Variabilă | Decizie | Susținere |
 |---|---|---|
 | Rute și orașe reale | Cele 10 rute din tabelul de mai sus, cu opririle menționate | 18 răspunsuri |
-| Politica de anulare, șofer | Anulare în ziua cursei (cu pasageri confirmați): notificare imediată pasageri, **-0,10** din scor de seriozitate, insignă „Anulare recentă” (30 zile) și blocare publicare curse **7 zile** | 72%, 78%, 56% (pragul și valorile decise de autor) |
-| Politica de anulare, pasager (târziu) | Anulare cu **< 4 ore** înainte: **-0,05** din scor de seriozitate și plata a **50%** din prețul segmentelor rezervate (în limita plafonului de 20 de lei) | 67%, 61% (pragul și procentul decise de autor) |
+| Politica de anulare, șofer | Anulare în ziua cursei (cu pasageri confirmați): notificare imediată pasageri, **−5 puncte procentuale** din scor de seriozitate, insignă „Anulare recentă” (30 zile) și blocare publicare curse **7 zile** | 72%, 78%, 56% (pragul și valorile decise de autor) |
+| Politica de anulare, pasager (târziu) | Anulare cu **< 4 ore** înainte: **−3 puncte procentuale** din scor de seriozitate și plata a **50%** din prețul segmentelor rezervate (în limita plafonului de 20 de lei) | 67%, 61% (pragul și procentul decise de autor) |
 | Raza de căutare | Implicit **1 km**, pe care o poate lărgi pasagerul până la 5 km | 100% acceptă 1 km, 56% acceptă 3 km, 28% acceptă 5 km |
 | Regula de preț pe segment | Preț proporțional cu distanța segmentului; prețul unei cereri se compune din segmentele parcurse | 61% proporțional, 33% preț fix per segment |
 | Regula de cost | Suma plătită de pasageri nu depășește costul declarat de șofer | 67% |

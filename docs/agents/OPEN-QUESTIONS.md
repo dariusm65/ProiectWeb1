@@ -12,6 +12,9 @@
 - Q-001 · Which specific web lab assignment is currently being implemented? · _answered_
 - Q-002 · What university email domains are allowed at registration? · _investigating_
 - Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)? · _investigating_
+- Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
+- Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters?
+- Q-006 · How is the passenger cancellation fee collected, settled, and reconciled against the declared trip cost? · _answered_
 
 ---
 
@@ -42,3 +45,33 @@
 - **Proposed answer:** Yes — the seat is freed and the driver should be informed so they know the seat is available again.
 - **Answer:**
 - **Recorded as:**
+
+---
+
+## Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
+- **Status:** open
+- **Blocks:** Live deployment configuration and CI/CD
+- **Who answers:** User
+- **Proposed answer:** Railway or Render (with managed MySQL or a container setup), or a small VPS.
+- **Answer:**
+- **Recorded as:**
+
+---
+
+## Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters?
+- **Status:** open
+- **Blocks:** Auth registration domain allowlist configuration
+- **Who answers:** User
+- **Proposed answer:** Unverified guesses based on SURVEY.md clusters (Timișoara 50%, București 11%): `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (to be confirmed with real student email addresses).
+- **Answer:**
+- **Recorded as:**
+
+---
+
+## Q-006 · How is the passenger cancellation fee collected, settled, and reconciled against the declared trip cost?
+- **Status:** answered
+- **Blocks:** Cancellation fee UI and settlement documentation
+- **Who answers:** User
+- **Proposed answer:**
+- **Answer:** The passenger cancellation fee (50% of the booked segment price, capped at 20 lei) is recorded by the app as an amount owed by the passenger to the driver and displayed to both parties on the cancelled booking. Because the platform has no in-app payment processing, the fee is settled directly between students outside the app (the app does not collect or process money). Known limitation: if the freed seat is subsequently booked by another passenger, the driver may end up collecting slightly more than the declared trip cost (by at most +20 lei).
+- **Recorded as:** D-016

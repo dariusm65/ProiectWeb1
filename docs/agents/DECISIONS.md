@@ -7,11 +7,11 @@
 <!-- graffino-agentic:end -->
 
 ## Index
-- D-001 · Semantic HTML and modern ES6+ standards
+- D-001 · Semantic HTML, accessibility, and modern React components
 - D-002 · Express REST API + OpenAPI documentation + React SPA
-- D-003 · MySQL 8 with mysql2 raw SQL and SELECT FOR UPDATE
+- D-003 · MySQL 8 with raw SQL migrations, idempotent seed, and SELECT FOR UPDATE
 - D-004 · JWT authentication with university email domain allowlist
-- D-005 · Segment availability as a pure function tested with Vitest
+- D-005 · Segment availability pure function and DB concurrency integration tests
 - D-006 · Recurring rides stored as rule + exceptions, materialised on demand
 - D-007 · Stop-edit triggers pending_reconfirmation with lazy deadline enforcement
 - D-008 · Ratings locked behind post-arrival server-side authorisation
@@ -19,16 +19,22 @@
 - D-010 · Proportional segment pricing with declared trip cost cap
 - D-011 · MySQL-backed REST polling for chat and notifications
 - D-012 · Docker Compose full stack plus live URL deployment
+- D-013 · Password hashing with bcrypt and server-side RBAC checks
+- D-014 · Server-side schema validation with Zod and XSS prevention
+- D-015 · GitHub Actions CI with MySQL service container
+- D-016 · Dual reputation model with seriousness score and cancellation penalties
+- D-017 · Configurable search radius with 1 km default
 
 ---
 
-## D-001 · Semantic HTML and modern ES6+ standards
+## D-001 · Semantic HTML, accessibility, and modern React components
 - **Status:** approved
-- **Date:** 2026-11-05
-- **Rule:** Use semantic HTML5 elements and standard ES6+ JavaScript syntax without unnecessary heavy external dependencies unless specified by the assignment.
-- **Why:** University web laboratories emphasize core web standards, accessibility, and fundamental concepts.
-- **Rejected:** Heavy bundling frameworks by default.
-- **Evidence:** Coursework curriculum requirements.
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** The frontend UI is built using React with Vite (as decided in D-002), emphasizing semantic HTML5 elements, modular components, and accessible markup (WCAG basics) without bloated UI kit dependencies.
+- **Why:** University web laboratories emphasize core web standards, accessibility, and fundamental concepts within modern React applications.
+- **Rejected:** Heavy, bloated UI component frameworks by default.
+- **Evidence:** P18 scope interview, 2026-11-19; aligns with D-002.
 - **Source:** user · confidence high
 
 ---
@@ -44,13 +50,13 @@
 
 ---
 
-## D-003 · MySQL 8 with mysql2 raw SQL and SELECT FOR UPDATE
+## D-003 · MySQL 8 with raw SQL migrations, idempotent seed, and SELECT FOR UPDATE
 - **Status:** approved
 - **Date:** 2026-11-19
 - **Confirmed:** 2026-11-19
-- **Rule:** The database is MySQL 8, accessed with the `mysql2` driver and raw SQL. No ORM. The schema and seed data are defined in a `.sql` file loaded at startup. Concurrent overbooking is prevented with `SELECT FOR UPDATE` inside a MySQL transaction.
-- **Why:** Full control over SQL queries, easy demonstration of parameterised queries against SQL injection, and transactional row locking to prevent double-booking when two users book simultaneously.
-- **Evidence:** P18 scope interview, 2026-11-19.
+- **Rule:** The database is MySQL 8, accessed with the `mysql2` driver and raw SQL (no ORM). Schema evolution is managed via sequential, numbered raw SQL migration files (e.g. `migrations/001_initial.sql`) applied at startup by a minimal custom runner tracking executed migrations in a `schema_migrations` table. Seed data (including the 10 real routes from SURVEY.md and system accounts) is managed via an idempotent script executed both in local development and on live deployment so real survey routes are always available. Concurrent overbooking is prevented with `SELECT FOR UPDATE` inside a MySQL transaction.
+- **Why:** Full control over SQL queries, parameterised queries against SQL injection, graded compliance with versioned migrations, idempotent real-data seeding on live and local environments, and transactional row locking to prevent double-booking.
+- **Evidence:** Coursework versioned migration requirements; SURVEY.md & P18 Definition of Done; scope interview, 2026-11-19.
 - **Source:** user · confidence high
 
 ---
@@ -59,20 +65,20 @@
 - **Status:** approved
 - **Date:** 2026-11-19
 - **Confirmed:** 2026-11-19
-- **Rule:** Authentication uses email + password; a JWT is returned on login and stored in `localStorage`. University membership is verified at registration by checking the email domain against a backend config allowlist (e.g. `@ulbsibiu.ro`, `@stud.ubbcluj.ro`, `@student.utcluj.ro`). No confirmation email is sent.
-- **Why:** Lightweight student-only access verification without SMTP server overhead.
-- **Evidence:** P18 scope interview, 2026-11-19; Q-002 (domain list stays `investigating` until confirmed).
+- **Rule:** Authentication uses email + password; a JWT is returned on login and stored in `localStorage`. University membership verification consists strictly of validating that the email format matches an allowed university domain allowlist at registration (e.g. `@ulbsibiu.ro`, `@stud.ubbcluj.ro`, `@student.utcluj.ro`). The UI and API must explicitly designate this as "domain-validated" and make clear that mailbox ownership is not confirmed via email verification link or code.
+- **Why:** Lightweight student-only access verification without SMTP server overhead, with honest labeling that mailbox ownership is unverified.
+- **Evidence:** P18 scope interview, 2026-11-19; Q-002 and Q-005.
 - **Source:** user · confidence high
 
 ---
 
-## D-005 · Segment availability as a pure function tested with Vitest
+## D-005 · Segment availability pure function and DB concurrency integration tests
 - **Status:** approved
 - **Date:** 2026-11-19
 - **Confirmed:** 2026-11-19
-- **Rule:** Seat availability is calculated per segment (not per ride) in a pure function that takes segment bookings as input and returns available seat counts. This function is tested in Vitest with ≥ 8 cases (overlapping segments, cancellations, modified stops, concurrent overbooking). Database enforcement uses `SELECT FOR UPDATE` inside a transaction (see D-003).
-- **Why:** Isolates complex overlapping-segment logic so it is deterministic and verifiable with 8+ unit tests as required by P18.
-- **Evidence:** P18 project sheet (mandatory ≥ 8 tests); P18 scope interview, 2026-11-19.
+- **Rule:** Seat availability is calculated per segment (not per ride) in a pure function that takes segment bookings as input and returns available seat counts. This pure function is verified in Vitest across ≥ 8 unit test cases (single segment, overlapping segments, mid-route free seats, cancellations, modified stops). Concurrent overbooking prevention is separated from the pure unit tests and verified via a dedicated database integration test simulating concurrent booking attempts with `SELECT FOR UPDATE` transactions.
+- **Why:** Isolates complex overlapping-segment logic so it is deterministic and verifiable with 8+ unit tests, while properly delegating transactional concurrency verification to integration tests against MySQL.
+- **Evidence:** P18 project sheet (mandatory ≥ 8 tests); scope interview, 2026-11-19.
 - **Source:** user · confidence high
 
 ---
@@ -150,4 +156,61 @@
 - **Rule:** The full stack (MySQL 8 + Express backend + React frontend) must start with a single `docker compose up` command for grading. The same codebase also supports `npm run dev` for local development with MySQL in Docker and the backend/frontend on the host. The app is additionally deployed to a live URL (Render / Railway / VPS) to satisfy the P18 Definition of Done (≥ 5 real colleagues on the live instance).
 - **Why:** Enables one-command local grading, fast local iteration, and fulfills the P18 Definition of Done (5 real colleagues on live).
 - **Evidence:** P18 project sheet (Definition of Done); P18 scope interview, 2026-11-19.
+- **Source:** user · confidence high
+
+---
+
+## D-013 · Password hashing with bcrypt and server-side RBAC checks
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** Passwords must be hashed using `bcrypt` with a salt (work factor ≥ 10) before database persistence. Role-based access control (user, moderator, admin) is enforced server-side on every protected API endpoint, validating permissions from the verified JWT claims and verifying account status (e.g. active vs suspended) against the database.
+- **Why:** Protects credentials against disclosure and guarantees role boundaries cannot be bypassed by client-side tampering.
+- **Evidence:** P18 role specifications (user, moderator, admin); scope interview, 2026-11-19.
+- **Source:** user · confidence high
+
+---
+
+## D-014 · Server-side schema validation with Zod and XSS prevention
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** All incoming API request bodies, queries, and route parameters must undergo strict schema validation using Zod before query execution or domain logic processing. On the frontend, React components must never use `dangerouslySetInnerHTML`, relying on React's automatic text escaping to prevent Cross-Site Scripting (XSS).
+- **Why:** Comprehensive input validation preventing malformed or malicious payloads at the API boundary, paired with safe React rendering practices to prevent XSS without manual string escaping.
+- **Evidence:** Standard web security practices for REST + React architectures.
+- **Source:** user · confidence high
+
+---
+
+## D-015 · GitHub Actions CI with MySQL service container
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** Continuous integration is implemented using GitHub Actions (`.github/workflows/ci.yml`), automatically executing test suites (Vitest unit and database integration tests) and running `python3 docs/agents/tools/ledger-lint.py` on pull requests and pushes to `main`. The CI workflow includes a containerized MySQL service container to support integration tests (migrations, seeds, and transactional concurrency locking).
+- **Why:** Enforces automated grading compliance, test coverage, transactional integrity, and ledger consistency on every commit.
+- **Evidence:** P18 project requirements and agent ledger rules.
+- **Source:** user · confidence high
+
+---
+
+## D-016 · Dual reputation model with seriousness score and cancellation penalties
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** The platform maintains two independent reputation metrics: a 1–5 star rating (mutual, submitted only after completed rides per D-008) and a percentage-based seriousness score. The seriousness score scale is 0% to 100% (start value 100%, minimum 0%, maximum 100%). The score is not stored in the database: it is computed on read by a pure function that replays the user's infraction events in chronological order (applying penalties, clamping to 0..100, adding weekly recovery of +1 percentage point per full 7 days without a new infraction, and clamping to 100%). Late cancellations incur the following consequences:
+  1. Driver cancelling on the day of departure (with confirmed passengers): −5 percentage points penalty, an "Anulare recentă" (Recent Cancellation) profile badge active for 30 days, and a temporary ban from publishing new rides for 7 days.
+  2. Passenger cancelling < 4 hours before departure: −3 percentage points penalty and obligation to pay a cancellation fee equal to 50% of the booked segment price, capped at 20 lei. This cancellation fee is a penalty outside the D-010 passenger fare sum cap. The fee is recorded by the app as an amount owed by the passenger to the driver, displayed to both parties on the cancelled booking, and settled directly between them outside the app (the app does not process payments or collect money). Known limitation: if the freed seat is subsequently booked by another passenger, the driver may end up with slightly more than the declared trip cost (at most +20 lei).
+- **Why:** Event-sourced on-read calculation avoids background cron jobs and state drift while supporting deterministic recovery over time. Protects both parties against last-minute disruptions (fear #2 in SURVEY.md at 56%), creates tangible accountability without relying solely on subjective star reviews, and keeps penalty fees distinct from shared travel expense caps.
+- **Evidence:** SURVEY.md §3 & §4 for directional consensus (78% driver penalty, 72% notification, 67% passenger score penalty, 61% partial payment). The penalty amounts (−5 pp, −3 pp), recovery rate (+1 pp per 7 clean days), 4h threshold, 50% / 20 lei fee cap, 7-day ban, and 30-day badge are author-defined project parameters.
+- **Source:** user decision
+
+---
+
+## D-017 · Configurable search radius with 1 km default
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** Ride segment matching applies a default spatial search radius of 1 km around pickup and drop-off coordinates, with an optional passenger-selected expansion up to a maximum of 5 km in the search query.
+- **Why:** Directly codifies the SURVEY.md findings where 100% of respondents accept 1 km, 56% accept 3 km, and 28% accept 5 km.
+- **Evidence:** SURVEY.md §3; confirmed in scope interview, 2026-11-19.
 - **Source:** user · confidence high
