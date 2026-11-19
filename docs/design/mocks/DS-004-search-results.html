@@ -565,17 +565,36 @@
     .route-timeline-container {
       display: flex;
       flex-direction: column;
-      gap: var(--space-xs);
       padding: var(--space-xs) 0;
     }
 
+    /* Rows have symmetric padding and no gap, so the connector segments drawn by each row
+       touch each other and form one continuous line. */
     .timeline-stop-row {
       display: grid;
       grid-template-columns: 60px 24px 1fr auto;
       align-items: center;
       gap: var(--space-sm);
+      padding: 5px 0;
       position: relative;
     }
+
+    /* Connector: centered on the 24px marker column (60px + gap + 12px), 2px wide.
+       First row starts at the vertical center of its dot, last row ends at the center
+       of its dot, so the line never leaves the dots' span. */
+    .timeline-stop-row::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(60px + var(--space-sm) + 12px - 1px);
+      width: 2px;
+      background: var(--color-border);
+      z-index: 1;
+    }
+    .timeline-stop-row:first-child::before { top: 50%; }
+    .timeline-stop-row:last-child::before { bottom: 50%; }
+    .timeline-stop-row:only-child::before { display: none; }
 
     .stop-time {
       font-family: var(--font-mono);
@@ -599,6 +618,7 @@
       border-radius: var(--radius-full);
       background: var(--color-surface);
       border: 2px solid var(--color-text-muted);
+      position: relative;
       z-index: 2;
     }
 
@@ -606,16 +626,6 @@
       background: var(--color-primary);
       border-color: var(--color-primary);
       box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
-    }
-
-    .timeline-line {
-      position: absolute;
-      top: 14px;
-      bottom: -14px;
-      left: calc(60px + var(--space-sm) + 11px);
-      width: 2px;
-      background: var(--color-border);
-      z-index: 1;
     }
 
     .stop-name-group {
@@ -1057,10 +1067,9 @@
               </div>
               <span class="stop-badge-chip">Urcare pasager</span>
             </div>
-            <div class="timeline-line"></div>
 
             <!-- Intermediate Stop 1 -->
-            <div class="timeline-stop-row" style="margin: 6px 0;">
+            <div class="timeline-stop-row">
               <span class="stop-time" style="color: var(--color-text-muted);">17:05</span>
               <div class="stop-marker">
                 <span class="marker-dot"></span>
@@ -1073,7 +1082,7 @@
             </div>
 
             <!-- Intermediate Stop 2 -->
-            <div class="timeline-stop-row" style="margin: 6px 0;">
+            <div class="timeline-stop-row">
               <span class="stop-time" style="color: var(--color-text-muted);">17:55</span>
               <div class="stop-marker">
                 <span class="marker-dot"></span>
@@ -1167,9 +1176,8 @@
               </div>
               <span class="stop-badge-chip">Urcare</span>
             </div>
-            <div class="timeline-line"></div>
 
-            <div class="timeline-stop-row" style="margin: 6px 0;">
+            <div class="timeline-stop-row">
               <span class="stop-time" style="color: var(--color-text-muted);">19:10</span>
               <div class="stop-marker"><span class="marker-dot"></span></div>
               <div class="stop-name-group">
@@ -1249,13 +1257,12 @@
               <div class="stop-name-group"><span class="stop-city highlight-match">Bacău</span><span class="stop-landmark">Parcare Stadionul Municipal</span></div>
               <span class="stop-badge-chip">Origine</span>
             </div>
-            <div class="timeline-line"></div>
 
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">07:45</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Adjud</span><span class="stop-landmark">Intersecție DN2</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">08:20</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Mărășești</span><span class="stop-landmark">Monumentul Eroilor</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">08:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Focșani</span><span class="stop-landmark">Gara / Benzinăria Rompetrol</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">10:00</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Buzău</span><span class="stop-landmark">Centură Nord / Rond Spătaru</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">10:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Ploiești</span><span class="stop-landmark">Ploiești Nord / Mall Afi</span></div></div>
+            <div class="timeline-stop-row"><span class="stop-time" style="color: var(--color-text-muted);">07:45</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Adjud</span><span class="stop-landmark">Intersecție DN2</span></div></div>
+            <div class="timeline-stop-row"><span class="stop-time" style="color: var(--color-text-muted);">08:20</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Mărășești</span><span class="stop-landmark">Monumentul Eroilor</span></div></div>
+            <div class="timeline-stop-row"><span class="stop-time" style="color: var(--color-text-muted);">08:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Focșani</span><span class="stop-landmark">Gara / Benzinăria Rompetrol</span></div></div>
+            <div class="timeline-stop-row"><span class="stop-time" style="color: var(--color-text-muted);">10:00</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Buzău</span><span class="stop-landmark">Centură Nord / Rond Spătaru</span></div></div>
+            <div class="timeline-stop-row"><span class="stop-time" style="color: var(--color-text-muted);">10:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Ploiești</span><span class="stop-landmark">Ploiești Nord / Mall Afi</span></div></div>
 
             <div class="timeline-stop-row">
               <span class="stop-time">11:50</span>

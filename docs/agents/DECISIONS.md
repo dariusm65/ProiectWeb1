@@ -25,6 +25,7 @@
 - D-016 · Dual reputation model with seriousness score and cancellation penalties
 - D-017 · Configurable search radius with 1 km default
 - D-018 · Women-only ride preference and eligibility rule
+- D-019 · Single-seat booking constraint
 
 ---
 
@@ -99,9 +100,9 @@
 - **Status:** approved
 - **Date:** 2026-11-19
 - **Confirmed:** 2026-11-19
-- **Rule:** When a driver modifies or deletes a stop after confirmed bookings exist, all affected bookings (whose pickup, drop-off, or traversed segment includes that stop) transition to `pending_reconfirmation`. The reconfirmation deadline is computed as: if modified > 2 h before departure -> `min(now + 6 h, departure - 2 h)`; if modified <= 2 h before departure -> `min(now + 30 min, departure)`. Passengers must accept or decline; if the deadline passes without a response, the booking auto-lapses and the seat is freed (evaluated lazily on read). Drivers receive an in-app notification upon lapse; notifications generated lazily on read must be idempotent (created once per lapse). Drivers cannot manually release a `pending_reconfirmation` seat before the deadline.
-- **Why:** Protects booked passengers from unannounced route changes without needing background cron workers, and ensures drivers are idempotently notified when seats are freed.
-- **Evidence:** P18 project sheet (stop-modification twist); user answers to Q-1, Q-2, and Q-003, 2026-11-19.
+- **Rule:** When a driver edits, deletes, or adds a stop after confirmed bookings exist: (1) For edited or deleted stops, all bookings whose pickup, drop-off, or traversed segment includes that stop transition to `pending_reconfirmation`. (2) For a newly added stop, only bookings whose drop-off stop is ordered after the new stop transition to `pending_reconfirmation`; bookings whose drop-off is before the new stop are unaffected and remain confirmed. (3) The locked `price_lei` on existing bookings never changes. (4) Reconfirmation deadlines remain `min(now + 6 h, departure - 2 h)` if > 2 h out, or `min(now + 30 min, departure)` if <= 2 h out. If the deadline lapses without passenger response, the booking auto-lapses and the seat is freed (evaluated lazily on read). Drivers receive an in-app notification upon lapse; notifications generated lazily on read must be idempotent (created once per lapse). Drivers cannot manually release a `pending_reconfirmation` seat before the deadline.
+- **Why:** Clarifies exact selective passenger impact when adding new intermediate stops while keeping existing prices immutable, and ensures drivers are idempotently notified when seats are freed.
+- **Evidence:** P18 project sheet (stop-modification twist); user answers to Q-1, Q-2, Q-003, and decision refinements, 2026-11-19.
 - **Source:** user · confidence high
 
 ---
@@ -110,9 +111,9 @@
 - **Status:** approved
 - **Date:** 2026-11-19
 - **Confirmed:** 2026-11-19
-- **Rule:** A rating can only be submitted by a confirmed participant of a specific ride, and only after the ride's estimated arrival time has passed. This is enforced server-side in the rating POST endpoint. A Vitest + Supertest test must assert that a rating submitted before arrival is rejected with an appropriate error.
-- **Why:** Prevents fake/premature reviews and satisfies the P18 authorisation test requirement.
-- **Evidence:** P18 project sheet (authorisation test requirement); P18 scope interview, 2026-11-19.
+- **Rule:** A 1–5 star rating can only be submitted by confirmed participants of a ride that actually took place, unlocked strictly after the ride's estimated arrival time has passed. Star ratings cannot be submitted for cancelled rides (late driver cancellations are penalized exclusively via the automatic seriousness score deduction, 30-day "Anulare recentă" badge, and 7-day publishing ban per D-016).
+- **Why:** Prevents fake/premature reviews, ensures star ratings reflect completed shared trips only, and eliminates ambiguity regarding cancelled trips.
+- **Evidence:** P18 project sheet (authorisation test requirement); scope interview and decision refinements, 2026-11-19.
 - **Source:** user · confidence high
 
 ---
@@ -201,7 +202,8 @@
 - **Rule:** The platform maintains two independent reputation metrics: a 1–5 star rating (mutual, submitted only after completed rides per D-008) and a percentage-based seriousness score. The seriousness score scale is 0% to 100% (start value 100%, minimum 0%, maximum 100%). The score is not stored in the database: it is computed on read by a pure function that replays the user's infraction events in chronological order (applying penalties, clamping to 0..100, adding weekly recovery of +1 percentage point per full 7 days without a new infraction, and clamping to 100%). Late cancellations incur the following consequences:
   1. Driver cancelling on the day of departure (with confirmed passengers): −5 percentage points penalty, an "Anulare recentă" (Recent Cancellation) profile badge active for 30 days, and a temporary ban from publishing new rides for 7 days.
   2. Passenger cancelling < 4 hours before departure: −3 percentage points penalty and obligation to pay a cancellation fee equal to 50% of the booked segment price, capped at 20 lei. This cancellation fee is a penalty outside the D-010 passenger fare sum cap. The fee is recorded by the app as an amount owed by the passenger to the driver, displayed to both parties on the cancelled booking, and settled directly between them outside the app (the app does not process payments or collect money). Known limitation: if the freed seat is subsequently booked by another passenger, the driver may end up with slightly more than the declared trip cost (at most +20 lei).
-- **Why:** Event-sourced on-read calculation avoids background cron jobs and state drift while supporting deterministic recovery over time. Protects both parties against last-minute disruptions (fear #2 in SURVEY.md at 56%), creates tangible accountability without relying solely on subjective star reviews, and keeps penalty fees distinct from shared travel expense caps.
+  Reaching 0% seriousness score does NOT trigger automatic account suspension; suspension is strictly a manual action executed by a moderator or admin. When an account is suspended by a moderator: (1) All their upcoming published rides and active bookings are automatically cancelled with immediate notifications to affected peers. (2) Cancellations resulting directly from administrative suspension do NOT assess seriousness score penalties, cancellation fees, "Anulare recentă" badges, or publishing bans against either party.
+- **Why:** Event-sourced on-read calculation avoids background cron jobs and state drift while supporting deterministic recovery over time. Protects both parties against last-minute disruptions (fear #2 in SURVEY.md at 56%), creates tangible accountability without relying solely on subjective star reviews, and keeps penalty fees distinct from shared travel expense caps. Establishes clear boundaries for manual moderation vs automatic score decay, and handles collateral cancellations fairly when an account is suspended.
 - **Evidence:** SURVEY.md §3 & §4 for directional consensus (78% driver penalty, 72% notification, 67% passenger score penalty, 61% partial payment). The penalty amounts (−5 pp, −3 pp), recovery rate (+1 pp per 7 clean days), 4h threshold, 50% / 20 lei fee cap, 7-day ban, and 30-day badge are author-defined project parameters.
 - **Source:** user decision
 
@@ -225,4 +227,15 @@
 - **Rule:** Users may optionally provide a private gender field (`female`, `male`, `prefer_not_to_say`) at registration, used strictly for women-only ride eligibility. Only accounts with `gender = female` are permitted to publish or book women-only rides (`prefer_not_to_say` and `male` cannot). Gender is self-declared and unverified. This feature is categorized as lowest priority (supported by 2 of 18 survey respondents) and will be the first feature cut if project deadlines require.
 - **Why:** Enforces safety preference requested by female students in the survey while establishing clear eligibility boundaries and explicitly marking the feature as cut-first scope under schedule pressure.
 - **Evidence:** SURVEY.md §4 (requirement 2: 2 of 18 free-text respondents); decision refinement, 2026-11-19.
+- **Source:** user · confidence high
+
+---
+
+## D-019 · Single-seat booking constraint
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Confirmed:** 2026-11-19
+- **Rule:** Every booking request is strictly for 1 seat per student account. Multi-seat bookings (reserving multiple seats in a single booking request) are explicitly out of scope.
+- **Why:** Aligns with student commuter use cases where students maintain individual accounts and reputations, simplifies segment capacity math, and prevents account proxying.
+- **Evidence:** P18 scope refinement, 2026-11-19.
 - **Source:** user · confidence high
