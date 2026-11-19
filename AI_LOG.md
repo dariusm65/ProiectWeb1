@@ -113,3 +113,9 @@ The user audited the operational mechanics across all decisions and documentatio
 - bcryptjs (pure JS) instead of native bcrypt; same algorithm and hash format.
 - MySQL DDL auto-commits, so migrations are not transactional; a version is recorded only after the file fully ran (files use IF NOT EXISTS).
 - .env added to .gitignore (it was not ignored).
+
+### Follow-up: Nominatim coordinates (same session)
+- Added backend/database/fetch-nominatim.js (custom User-Agent, 1 req/s). Ran it outside the sandbox with the user's approval on 2026-11-19: 36/36 places found.
+- Output goes to seeds/002_seed_known_place_coordinates.sql (UPDATE rows with source_query + queried_on), NOT into 001: the existing static test forbids coordinate literals in 001 and assertions may not be changed. 001 keeps the NULL/TODO marker.
+- Review found one wrong match: plain query 'Boița, Romania' returned a Hunedoara hamlet; the survey route (Valea Oltului) needs the Sibiu county commune. Fixed with a query override ('Boița, Sibiu, Romania') and re-ran. Other ambiguous names (Vulcan, Zimbor, Vinga, Sântana, Câineni, Voiteg) match the survey routes' counties; each SQL row keeps Nominatim's display_name as a comment for review.
+- NOT done: starting MySQL and running the 10 integration tests. No docker/podman/mysqld exists in this environment and I did not install one. A local untracked .env was created from .env.example (git-ignored).
