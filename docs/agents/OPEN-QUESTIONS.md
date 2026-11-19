@@ -10,8 +10,8 @@
 
 ## Index
 - Q-001 · Which specific web lab assignment is currently being implemented? · _answered_
-- Q-002 · What university email domains are allowed at registration? · _investigating_
-- Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)? · _investigating_
+- Q-002 · What university email domains are allowed at registration?
+- Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)? · _answered_
 - Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
 - Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters?
 - Q-006 · How is the passenger cancellation fee collected, settled, and reconciled against the declared trip cost? · _answered_
@@ -29,22 +29,22 @@
 ---
 
 ## Q-002 · What university email domains are allowed at registration?
-- **Status:** investigating
-- **Blocks:** Auth registration endpoint; university badge display
+- **Status:** open
+- **Blocks:** Auth registration domain allowlist configuration; university domain badge display
 - **Who answers:** User
-- **Proposed answer:** `@ulbsibiu.ro`, `@stud.ubbcluj.ro`, `@student.utcluj.ro` — from interview (2026-11-19); the list lives in a backend config array so it can be extended without a code change.
+- **Proposed answer:** `@ulbsibiu.ro`, `@stud.ubbcluj.ro`, `@student.utcluj.ro`, `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (unverified guesses based on survey clusters; to confirm with real colleague addresses post-deployment).
 - **Answer:**
 - **Recorded as:**
 
 ---
 
 ## Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)?
-- **Status:** investigating
+- **Status:** answered
 - **Blocks:** Reconfirmation deadline lapse logic; notification design
 - **Who answers:** User
 - **Proposed answer:** Yes — the seat is freed and the driver should be informed so they know the seat is available again.
-- **Answer:**
-- **Recorded as:**
+- **Answer:** Yes — when a passenger in pending_reconfirmation misses the deadline and auto-lapses, the seat is freed and the driver receives an in-app notification (evaluated lazily on read, created idempotently once per lapse).
+- **Recorded as:** D-007
 
 ---
 
@@ -52,7 +52,7 @@
 - **Status:** open
 - **Blocks:** Live deployment configuration and CI/CD
 - **Who answers:** User
-- **Proposed answer:** Railway or Render (with managed MySQL or a container setup), or a small VPS.
+- **Proposed answer:** Railway is candidate only, pending verification of current pricing and managed MySQL availability, with Render or a small VPS as Plan B.
 - **Answer:**
 - **Recorded as:**
 
@@ -62,7 +62,7 @@
 - **Status:** open
 - **Blocks:** Auth registration domain allowlist configuration
 - **Who answers:** User
-- **Proposed answer:** Unverified guesses based on SURVEY.md clusters (Timișoara 50%, București 11%): `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (to be confirmed with real student email addresses).
+- **Proposed answer:** `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (unverified guesses based on SURVEY.md clusters; to confirm with real student email addresses post-deployment).
 - **Answer:**
 - **Recorded as:**
 

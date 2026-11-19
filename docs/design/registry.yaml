@@ -1,4 +1,73 @@
 # docs/design/registry.yaml — every screen and shared component, by DS- ID.
 # Plans, commits, mocks and board files use the ID (tickets don't). kind: foundation | component | screen
 # status: draft (mock drawn) | approved (confirmed on the board) | implemented | deprecated (never delete an entry)
-designs: []
+
+designs:
+  - id: DS-001
+    name: Design Foundation & Tokens
+    kind: foundation
+    status: approved
+    description: StudRide brand mark (inline SVG), color tokens, typography scales, spacing, and CSS custom properties.
+
+  - id: DS-002
+    name: Landing & Search Screen
+    kind: screen
+    status: draft
+    route: "/"
+    description: Hero banner with brand intro, quick origin/destination/date search widget, radius selector (1–5 km), and top navbar with auth links.
+
+  - id: DS-003
+    name: Auth Screen (Login & Register)
+    kind: screen
+    status: draft
+    route: "/login"
+    description: Email & password authentication forms, live university email domain validation feedback, and domain-validated university badge explanation.
+
+  - id: DS-004
+    name: Search Results & Map View
+    kind: screen
+    status: approved
+    route: "/rides"
+    description: Split layout featuring filtered ride result cards (segment price, segment availability, driver seriousness score % and star rating, university badge, women-only filter) alongside an interactive route map view showing route paths, stops, and radius search.
+
+  - id: DS-005
+    name: Ride Details & Segment Booking
+    kind: screen
+    status: draft
+    route: "/rides/:rideId"
+    description: Ordered intermediate stop timeline, segment pickup/drop-off stop selector, transparent passenger price calculation (under declared trip cost cap), booking request trigger, and driver accept/reject controls.
+
+  - id: DS-006
+    name: Publish Ride Screen
+    kind: screen
+    status: draft
+    route: "/publish"
+    description: Driver form with interactive Leaflet map (typed autocomplete + click-to-add stops), seat count, trip cost declaration, passenger preference toggles, and optional recurrence rule configuration (days + exceptions).
+
+  - id: DS-007
+    name: My Rides Dashboard & Notifications
+    kind: screen
+    status: draft
+    route: "/dashboard"
+    description: Tabbed view for passenger bookings and driver published rides, booking statuses, recurring instance exceptions (skip date), and chronological in-app notification feed.
+
+  - id: DS-008
+    name: Ride Chat, Reconfirmation & Rating Modal
+    kind: screen
+    status: draft
+    route: "/rides/:rideId/chat"
+    description: REST-polled ride group chat, pending_reconfirmation banner with deadline countdown, post-arrival mutual star rating modal, and report modal.
+
+  - id: DS-009
+    name: Moderation & Admin Dashboard
+    kind: screen
+    status: draft
+    route: "/admin"
+    description: Role-gated management view: summary metric cards, reports table (with user/ride/message context and resolve/dismiss actions), ride moderation, user suspension, and role promotion.
+
+  - id: DS-010
+    name: Student Profile & Reputation
+    kind: screen
+    status: draft
+    route: "/profile/:userId"
+    description: Student public profile showing star rating average with ride count, seriousness score %, domain-validated university badge, and 30-day "Anulare recentă" badge if applicable.

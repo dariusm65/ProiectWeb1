@@ -18,6 +18,9 @@ _Avoid_: repeating trip, scheduled ride, cron ride
 **Ride instance** (noun) — A concrete ride row in the database materialised from a recurring ride rule for a specific date. Bookings, stop edits, and chat attach to the instance, not the rule.
 _Avoid_: occurrence, event
 
+**Available seats** (noun) — The number of passenger seats offered in the vehicle, strictly excluding the driver (e.g., a car carrying 4 people total has `available_seats = 3`). Used in cost-sharing calculations as `available_seats + 1` total shares.
+_Avoid_: total seats, car capacity (when referring to passenger spots)
+
 **Stop** (noun) — An ordered waypoint on a ride (origin, intermediate, or destination), each with a name, geocoded coordinates, and an estimated arrival time.
 _Avoid_: waypoint, checkpoint, location (when referring to a stop)
 
@@ -27,7 +30,7 @@ _Avoid_: leg, interval, stretch
 **Booking** (noun) — A passenger's reservation of a seat on a specific segment range of a ride, with a lifecycle status.
 _Avoid_: reservation (as a primary term), ticket, slot
 
-**Booking status** (noun, one of) — `pending` · `confirmed` · `rejected` · `cancelled` · `pending_reconfirmation`. Use these exact strings in code, database columns, and documentation.
+**Booking status** (noun, one of) — `pending` · `confirmed` · `rejected` · `cancelled` · `pending_reconfirmation` · `expired`. Use these exact strings in code, database columns, and documentation.
 
 **Seriousness score** (noun) — A percentage-based reputation metric (0%–100%, start 100%) computed on read from infraction events. Decreased by late cancellations (−5 percentage points for driver, −3 percentage points for passenger) and recovered by +1 percentage point per full 7 days without new infractions. Distinct from the star rating.
 _Avoid_: trust score, reliability score, reputation score
@@ -35,10 +38,13 @@ _Avoid_: trust score, reliability score, reputation score
 **Star rating** (noun) — The 1–5 mutual rating left by a driver and passenger after ride completion. Displayed on profiles as an average with ride count.
 _Avoid_: score (when referring to the star rating), review score
 
-**University badge** (noun) — The verified label shown on a profile when the account's email domain matches an allowed university domain. Set at registration; not re-validated afterwards.
-_Avoid_: verified badge, email badge, verification mark
+**University badge** (noun) — The "university domain" badge (domain-validated, not identity-verified) shown on a profile when the account's email domain matches an approved university domain allowlist. Set at registration; indicates domain format match only, not verified mailbox ownership or physical student identity.
+_Avoid_: verified badge, verified student, identity badge
 
-**Reconfirmation deadline** (noun) — The timestamp by which a passenger in `pending_reconfirmation` status must accept or decline a stop change, after which the booking auto-lapses. Computed as: if modified > 2 h before departure → `min(now + 6 h, departure − 2 h)`; if modified ≤ 2 h before departure → `min(now + 30 min, departure)`.
+**Women-only ride** (noun) — An optional safety preference ride filter and publishing option based on self-declared private gender (`female` required to publish or book). Documented as lowest priority / cut-first scope under schedule constraints.
+_Avoid_: women ride, girls carpool
+
+**Reconfirmation deadline** (noun) — The timestamp by which a passenger in `pending_reconfirmation` status must accept or decline a stop change, after which the booking auto-lapses. Computed as: if modified > 2 h before departure -> `min(now + 6 h, departure − 2 h)`; if modified <= 2 h before departure -> `min(now + 30 min, departure)`.
 _Avoid_: timeout, expiry
 
 **Report** (noun) — A moderation record filed by a user against a user, a ride, or a chat message, with a fixed reason and optional free-text detail.

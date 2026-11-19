@@ -98,52 +98,67 @@ them; a ticket with UI has a design subtask instead (team addon).
 ## Source
 - Design board: none yet (published from `mocks/`, never pulled)
 - Figma: none (regenerated on request)
-- Token source in code: to be established in coursework styles (e.g. `css/tokens.css` or `css/style.css`)
+- Token source in code: `src/tokens.css` (exported CSS custom properties)
+
+## Brand Identity — StudRide
+- **Name:** StudRide
+- **Subtitle:** STUDENT CARPOOLING
+- **Brand Mark:** Rounded-square Transit Teal (`var(--color-primary)`) icon containing a white graduation cap, cyan (`var(--color-accent)`) dotted route path with 3 stops (origin, intermediate, destination).
+- **Wordmark:** "Stud" in `var(--color-text)` + "Ride" in `var(--color-accent)`.
+- **Implementation:** Inline SVG strictly utilizing CSS variables (zero external image dependencies per D-001).
 
 ## Tokens
 
 ### Color
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--color-bg` | `#ffffff` | `#121212` | Page background |
-| `--color-surface` | `#f8f9fa` | `#1e1e1e` | Card / container surface |
-| `--color-text` | `#212529` | `#e0e0e0` | Primary text |
-| `--color-text-muted` | `#6c757d` | `#9e9e9e` | Secondary / muted text |
-| `--color-border` | `#dee2e6` | `#333333` | Structural borders |
-| `--color-primary` | `#0066cc` | `#4da3ff` | Primary actions / links |
-| `--color-primary-hover` | `#0052a3` | `#66b0ff` | Hover states |
-| `--color-success` | `#198754` | `#2ecc71` | Success states |
-| `--color-error` | `#dc3545` | `#e74c3c` | Error states |
+| `--color-bg` | `#EBF0F5` | `#0B1120` | Page background (soft cool mist / deep slate) |
+| `--color-header` | `#E3ECEF` | `#0F172A` | Top navigation bar / header background |
+| `--color-surface` | `#F9FBFD` | `#1E293B` | Elevated card & container surface |
+| `--color-surface-subtle` | `#E2E9F0` | `#131C31` | Nested surface, stop chips, table row alternate |
+| `--color-border` | `#CBD5E1` | `#334155` | Structural borders and dividers |
+| `--color-border-subtle` | `#E2E8F0` | `#1E293B` | Subtle separators between route stops |
+| `--color-text` | `#0F172A` | `#F8FAFC` | Primary headings, body copy, key data |
+| `--color-text-muted` | `#64748B` | `#94A3B8` | Secondary / muted text, labels |
+| `--color-primary` | `#0D9488` | `#0D9488` | Transit Teal — primary buttons, main pins |
+| `--color-primary-hover` | `#0F766E` | `#14B8A6` | Primary button hover / focus |
+| `--color-accent` | `#0284C7` | `#38BDF8` | Cyan — route lines, active links, "Ride" mark |
+| `--color-success` | `#059669` | `#10B981` | Emerald — confirmed booking, free seats, university badge |
+| `--color-warning` | `#D97706` | `#F59E0B` | Amber — pending_reconfirmation deadlines, alerts |
+| `--color-error` | `#DC2626` | `#EF4444` | Crimson — cancellation penalties, error messages |
 
 ### Typography
 | Token | Family | Size / line height | Weight | Use |
 |---|---|---|---|---|
-| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Default body font family |
-| `--font-mono` | `ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace` | — | — | Code snippets / technical text |
-| `--font-size-sm` | `var(--font-sans)` | `0.875rem` / `1.4` | `400` | Small notes, captions |
-| `--font-size-base` | `var(--font-sans)` | `1rem` / `1.5` | `400` | Standard body copy |
-| `--font-size-lg` | `var(--font-sans)` | `1.25rem` / `1.4` | `600` | Subheadings / section headers |
-| `--font-size-xl` | `var(--font-sans)` | `1.5rem` / `1.3` | `700` | Group headings / card titles |
-| `--font-size-2xl` | `var(--font-sans)` | `2rem` / `1.2` | `700` | Primary page heading |
+| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Default UI copy |
+| `--font-mono` | `ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace` | — | — | Tabular numbers: prices (`lei`), times, seats, percentages |
+| `--font-size-xs` | `var(--font-sans)` | `0.75rem` / `1.3` | `500` | Badges, verification tags |
+| `--font-size-sm` | `var(--font-sans)` | `0.875rem` / `1.4` | `400` | Small notes, stop names, helper text |
+| `--font-size-base` | `var(--font-sans)` | `1rem` / `1.5` | `400` | Standard body copy, form inputs |
+| `--font-size-lg` | `var(--font-sans)` | `1.125rem` / `1.4` | `600` | Card titles, route summary ("Sibiu → Cluj") |
+| `--font-size-xl` | `var(--font-sans)` | `1.375rem` / `1.3` | `700` | Section headers |
+| `--font-size-2xl` | `var(--font-sans)` | `1.75rem` / `1.2` | `700` | Primary page heading, hero banner |
 
 ### Spacing
-| Token | Value |
-|---|---|
-| `--space-xs` | `0.25rem` (4px) |
-| `--space-sm` | `0.5rem` (8px) |
-| `--space-md` | `1rem` (16px) |
-| `--space-lg` | `1.5rem` (24px) |
-| `--space-xl` | `2rem` (32px) |
-| `--space-2xl` | `3rem` (48px) |
+| Token | Value | Use |
+|---|---|---|
+| `--space-xs` | `0.25rem` (4px) | Inline badge padding, tight icon margins |
+| `--space-sm` | `0.5rem` (8px) | Stop timeline gaps, chip padding |
+| `--space-md` | `1rem` (16px) | Card internal padding, form field spacing |
+| `--space-lg` | `1.5rem` (24px) | Section separation, container padding |
+| `--space-xl` | `2rem` (32px) | Page grid spacing |
+| `--space-2xl` | `3rem` (48px) | Major layout section padding |
 
 ### Radius, shadow, motion
 | Token | Value | Use |
 |---|---|---|
-| `--radius-sm` | `4px` | Small badges, tags |
-| `--radius-md` | `8px` | Buttons, form inputs, cards |
-| `--radius-lg` | `12px` | Modals, large panels |
-| `--shadow-sm` | `0 1px 2px rgba(0, 0, 0, 0.05)` | Subtle card elevation |
-| `--shadow-md` | `0 4px 6px -1px rgba(0, 0, 0, 0.1)` | Hovered cards, dropdowns |
+| `--radius-sm` | `4px` | Small badges, status tags |
+| `--radius-md` | `8px` | Buttons, form inputs, search dropdowns |
+| `--radius-lg` | `12px` | Ride cards, modals, map containers |
+| `--radius-full` | `9999px` | User avatar badges, pill filters |
+| `--shadow-sm` | `0 1px 2px rgba(15, 23, 42, 0.05)` | Subtle card elevation |
+| `--shadow-md` | `0 4px 6px -1px rgba(15, 23, 42, 0.08)` | Hovered ride card, dropdowns |
+| `--shadow-lg` | `0 10px 15px -3px rgba(15, 23, 42, 0.12)` | Floating booking summaries, modals |
 | `--transition-fast` | `150ms ease-in-out` | Button and link interaction transitions |
 
 ### Breakpoints / window sizes
