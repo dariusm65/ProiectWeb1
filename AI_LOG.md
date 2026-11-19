@@ -91,3 +91,25 @@ The user audited the operational mechanics across all decisions and documentatio
 - `CONTEXT.md`: added `available_seats` and `Women-only ride`; updated `Booking status` (`expired` added) and `University badge`.
 - `README.md`: updated booking lifecycle, capacity/auto-rejection rules, pricing formula, chat privacy, and registration policies.
 - Run `python3 docs/agents/tools/ledger-lint.py --fix` and verification check (passed, 0 errors).
+
+---
+
+## Session 2026-11-19 (Part 4) — DB schema, migrations and seed (/build, branch feat/db-schema-and-migrations)
+
+### What the user corrected (three seed conditions)
+1. Seed only places that appear in SURVEY.md (dropped Campus Hasdeu, Iulius Mall, Piata Romana, Politehnica, Calea Dumbravii from the plan). Coordinates only from a real Nominatim query, recorded with query + date; otherwise NULL with a marker.
+2. System accounts use neutral addresses (admin@studride.local, moderator@studride.local), not a university domain.
+3. No password or hash is committed: seed.js reads ADMIN_PASSWORD / MODERATOR_PASSWORD from .env and hashes them with bcrypt at runtime.
+
+### What was done and what is NOT verified
+- Tests written first; red run: 5 failed / 1 passed (files missing). After implementation: 6 static tests pass, 0 assertions changed (one code fix in seed.js to satisfy an existing assertion).
+- Nominatim is not reachable from the sandbox, so ALL known_places coordinates are NULL (source = 'TODO-fill-from-Nominatim') for the owner to fill. Nothing was written from memory.
+- Docker and MySQL are not installed here: the 10 integration tests (migration, 15 tables, seed idempotency, stop order 15, removed_at, UNIQUE instance_date) were SKIPPED, not passed. The SQL has never been executed against MySQL.
+
+### Deviations from the approved plan (to confirm)
+- known_places: latitude/longitude nullable; added source_query and queried_on columns.
+- geocoding_cache is not pre-seeded (no coordinates to put in it).
+- System accounts are inserted by seed.js (needs runtime bcrypt), not by the .sql seed file.
+- bcryptjs (pure JS) instead of native bcrypt; same algorithm and hash format.
+- MySQL DDL auto-commits, so migrations are not transactional; a version is recorded only after the file fully ran (files use IF NOT EXISTS).
+- .env added to .gitignore (it was not ignored).
