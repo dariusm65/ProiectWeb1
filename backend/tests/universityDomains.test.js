@@ -43,6 +43,11 @@ describe('domain: universityDomains (D-004, Q-002, Q-005)', () => {
     expect(matchUniversityDomain('attacker@evil-ulbsibiu.ro')).toBeNull();
     expect(matchUniversityDomain('attacker@ulbsibiu.ro.evil.com')).toBeNull();
     expect(matchUniversityDomain('attacker@fakeupb.ro')).toBeNull();
+    // Strict DNS label syntax: reject leading/consecutive dots and hyphen-bounded labels
+    expect(matchUniversityDomain('user@.ulbsibiu.ro')).toBeNull();
+    expect(matchUniversityDomain('user@foo..ulbsibiu.ro')).toBeNull();
+    expect(matchUniversityDomain('user@-sub.ulbsibiu.ro')).toBeNull();
+    expect(matchUniversityDomain('user@sub-.ulbsibiu.ro')).toBeNull();
     // Malformed emails
     expect(matchUniversityDomain('')).toBeNull();
     expect(matchUniversityDomain('not-an-email')).toBeNull();
@@ -51,10 +56,11 @@ describe('domain: universityDomains (D-004, Q-002, Q-005)', () => {
   });
 
   it('supports optional comma-separated EXTRA_UNIVERSITY_DOMAINS (exact + subdomain)', () => {
-    const extra = ' custom-uni.ro , @test-campus.edu.ro ';
+    const extra = ' custom-uni.ro , @test-campus.edu.ro , ..ro , .bad.ro , -bad.ro ';
     expect(matchUniversityDomain('student@custom-uni.ro', extra)).toBe('custom-uni.ro');
     expect(matchUniversityDomain('student@cs.custom-uni.ro', extra)).toBe('cs.custom-uni.ro');
     expect(matchUniversityDomain('student@test-campus.edu.ro', extra)).toBe('test-campus.edu.ro');
     expect(matchUniversityDomain('attacker@evil-custom-uni.ro', extra)).toBeNull();
+    expect(matchUniversityDomain('attacker@bad.ro', extra)).toBeNull();
   });
 });

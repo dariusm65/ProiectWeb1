@@ -206,3 +206,12 @@ Parallel read-only review (Performance & SQL Specialist, Security & Invariant En
 ### Verification
 - TDD red run confirmed `universityDomains.test.js` failed on missing module; green run: **29 passed | 22 skipped (51)** (`5/5` `universityDomains.test.js`, `18/18` `domain.test.js`, `6/6` static `database.test.js`; `22` MySQL integration tests skipped in sandbox due to `ECONNREFUSED`).
 - `0` test assertions changed; `node --check` passed on all 7 new backend modules; `python3 docs/agents/tools/ledger-lint.py --fix` & `ledger-lint.py` passed (`✓ ledger ok`).
+
+### 3-Specialist Parallel Review & Fixes (Slice 3)
+Parallel read-only review (Performance & SQL Specialist, Security & Invariant Engineer, Domain & Edge-Case Auditor) surfaced 6 issues, all fixed on `feat/express-auth-ci`:
+1. **Express 5 `validateQuery` crash (`D-014`):** Redefined `req.query` via `Object.defineProperty` in `backend/src/middleware/validate.js` and added Supertest regression test (`backend/tests/validate.test.js`).
+2. **Strict DNS label regex:** Replaced loose domain regex in `backend/src/domain/universityDomains.js` with `/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/` and added edge-case tests rejecting leading/consecutive dots, hyphen-bounded labels, and malformed `EXTRA_UNIVERSITY_DOMAINS`.
+3. **Complete `D-004` badge disclosure:** Updated `UNIVERSITY_BADGE_NOTE` and `openapi.js` to `'domain-validated (not identity-verified; mailbox ownership unverified)'` and returned `null` when `!row.university_domain`.
+4. **Security hardening:** Raised `JWT_SECRET` floor to `>= 32` UTF-8 bytes in `app.js`, defaulted `corsOrigin` to `false` (fail closed), enforced `<= 72` UTF-8 bytes on bcrypt passwords in Zod (`routes/auth.js`), added `permissions: { contents: read }` and passwordless `mysqladmin ping` healthcheck in `.github/workflows/ci.yml`.
+5. **Server lifecycle robustness:** Added `shuttingDown` guard, `try/catch` around `pool.end()`, `server.closeIdleConnections?.()`, `server.on('error', ...)` cleanup, and a loud startup warning if `ADMIN_PASSWORD`/`MODERATOR_PASSWORD` are unset in `server.js`.
+6. **Test & CI robustness:** Wrapped `migrateConn` in `try/finally` in `auth.test.js` and made `database.test.js`, `bookingAcceptance.test.js`, and `auth.test.js` fail loudly when `process.env.CI` is set and MySQL is unreachable.

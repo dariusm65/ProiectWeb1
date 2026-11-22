@@ -6,7 +6,7 @@ export const openapiSpec = {
     title: 'StudRide API (P18 Student Carpooling)',
     version: '0.1.0',
     description:
-      'REST API for StudRide student carpooling with segment matching. University domain badges are strictly domain-validated (not identity-verified) per D-004.',
+      'REST API for StudRide student carpooling with segment matching. University domain badges are strictly domain-validated (not identity-verified; mailbox ownership unverified) per D-004.',
   },
   servers: [{ url: '/', description: 'Current host' }],
   components: {
@@ -29,7 +29,8 @@ export const openapiSpec = {
           has_university_badge: { type: 'boolean' },
           university_badge_note: {
             type: 'string',
-            example: 'domain-validated (not identity-verified)',
+            nullable: true,
+            example: 'domain-validated (not identity-verified; mailbox ownership unverified)',
           },
           role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
           gender: { type: 'string', enum: ['female', 'male', 'prefer_not_to_say'] },

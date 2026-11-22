@@ -2,7 +2,8 @@
 // Matches exact root domains OR any subdomain of them (e.g. stud.acs.upb.ro -> upb.ro),
 // while rejecting spoofed prefix/suffix domains (e.g. evil-ulbsibiu.ro).
 
-export const UNIVERSITY_BADGE_NOTE = 'domain-validated (not identity-verified)';
+export const UNIVERSITY_BADGE_NOTE = 'domain-validated (not identity-verified; mailbox ownership unverified)';
+const STRICT_DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
 
 export const ROMANIAN_UNIVERSITY_ROOT_DOMAINS = Object.freeze([
   // Major public & technical universities across Romania
@@ -69,7 +70,7 @@ function parseExtraDomains(extraDomainsCsv) {
   return extraDomainsCsv
     .split(',')
     .map((item) => item.trim().toLowerCase().replace(/^@/, ''))
-    .filter((d) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d));
+    .filter((d) => d.length <= 100 && STRICT_DOMAIN_RE.test(d));
 }
 
 /**
@@ -85,7 +86,7 @@ export function matchUniversityDomain(email, extraDomainsCsv = process.env.EXTRA
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
 
   const domain = parts[1];
-  if (domain.length > 100 || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
+  if (domain.length > 100 || !STRICT_DOMAIN_RE.test(domain)) {
     return null;
   }
 

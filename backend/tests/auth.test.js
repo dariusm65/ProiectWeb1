@@ -34,6 +34,9 @@ let admin = null;
 try {
   admin = await mysql.createConnection(connOpts(undefined));
 } catch (e) {
+  if (process.env.CI) {
+    throw new Error(`MySQL is required in CI but unreachable (${e.code || e.message})`);
+  }
   console.warn(`\n!!! MySQL unreachable (${e.code || e.message}): auth API integration tests SKIPPED !!!\n`);
 }
 
@@ -47,9 +50,12 @@ describe.skipIf(!admin)('integration: Express API, Auth (JWT + RBAC) & OpenAPI (
   beforeAll(async () => {
     await admin.query(`DROP DATABASE IF EXISTS ${TEST_DB}; CREATE DATABASE ${TEST_DB} CHARACTER SET utf8mb4`);
     const migrateConn = await mysql.createConnection(connOpts(TEST_DB));
-    const { migrate } = await import('../database/migrate.js');
-    await migrate(migrateConn);
-    await migrateConn.end();
+    try {
+      const { migrate } = await import('../database/migrate.js');
+      await migrate(migrateConn);
+    } finally {
+      await migrateConn.end();
+    }
 
     pool = mysql.createPool({
       ...connOpts(TEST_DB),
@@ -122,7 +128,9 @@ describe.skipIf(!admin)('integration: Express API, Auth (JWT + RBAC) & OpenAPI (
     expect(uniRes.body.user.email).toBe('ioana.popescu@stud.ubbcluj.ro');
     expect(uniRes.body.user.university_domain).toBe('stud.ubbcluj.ro');
     expect(uniRes.body.user.has_university_badge).toBe(true);
-    expect(uniRes.body.user.university_badge_note).toBe('domain-validated (not identity-verified)');
+    expect(uniRes.body.user.university_badge_note).toBe(
+      'domain-validated (not identity-verified; mailbox ownership unverified)',
+    );
     expect(uniRes.body.user.gender).toBe('female');
     expect(uniRes.body.user.role).toBe('user');
     expect(uniRes.body.user.password_hash).toBeUndefined();
@@ -138,7 +146,18 @@ describe.skipIf(!admin)('integration: Express API, Auth (JWT + RBAC) & OpenAPI (
     expect(stdRes.status).toBe(201);
     expect(stdRes.body.user.university_domain).toBeNull();
     expect(stdRes.body.user.has_university_badge).toBe(false);
+    expect(stdRes.body.user.university_badge_note).toBeNull();
     expect(stdRes.body.user.gender).toBe('prefer_not_to_say');
+
+    // Password exceeding bcrypt 72-byte limit -> 400 Bad Request
+    const longPassRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'longpass@ulbsibiu.ro',
+        password: 'a'.repeat(73),
+        full_name: 'Long Password',
+      });
+    expect(longPassRes.status).toBe(400);
 
     // Duplicate email -> 409 Conflict
     const dupRes = await request(app)

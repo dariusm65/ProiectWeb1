@@ -95,6 +95,9 @@ let admin = null;
 try {
   admin = await connect(undefined);
 } catch (e) {
+  if (process.env.CI) {
+    throw new Error(`MySQL is required in CI but unreachable (${e.code || e.message})`);
+  }
   console.warn(`\n!!! MySQL unreachable (${e.code || e.message}): integration tests SKIPPED !!!\n`);
 }
 

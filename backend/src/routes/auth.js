@@ -11,9 +11,14 @@ const BCRYPT_ROUNDS = 10;
 // Precomputed dummy hash to equalize timing when email is not found on login
 const DUMMY_HASH = bcrypt.hashSync('studride-dummy-timing-password', BCRYPT_ROUNDS);
 
+const withinBcryptByteLimit = (val) => Buffer.byteLength(val, 'utf8') <= 72;
+
 const registerSchema = z.object({
   email: z.string().trim().email().max(255).transform((v) => v.toLowerCase()),
-  password: z.string().min(8).max(128),
+  password: z
+    .string()
+    .min(8)
+    .refine(withinBcryptByteLimit, { message: 'Password must be at most 72 UTF-8 bytes' }),
   full_name: z.string().trim().min(2).max(150),
   phone: z.string().trim().max(50).optional().nullable(),
   gender: z.enum(['female', 'male', 'prefer_not_to_say']).optional().default('prefer_not_to_say'),
@@ -21,7 +26,10 @@ const registerSchema = z.object({
 
 const loginSchema = z.object({
   email: z.string().trim().email().max(255).transform((v) => v.toLowerCase()),
-  password: z.string().min(1).max(128),
+  password: z
+    .string()
+    .min(1)
+    .refine(withinBcryptByteLimit, { message: 'Password must be at most 72 UTF-8 bytes' }),
 });
 
 export function createAuthRouter({ pool, jwtSecret, extraUniversityDomains }) {

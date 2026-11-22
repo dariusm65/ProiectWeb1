@@ -11,15 +11,15 @@ import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 export function createApp({
   pool,
   jwtSecret = process.env.JWT_SECRET,
-  corsOrigin = process.env.CORS_ORIGIN || true,
+  corsOrigin = process.env.CORS_ORIGIN || false,
   extraUniversityDomains = process.env.EXTRA_UNIVERSITY_DOMAINS,
   mountExtraRoutes = null,
 } = {}) {
   if (!pool) {
     throw new Error('createApp requires a MySQL pool instance');
   }
-  if (!jwtSecret || typeof jwtSecret !== 'string' || jwtSecret.length < 16) {
-    throw new Error('JWT_SECRET must be configured with at least 16 characters');
+  if (!jwtSecret || typeof jwtSecret !== 'string' || Buffer.byteLength(jwtSecret.trim(), 'utf8') < 32) {
+    throw new Error('JWT_SECRET must be configured with at least 32 bytes for HS256');
   }
 
   const app = express();

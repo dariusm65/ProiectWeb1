@@ -10,7 +10,7 @@ export function formatSafeUser(row) {
     phone: row.phone ?? null,
     university_domain: row.university_domain ?? null,
     has_university_badge: Boolean(row.university_domain),
-    university_badge_note: UNIVERSITY_BADGE_NOTE,
+    university_badge_note: row.university_domain ? UNIVERSITY_BADGE_NOTE : null,
     role: row.role,
     gender: row.gender,
     is_suspended: Boolean(row.is_suspended),
