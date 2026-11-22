@@ -12,14 +12,14 @@ designs:
   - id: DS-002
     name: Landing & Search Screen
     kind: screen
-    status: draft
+    status: approved
     route: "/"
     description: Hero banner with brand intro, quick origin/destination/date search widget, radius selector (1–5 km), and top navbar with auth links.
 
   - id: DS-003
     name: Auth Screen (Login & Register)
     kind: screen
-    status: draft
+    status: approved
     route: "/login"
     description: Email & password authentication forms, live university email domain validation feedback, and domain-validated university badge explanation.
 

@@ -22,6 +22,7 @@ A web platform that lets students share rides between campus and home cities. Dr
 
 ### What is explicitly out of scope
 - Online payments or money transfers — settlement is offline between students.
+- Multi-seat bookings — every booking request is strictly for 1 seat per student account.
 - External email / SMS / push notifications — in-app only.
 - Turn-by-turn GPS navigation or live vehicle tracking.
 - Social login (Google / Facebook) or document / photo uploads.

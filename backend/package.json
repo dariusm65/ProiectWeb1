@@ -1,0 +1,20 @@
+{
+  "name": "studride-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "StudRide (P18) backend: MySQL schema, migrations and seed",
+  "scripts": {
+    "migrate": "node database/migrate.js",
+    "seed": "node database/seed.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mysql2": "^3.11.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}
