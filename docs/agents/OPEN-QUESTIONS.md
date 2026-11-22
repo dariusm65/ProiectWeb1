@@ -10,10 +10,10 @@
 
 ## Index
 - Q-001 · Which specific web lab assignment is currently being implemented? · _answered_
-- Q-002 · What university email domains are allowed at registration?
+- Q-002 · What university email domains are allowed at registration? · _answered_
 - Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)? · _answered_
 - Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
-- Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters?
+- Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters? · _answered_
 - Q-006 · How is the passenger cancellation fee collected, settled, and reconciled against the declared trip cost? · _answered_
 
 ---
@@ -29,12 +29,12 @@
 ---
 
 ## Q-002 · What university email domains are allowed at registration?
-- **Status:** open
+- **Status:** answered
 - **Blocks:** Auth registration domain allowlist configuration; university domain badge display
 - **Who answers:** User
 - **Proposed answer:** `@ulbsibiu.ro`, `@stud.ubbcluj.ro`, `@student.utcluj.ro`, `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (unverified guesses based on survey clusters; to confirm with real colleague addresses post-deployment).
-- **Answer:**
-- **Recorded as:**
+- **Answer:** Support all accredited Romanian universities by matching exact root domains OR any subdomain of them (e.g. `upb.ro` matches `stud.acs.upb.ro`, `ubbcluj.ro` matches `stud.ubbcluj.ro`, `ulbsibiu.ro`, `utcluj.ro`, `upt.ro`, `uvt.ro`, `e-uvt.ro`, `unibuc.ro`, `ase.ro`, `uaic.ro`, `tuiasi.ro`, `unitbv.ro`, `ucv.ro`, `uoradea.ro`, `umfcd.ro`, `umfcluj.ro`, `umft.ro`, `umfst.ro`, `utcb.ro`, `usamvcluj.ro`, `usv.ro`, `ugal.ro`, `univ-ovidius.ro`, `uab.ro`, `ub.ro`, etc.), plus an optional comma-separated `EXTRA_UNIVERSITY_DOMAINS` env var (confirmed 2026-11-22).
+- **Recorded as:** D-004 (`backend/src/domain/universityDomains.js`)
 
 ---
 
@@ -59,12 +59,12 @@
 ---
 
 ## Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters?
-- **Status:** open
+- **Status:** answered
 - **Blocks:** Auth registration domain allowlist configuration
 - **Who answers:** User
 - **Proposed answer:** `@student.upt.ro`, `@e-uvt.ro`, `@stud.acs.upb.ro`, `@unibuc.ro` (unverified guesses based on SURVEY.md clusters; to confirm with real student email addresses post-deployment).
-- **Answer:**
-- **Recorded as:**
+- **Answer:** Covered by the accredited Romanian university root-domain + subdomain matcher (`upb.ro`, `unibuc.ro`, `ase.ro`, `umfcd.ro`, `utcb.ro`, `upt.ro`, `uvt.ro`, `e-uvt.ro`, `umft.ro`, etc.) plus optional `EXTRA_UNIVERSITY_DOMAINS` env var (confirmed 2026-11-22).
+- **Recorded as:** D-004 (`backend/src/domain/universityDomains.js`)
 
 ---
 
