@@ -91,3 +91,29 @@ The user audited the operational mechanics across all decisions and documentatio
 - `CONTEXT.md`: added `available_seats` and `Women-only ride`; updated `Booking status` (`expired` added) and `University badge`.
 - `README.md`: updated booking lifecycle, capacity/auto-rejection rules, pricing formula, chat privacy, and registration policies.
 - Run `python3 docs/agents/tools/ledger-lint.py --fix` and verification check (passed, 0 errors).
+
+---
+
+## Session 2026-11-22 — Visual direction overhaul (`DESIGN.md` & `DS-001`–`DS-004` mocks)
+
+### What was asked
+1. **Step 1:** Update `docs/design/DESIGN.md` to replace the sterile slate/teal/cyan palette and monospace typography with the approved Warm Cream (`#F5EFE6`) & Deep Forest Green (`#143D2B`) Light Mode, Neutral Charcoal (`#0E100F`) & Forest Green (`#1F6B47`) Dark Mode, `Fraunces` display typography (`-0.02em`), and `DM Sans` (`tabular-nums`) UI/numeric typography, while preserving all StudRide domain invariants and `DS-001`–`DS-004` specs.
+2. **Step 2 (after user confirmation):** Remove the non-existent `D-019` label from `docs/design/DESIGN.md` (keeping the "1 seat per passenger booking — no seat-count selector" rule as plain text so every `D-001`–`D-018` citation strictly matches `docs/agents/DECISIONS.md`), then create/update all 4 HTML mocks (`DS-001` through `DS-004`) in `docs/design/mocks/` strictly implementing `DESIGN.md`, run `ledger-lint.py`, and update `AI_LOG.md`.
+
+### Changes recorded
+| File | Action | Contents |
+|---|---|---|
+| `docs/design/DESIGN.md` | Updated | Warm Cream / Deep Forest Green light tokens, Neutral Charcoal / Forest Green dark tokens, `Fraunces` + `DM Sans` (`tabular-nums`) typography (zero monospace), exact `38×38px` (`rx="10"`) SVG brand mark spec, domain invariants, and `DS-001`–`DS-004` specs |
+| `docs/design/mocks/DS-001-tokens-brand.html` | Created | Brand lockup (light & dark), full color swatch boards, `Fraunces` + `DM Sans` (`tabular-nums`) specimens, domain badge primitives, working Light/Dark toggle |
+| `docs/design/mocks/DS-002-landing-search.html` | Created | Editorial split hero with Carpathian forest road SVG illustration, integrated search card (`1 km (Implicit)`, `3 km`, `5 km` chips per `D-017`), popular Romanian corridors, toggleable `default` / `loading` / `error` states |
+| `docs/design/mocks/DS-003-auth.html` | Created | Tabbed Login & Register card with live Romanian university domain validator (`Validat pe domeniu (nu identitate verificată)` per `D-004`), optional private gender selector (`D-018`), toggleable `default` / `loading` / `error` / `success` states |
+| `docs/design/mocks/DS-004-search-results.html` | Updated | Travel-ticket ride cards with horizontal route arc, expandable intermediate stops (`D-005`), perforated right-hand stub (`lei` + `Rezervă segment`, 1 seat/passenger), female driver `Women-only` ride (`D-018`), `Anulare recentă` dual reputation (`D-016`), 6-stop `Bacău → București` route, synced sticky topographic Romania map (`D-009` cache badge) + `D-010` fuel split box, and all 4 toggleable states (`success`, `loading`, `empty`, `error`) |
+| `AI_LOG.md` | Updated | Logged 2026-11-22 design tokens and `DS-001`–`DS-004` mock implementation session |
+
+- Run `python3 docs/agents/tools/ledger-lint.py` (passed, 0 errors).
+
+### Brand mark & route node marker refinement (2026-11-22)
+- Removed all mustard/amber yellow (`#C88228`, `#E5A94C`, `var(--color-accent)`) from the `38×38px` (`rx="10"`) StudRide SVG brand mark and from all route origin/destination/intermediate stop markers across `docs/design/DESIGN.md` and `DS-001`–`DS-004`.
+- Brand mark uses Deep Forest Green (`#143D2B` light / `#1F6B47` dark), Warm Cream (`#FCF9F4`) for the graduation cap & tassel, and soft Sage Mint (`#9AD6B6`) + Warm Cream (`#FCF9F4`) for the curved 3-stop dotted route line and stop markers.
+- Route origin & destination markers (timelines, route arcs, topographic map pins, and hero road stops) now use a Forest Green & Soft Sage double-ring (`#143D2B` + `#B7DEC9` light / `#34A86B` + `rgba(52, 168, 107, 0.28)` dark), with muted intermediate stop dots (`#5E7368` light / `#8C9992` dark).
+- Scoped Warm Amber (`#C88228` / `#E5A94C`) strictly to driver star ratings (`★`) and subtle decorative warmth, never on route nodes or the logo.

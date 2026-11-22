@@ -103,41 +103,52 @@ them; a ticket with UI has a design subtask instead (team addon).
 ## Brand Identity — StudRide
 - **Name:** StudRide
 - **Subtitle:** STUDENT CARPOOLING
-- **Brand Mark:** Rounded-square Transit Teal (`var(--color-primary)`) icon containing a white graduation cap, cyan (`var(--color-accent)`) dotted route path with 3 stops (origin, intermediate, destination).
-- **Wordmark:** "Stud" in `var(--color-text)` + "Ride" in `var(--color-accent)`.
-- **Implementation:** Inline SVG strictly utilizing CSS variables (zero external image dependencies per D-001).
+- **Brand Mark:** Exact `38×38px` (`rx="10"`) Deep Forest Green (`var(--color-primary)`: `#143D2B` light / `#1F6B47` dark) rounded-square SVG mark containing a crisp Warm Cream (`#FCF9F4`) graduation cap and tassel, with a curved 3-stop dotted route line and stop markers underneath in soft Sage Mint (`#9AD6B6`) and Warm Cream (`#FCF9F4`). Strictly within the Forest Green & Cream palette — zero mustard/amber/yellow in the logo.
+- **Wordmark:** `Fraunces` (`letter-spacing: -0.02em`) — `"Stud"` in `var(--color-text)` + `"Ride"` in `var(--color-primary-wordmark)` (`#143D2B` light / `#34A86B` dark), paired with the `STUDENT CARPOOLING` subtitle.
+- **Implementation:** Inline SVG strictly utilizing CSS variables and palette tokens (zero external image dependencies per `D-001`).
 
 ## Tokens
 
+Default theme is `data-theme="light"` (Warm Cream & Deep Forest Green). Dark theme (`data-theme="dark"`) uses Neutral Charcoal surfaces with Forest Green accents — avoid full-green backgrounds.
+
 ### Color
-| Token | Light | Dark | Use |
+| Token | Light (`data-theme="light"`) | Dark (`data-theme="dark"`) | Use |
 |---|---|---|---|
-| `--color-bg` | `#EBF0F5` | `#0B1120` | Page background (soft cool mist / deep slate) |
-| `--color-header` | `#E3ECEF` | `#0F172A` | Top navigation bar / header background |
-| `--color-surface` | `#F9FBFD` | `#1E293B` | Elevated card & container surface |
-| `--color-surface-subtle` | `#E2E9F0` | `#131C31` | Nested surface, stop chips, table row alternate |
-| `--color-border` | `#CBD5E1` | `#334155` | Structural borders and dividers |
-| `--color-border-subtle` | `#E2E8F0` | `#1E293B` | Subtle separators between route stops |
-| `--color-text` | `#0F172A` | `#F8FAFC` | Primary headings, body copy, key data |
-| `--color-text-muted` | `#64748B` | `#94A3B8` | Secondary / muted text, labels |
-| `--color-primary` | `#0D9488` | `#0D9488` | Transit Teal — primary buttons, main pins |
-| `--color-primary-hover` | `#0F766E` | `#14B8A6` | Primary button hover / focus |
-| `--color-accent` | `#0284C7` | `#38BDF8` | Cyan — route lines, active links, "Ride" mark |
-| `--color-success` | `#059669` | `#10B981` | Emerald — confirmed booking, free seats, university badge |
-| `--color-warning` | `#D97706` | `#F59E0B` | Amber — pending_reconfirmation deadlines, alerts |
-| `--color-error` | `#DC2626` | `#EF4444` | Crimson — cancellation penalties, error messages |
+| `--color-bg` | `#F5EFE6` | `#0E100F` | Page background (Warm Cream / Neutral Charcoal Dark) |
+| `--color-surface` | `#FCF9F4` | `#171A18` | Elevated card & container surface (Ivory Card / Charcoal Card) |
+| `--color-surface-subtle` | `#EAE1D3` | `#1F2321` | Nested surface, stop chips, ticket notches, subtle bands |
+| `--color-header` | `rgba(245, 239, 230, 0.94)` | `rgba(19, 22, 21, 0.94)` | Translucent top navigation bar / sticky header |
+| `--color-border` | `rgba(20, 61, 43, 0.14)` | `rgba(244, 240, 232, 0.09)` | Structural borders, card outlines, ticket perforation dividers |
+| `--color-border-subtle` | `rgba(20, 61, 43, 0.08)` | `rgba(244, 240, 232, 0.05)` | Subtle separators between intermediate route stops |
+| `--color-text` | `#13261D` | `#F4F0E8` | Primary headings, body copy, key data |
+| `--color-text-muted` | `#53665C` | `#9CA39F` | Secondary / muted text, metadata, labels |
+| `--color-primary` | `#143D2B` | `#1F6B47` | Deep Forest Green — primary buttons, brand mark, main pins |
+| `--color-primary-hover` | `#1D543C` | `#278257` | Primary button hover / focus |
+| `--color-primary-contrast` | `#FCF9F4` | `#F4F0E8` | Text and icons placed on `--color-primary` |
+| `--color-primary-soft` | `#E3EDE7` | `rgba(31, 107, 71, 0.18)` | Tinted pills, active radius chips, soft badges |
+| `--color-primary-wordmark` | `#143D2B` | `#34A86B` | `"Ride"` wordmark accent |
+| `--color-primary-ink` | `#143D2B` | `#57C48B` | High-contrast Forest Green text, links, and active indicators on surfaces |
+| `--color-accent` | `#C88228` | `#E5A94C` | Warm Amber / Ochre — strictly for driver star ratings (`★`) and subtle decorative warmth (never on route nodes or the brand mark) |
+| `--color-node-terminal` | `#143D2B` | `#34A86B` | Route origin & destination core node (stop timelines, arcs, map pins) |
+| `--color-node-terminal-ring` | `#B7DEC9` | `rgba(52, 168, 107, 0.28)` | Soft Sage / Forest-Mint outer double-ring on origin & destination nodes |
+| `--color-node-intermediate` | `#5E7368` | `#8C9992` | Muted intermediate stop markers on timelines, arcs, and map pins |
+| `--color-success` | `#1D6F4B` | `#34A86B` | Confirmed booking, available seats, university domain badge |
+| `--color-warning` | `#C88228` | `#E5A94C` | Warm Amber — `pending_reconfirmation` deadlines, alerts |
+| `--color-error` | `#B91C1C` | `#EF4444` | Crimson — cancellation penalties, validation & error messages |
 
 ### Typography
-| Token | Family | Size / line height | Weight | Use |
-|---|---|---|---|---|
-| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Default UI copy |
-| `--font-mono` | `ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace` | — | — | Tabular numbers: prices (`lei`), times, seats, percentages |
-| `--font-size-xs` | `var(--font-sans)` | `0.75rem` / `1.3` | `500` | Badges, verification tags |
-| `--font-size-sm` | `var(--font-sans)` | `0.875rem` / `1.4` | `400` | Small notes, stop names, helper text |
-| `--font-size-base` | `var(--font-sans)` | `1rem` / `1.5` | `400` | Standard body copy, form inputs |
-| `--font-size-lg` | `var(--font-sans)` | `1.125rem` / `1.4` | `600` | Card titles, route summary ("Sibiu → Cluj") |
-| `--font-size-xl` | `var(--font-sans)` | `1.375rem` / `1.3` | `700` | Section headers |
-| `--font-size-2xl` | `var(--font-sans)` | `1.75rem` / `1.2` | `700` | Primary page heading, hero banner |
+Warm & editorial pairing. **All monospace / robotic fonts are removed** (`--font-mono` is not used). All numeric values (`lei`, times, `km`, seat counts, percentages) use `var(--font-sans)` (`DM Sans`) with `font-variant-numeric: tabular-nums`.
+
+| Token | Family | Size / line height | Weight | Tracking / Features | Use |
+|---|---|---|---|---|---|
+| `--font-display` | `"Fraunces", Georgia, serif` | — | `600–700` | `letter-spacing: -0.02em` | Display headings, brand wordmark, route headers |
+| `--font-sans` | `"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` | — | `400–700` | `font-variant-numeric: tabular-nums` on numbers | UI body, controls, prices (`lei`), times, `km`, seat counts, percentages |
+| `--font-size-xs` | `var(--font-sans)` | `0.75rem` / `1.3` | `500` | — | Badges, verification tags, `STUDENT CARPOOLING` subtitle |
+| `--font-size-sm` | `var(--font-sans)` | `0.875rem` / `1.4` | `400` | `tabular-nums` on metrics | Small notes, stop names, helper text, seriousness score % |
+| `--font-size-base` | `var(--font-sans)` | `1rem` / `1.5` | `400` | `tabular-nums` on inputs/counts | Standard body copy, form inputs, buttons |
+| `--font-size-lg` | `var(--font-display)` | `1.125rem` / `1.35` | `600` | `-0.02em` | Card route headers (`Sibiu → Cluj-Napoca`), card titles |
+| `--font-size-xl` | `var(--font-display)` | `1.375rem` / `1.25` | `700` | `-0.02em` | Section headers |
+| `--font-size-2xl` | `var(--font-display)` | `1.875rem` / `1.15` | `700` | `-0.02em` | Primary page heading, editorial hero banner |
 
 ### Spacing
 | Token | Value | Use |
@@ -155,10 +166,10 @@ them; a ticket with UI has a design subtask instead (team addon).
 | `--radius-sm` | `4px` | Small badges, status tags |
 | `--radius-md` | `8px` | Buttons, form inputs, search dropdowns |
 | `--radius-lg` | `12px` | Ride cards, modals, map containers |
-| `--radius-full` | `9999px` | User avatar badges, pill filters |
-| `--shadow-sm` | `0 1px 2px rgba(15, 23, 42, 0.05)` | Subtle card elevation |
-| `--shadow-md` | `0 4px 6px -1px rgba(15, 23, 42, 0.08)` | Hovered ride card, dropdowns |
-| `--shadow-lg` | `0 10px 15px -3px rgba(15, 23, 42, 0.12)` | Floating booking summaries, modals |
+| `--radius-full` | `9999px` | User avatar badges, pill filters, radius chips |
+| `--shadow-sm` | `0 1px 2px rgba(19, 38, 29, 0.06)` | Subtle card elevation |
+| `--shadow-md` | `0 4px 10px -2px rgba(19, 38, 29, 0.10)` | Hovered ride card, dropdowns |
+| `--shadow-lg` | `0 12px 24px -4px rgba(19, 38, 29, 0.14)` | Floating booking summaries, modals |
 | `--transition-fast` | `150ms ease-in-out` | Button and link interaction transitions |
 
 ### Breakpoints / window sizes
@@ -167,6 +178,23 @@ them; a ticket with UI has a design subtask instead (team addon).
 | `mobile` | `320px` | `767px` |
 | `tablet` | `768px` | `1023px` |
 | `desktop` | `1024px` | — |
+
+## Domain Invariants (Mandatory Across All Screens)
+Every mock and implemented screen must preserve 100% of StudRide domain rules and use realistic Romanian localities:
+- **1 seat per passenger booking:** Each passenger booking reserves exactly 1 seat; no seat-count selector is shown.
+- **`D-010` (Transparent fuel split):** Proportional segment pricing under the declared trip cost cap (`seat_full_price = declared_trip_cost / (available_seats + 1)`), with transparent breakdown shown before booking confirmation.
+- **`D-005` (Segment intermediate stops):** Seat availability is computed per segment across ordered intermediate stops; only `confirmed` and `pending_reconfirmation` bookings hold capacity.
+- **`D-017` (Search radius):** Default `1 km (Implicit)` radius around pickup/drop-off with optional `3 km` and `5 km` expansion chips.
+- **`D-018` (Women-only female driver rule):** Women-only rides require `gender = female` for both driver and passenger; surfaced as an explicit filter and badge.
+- **`D-016` (Dual reputation):** Display both independent metrics — 1–5 star rating (post-arrival per `D-008`) and 0%–100% seriousness score (plus 30-day `"Anulare recentă"` badge when applicable).
+- **`D-004` (University domain badge):** Explicitly labelled `"Validat pe domeniu (nu identitate verificată)"` — never implied as physical identity verification.
+
+## Approved Component & Layout Specs (`DS-001` – `DS-004`)
+
+- **`DS-001` (Tokens & Brand):** Preserves the exact `38×38px` (`rx="10"`) Deep Forest Green (`#143D2B` / `#1F6B47`) rounded-square SVG mark with crisp Warm Cream (`#FCF9F4`) graduation cap & tassel and curved 3-stop dotted route line/markers in soft Sage Mint (`#9AD6B6`) and Warm Cream (`#FCF9F4`) underneath (no amber/yellow in the logo), paired with the `Fraunces` wordmark (`Stud` + `Ride`) and `STUDENT CARPOOLING` subtitle. Documents all light (`#F5EFE6`) and dark (`#0E100F`) color tokens, `Fraunces` display scale, and `DM Sans` (`tabular-nums`) UI/numeric scale.
+- **`DS-002` (Landing & Search — `/`):** Editorial split hero combining a `Fraunces` headline with a Carpathian forest road vector illustration in Forest Green & Warm Amber, paired with an integrated search card featuring radius chips (`1 km (Implicit)`, `3 km`, `5 km`) and toggleable states (`default`, `loading`, `error`).
+- **`DS-003` (Auth — `/login`):** Warm cream (light) / neutral charcoal (dark) tabbed Login & Register card featuring a live Romanian university email domain detector displaying `Validat pe domeniu (nu identitate verificată)` (`D-004`) and optional private gender selection (`D-018`).
+- **`DS-004` (Search Results & Map — `/rides`):** Split layout with travel-ticket ride cards featuring a horizontal route arc, expandable intermediate stops (`D-005`), dual reputation (`D-016`), Women-only female driver badge/filter (`D-018`), 1 seat per passenger booking (no seat-count selector), and a perforated right-hand ticket stub (`dashed` divider + top/bottom semicircular notches) displaying segment price (`DM Sans` `tabular-nums`) + `Rezervă segment`. Paired with the sticky topographic Romania route map and the `D-010` transparent fuel split box, preserving all 4 toggleable states (`success`, `loading`, `empty`, `error`).
 
 ## Hard-coded values found (to migrate)
 | path:line | Value | Should be |

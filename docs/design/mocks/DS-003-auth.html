@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ro" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudRide · Autentificare &amp; Înregistrare (DS-003)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+      --font-size-xs: 0.75rem;
+      --font-size-sm: 0.875rem;
+      --font-size-base: 1rem;
+      --font-size-lg: 1.125rem;
+      --font-size-xl: 1.375rem;
+      --font-size-2xl: 1.875rem;
+
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+
+      --transition-fast: 150ms ease-in-out;
+    }
+
+    [data-theme="light"] {
+      --color-bg: #F5EFE6;
+      --color-surface: #FCF9F4;
+      --color-surface-subtle: #EAE1D3;
+      --color-header: rgba(245, 239, 230, 0.94);
+      --color-border: rgba(20, 61, 43, 0.14);
+      --color-border-subtle: rgba(20, 61, 43, 0.08);
+      --color-text: #13261D;
+      --color-text-muted: #53665C;
+      --color-primary: #143D2B;
+      --color-primary-hover: #1D543C;
+      --color-primary-contrast: #FCF9F4;
+      --color-primary-soft: #E3EDE7;
+      --color-primary-wordmark: #143D2B;
+      --color-primary-ink: #143D2B;
+      --color-accent: #C88228;
+      --color-success: #1D6F4B;
+      --color-warning: #C88228;
+      --color-error: #B91C1C;
+      --shadow-sm: 0 1px 2px rgba(19, 38, 29, 0.06);
+      --shadow-md: 0 4px 10px -2px rgba(19, 38, 29, 0.10);
+      --shadow-lg: 0 12px 24px -4px rgba(19, 38, 29, 0.14);
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0E100F;
+      --color-surface: #171A18;
+      --color-surface-subtle: #1F2321;
+      --color-header: rgba(19, 22, 21, 0.94);
+      --color-border: rgba(244, 240, 232, 0.09);
+      --color-border-subtle: rgba(244, 240, 232, 0.05);
+      --color-text: #F4F0E8;
+      --color-text-muted: #9CA39F;
+      --color-primary: #1F6B47;
+      --color-primary-hover: #278257;
+      --color-primary-contrast: #F4F0E8;
+      --color-primary-soft: rgba(31, 107, 71, 0.18);
+      --color-primary-wordmark: #34A86B;
+      --color-primary-ink: #57C48B;
+      --color-accent: #E5A94C;
+      --color-success: #34A86B;
+      --color-warning: #E5A94C;
+      --color-error: #EF4444;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 14px -2px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 14px 28px -4px rgba(0, 0, 0, 0.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-base);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+    /* Mock Toolbar */
+    .mock-toolbar {
+      background: var(--color-surface-subtle);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.4rem var(--space-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      font-size: var(--font-size-xs);
+    }
+
+    .mock-toolbar-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+
+    .mock-btn {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .mock-btn.active {
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border-color: var(--color-primary);
+    }
+
+    /* Header */
+    .app-header {
+      background: var(--color-header);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem var(--space-lg);
+    }
+
+    .nav-container {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+
+    .brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-title .stud { color: var(--color-text); }
+    .brand-title .ride { color: var(--color-primary-wordmark); }
+    .brand-subtitle {
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .back-link {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-primary-ink);
+      text-decoration: none;
+    }
+
+    .back-link:hover { text-decoration: underline; }
+
+    /* Auth Layout */
+    .auth-shell {
+      flex: 1;
+      max-width: 1020px;
+      width: 100%;
+      margin: 0 auto;
+      padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: var(--space-2xl);
+      align-items: start;
+    }
+
+    .auth-aside {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      padding-top: var(--space-sm);
+    }
+
+    .aside-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.65rem, 2.8vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .aside-desc {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    .policy-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-top: var(--space-xs);
+    }
+
+    .policy-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.9rem;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .policy-item strong {
+      display: block;
+      color: var(--color-text);
+      font-size: var(--font-size-sm);
+      margin-bottom: 0.15rem;
+    }
+
+    /* Tabbed Auth Card */
+    .auth-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.35rem;
+      background: var(--color-bg);
+      padding: 0.3rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      min-height: 40px;
+      transition: all var(--transition-fast);
+    }
+
+    .tab-btn[aria-selected="true"] {
+      background: var(--color-surface);
+      color: var(--color-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-banner {
+      display: none;
+      padding: 0.75rem 0.9rem;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      gap: 0.55rem;
+      align-items: flex-start;
+    }
+
+    .status-banner.error {
+      background: rgba(185, 28, 28, 0.09);
+      border: 1px solid var(--color-error);
+      color: var(--color-text);
+    }
+
+    .status-banner.success {
+      background: var(--color-primary-soft);
+      border: 1px solid var(--color-primary);
+      color: var(--color-text);
+    }
+
+    .form-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .field label {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+    }
+
+    .input, .select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.55rem 0.85rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+    }
+
+    .input:focus, .select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
+    }
+
+    /* Live University Domain Detector (D-004) */
+    .domain-detector {
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: var(--font-size-xs);
+    }
+
+    .domain-detector.matched {
+      background: var(--color-primary-soft);
+      border-color: var(--color-primary);
+    }
+
+    .domain-detector.standard {
+      background: rgba(200, 130, 40, 0.10);
+      border-color: rgba(200, 130, 40, 0.4);
+    }
+
+    .domain-badge-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .uni-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 700;
+      color: var(--color-primary-ink);
+      font-size: var(--font-size-xs);
+    }
+
+    .disclosure-note {
+      color: var(--color-text-muted);
+      line-height: 1.4;
+    }
+
+    .quick-domains {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.25rem;
+    }
+
+    .domain-chip {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      border-radius: var(--radius-full);
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-family: var(--font-sans);
+      cursor: pointer;
+    }
+
+    .domain-chip:hover { background: var(--color-surface-subtle); }
+
+    /* Optional Gender Selector (D-018) */
+    .gender-group {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.9rem;
+      background: var(--color-bg);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .gender-legend {
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+    }
+
+    .gender-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.45rem;
+    }
+
+    .radio-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.4rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 40px;
+      text-align: center;
+    }
+
+    .radio-card input { accent-color: var(--color-primary); }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 44px;
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border: 1px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background var(--transition-fast);
+    }
+
+    .btn-primary:hover { background: var(--color-primary-hover); }
+    .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid rgba(252, 249, 244, 0.35);
+      border-top-color: var(--color-primary-contrast);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 820px) {
+      .auth-shell { grid-template-columns: 1fr; }
+      .gender-options { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-toolbar" role="region" aria-label="Controale previzualizare mock">
+    <div class="mock-toolbar-group">
+      <strong>DS-003 Mock:</strong>
+      <button type="button" class="mock-btn active" onclick="setState('default', this)">Default</button>
+      <button type="button" class="mock-btn" onclick="setState('loading', this)">Încărcare (Loading)</button>
+      <button type="button" class="mock-btn" onclick="setState('error', this)">Eroare (Error)</button>
+      <button type="button" class="mock-btn" onclick="setState('success', this)">Succes (Success)</button>
+    </div>
+    <div class="mock-toolbar-group">
+      <span>Temă:</span>
+      <button type="button" class="mock-btn" id="theme-btn" onclick="toggleTheme()">Luminos</button>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="DS-002-landing-search.html" class="brand-link">
+        <svg width="38" height="38" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="44" height="44" rx="10" fill="var(--color-primary)"/>
+          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="#FCF9F4"/>
+          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="#FCF9F4"/>
+          <path d="M21 15.2L11.5 16.8V23.5" stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M11.5 18.8V23.8" stroke="#FCF9F4" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M10.2 23.6H12.8L13.4 26.6H9.6L10.2 23.6Z" fill="#FCF9F4"/>
+          <path d="M23.5 15.2C28.5 15.5 33.5 18.5 34 23.5C34 28.5 29 32.5 22.5 32.5C17 32.5 13.5 33.5 10.5 36.5" stroke="#9AD6B6" stroke-width="2" stroke-linecap="round" stroke-dasharray="1.8 2.8"/>
+          <circle cx="34" cy="23.5" r="2.4" fill="var(--color-primary)" stroke="#FCF9F4" stroke-width="2"/>
+          <circle cx="22.5" cy="32.5" r="2.5" fill="#9AD6B6" stroke="#FCF9F4" stroke-width="1.8"/>
+          <circle cx="10.5" cy="36.5" r="2.4" fill="var(--color-primary)" stroke="#FCF9F4" stroke-width="2"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-title"><span class="stud">Stud</span><span class="ride">Ride</span></span>
+          <span class="brand-subtitle">STUDENT CARPOOLING</span>
+        </div>
+      </a>
+      <a href="DS-002-landing-search.html" class="back-link">← Înapoi la căutare</a>
+    </div>
+  </header>
+
+  <main class="auth-shell">
+    <section class="auth-aside" aria-labelledby="aside-heading">
+      <h1 class="aside-title" id="aside-heading">Acces transparent pentru comunitatea studențească</h1>
+      <p class="aside-desc">
+        Oricine își poate crea un cont cu o adresă de email validă. Dacă adresa aparține unui domeniu universitar din România, profilul primește automat badge-ul universitar.
+      </p>
+      <ul class="policy-list">
+        <li class="policy-item">
+          <strong>Badge universitar pe domeniu (D-004)</strong>
+          Etichetat explicit ca „Validat pe domeniu (nu identitate verificată)”. Nu verificăm accesul la căsuța poștală sau actul de identitate.
+        </li>
+        <li class="policy-item">
+          <strong>Opțiune privată pentru curse Women-only (D-018)</strong>
+          Genul auto-declarat rămâne privat și este folosit exclusiv pentru eligibilitatea curselor „Women-only” (doar conturile cu <strong>Femeie</strong> pot publica sau rezerva).
+        </li>
+        <li class="policy-item">
+          <strong>Reputație dublă din prima zi (D-016)</strong>
+          Fiecare cont nou începe cu scor de seriozitate 100% și rating 1–5 stele acordat doar după finalizarea cursei (D-008).
+        </li>
+      </ul>
+    </section>
+
+    <section class="auth-card" aria-label="Formular autentificare și înregistrare">
+      <div class="tabs" role="tablist" aria-label="Tip acces cont">
+        <button type="button" class="tab-btn" id="tab-register" role="tab" aria-selected="true" aria-controls="panel-register" onclick="switchTab('register')">Înregistrare</button>
+        <button type="button" class="tab-btn" id="tab-login" role="tab" aria-selected="false" aria-controls="panel-login" onclick="switchTab('login')">Autentificare</button>
+      </div>
+
+      <div id="banner-error" class="status-banner error" role="alert">
+        <div>
+          <strong>Autentificare eșuată:</strong> Adresa de email sau parola nu corespund. Verifică datele introduse și încearcă din nou.
+        </div>
+      </div>
+
+      <div id="banner-success" class="status-banner success" role="status" aria-live="polite">
+        <div>
+          <strong>Cont creat cu succes!</strong> Badge-ul <em>ULBS Sibiu · Validat pe domeniu (nu identitate verificată)</em> a fost atașat profilului tău.
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <form id="panel-register" class="form-panel" role="tabpanel" aria-labelledby="tab-register" onsubmit="event.preventDefault();">
+        <div class="field">
+          <label for="reg-name">Nume afișat</label>
+          <input id="reg-name" class="input" type="text" value="Ioana Popescu" autocomplete="name">
+        </div>
+
+        <div class="field">
+          <label for="reg-email">Adresă de email</label>
+          <input id="reg-email" class="input" type="email" value="ioana.popescu@ulbsibiu.ro" autocomplete="email" oninput="detectDomain(this.value)">
+          <div class="quick-domains" aria-label="Exemple rapide domenii">
+            <button type="button" class="domain-chip" onclick="setExampleEmail('ioana.popescu@ulbsibiu.ro')">@ulbsibiu.ro</button>
+            <button type="button" class="domain-chip" onclick="setExampleEmail('andrei.m@stud.ubbcluj.ro')">@stud.ubbcluj.ro</button>
+            <button type="button" class="domain-chip" onclick="setExampleEmail('darius@stud.acs.upb.ro')">@stud.acs.upb.ro</button>
+            <button type="button" class="domain-chip" onclick="setExampleEmail('student.test@gmail.com')">@gmail.com</button>
+          </div>
+        </div>
+
+        <!-- Live Romanian University Domain Detector (D-004) -->
+        <div id="domain-detector" class="domain-detector matched" role="status" aria-live="polite">
+          <div class="domain-badge-line">
+            <span class="uni-pill" id="domain-title">✓ ULBS Sibiu — Validat pe domeniu (nu identitate verificată)</span>
+          </div>
+          <p class="disclosure-note" id="domain-note">
+            Domeniul <strong>@ulbsibiu.ro</strong> este în lista universităților din România. Badge-ul indică exclusiv potrivirea formatului de domeniu, nu verificarea căsuței de email sau a identității fizice.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="reg-password">Parolă (minim 8 caractere)</label>
+          <input id="reg-password" class="input" type="password" value="••••••••••" autocomplete="new-password">
+        </div>
+
+        <!-- Optional Gender Selector (D-018) -->
+        <fieldset class="gender-group">
+          <legend class="gender-legend">Gen auto-declarat (opțional, privat · D-018)</legend>
+          <div class="gender-options">
+            <label class="radio-card">
+              <input type="radio" name="gender" value="female" checked>
+              <span>Femeie</span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="gender" value="male">
+              <span>Bărbat</span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="gender" value="prefer_not_to_say">
+              <span>Prefer să nu spun</span>
+            </label>
+          </div>
+          <p class="disclosure-note">
+            Folosit strict pentru eligibilitatea curselor „Women-only” (doar conturile cu „Femeie” pot publica sau rezerva curse Women-only). Auto-declarat și neverificat.
+          </p>
+        </fieldset>
+
+        <button type="submit" class="btn-primary" id="reg-submit">
+          <span class="spinner" id="reg-spinner" aria-hidden="true"></span>
+          <span id="reg-submit-text">Creează cont StudRide</span>
+        </button>
+      </form>
+
+      <!-- Login Form -->
+      <form id="panel-login" class="form-panel" role="tabpanel" aria-labelledby="tab-login" style="display: none;" onsubmit="event.preventDefault();">
+        <div class="field">
+          <label for="login-email">Adresă de email</label>
+          <input id="login-email" class="input" type="email" value="ioana.popescu@ulbsibiu.ro" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="login-password">Parolă</label>
+          <input id="login-password" class="input" type="password" value="••••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary" id="login-submit">
+          <span class="spinner" id="login-spinner" aria-hidden="true"></span>
+          <span id="login-submit-text">Intră în cont</span>
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const UNI_DOMAINS = {
+      'ulbsibiu.ro': 'ULBS Sibiu',
+      'stud.ubbcluj.ro': 'UBB Cluj-Napoca',
+      'student.utcluj.ro': 'UTCN Cluj-Napoca',
+      'student.upt.ro': 'UPT Timișoara',
+      'e-uvt.ro': 'UVT Timișoara',
+      'stud.acs.upb.ro': 'UPB București',
+      'unibuc.ro': 'Universitatea din București'
+    };
+
+    function detectDomain(email) {
+      const box = document.getElementById('domain-detector');
+      const title = document.getElementById('domain-title');
+      const note = document.getElementById('domain-note');
+      const parts = (email || '').trim().toLowerCase().split('@');
+      const domain = parts.length === 2 ? parts[1] : '';
+
+      box.classList.remove('matched', 'standard');
+
+      if (UNI_DOMAINS[domain]) {
+        box.classList.add('matched');
+        title.textContent = '✓ ' + UNI_DOMAINS[domain] + ' — Validat pe domeniu (nu identitate verificată)';
+        note.innerHTML = 'Domeniul <strong>@' + domain + '</strong> este în lista universităților din România. Badge-ul indică exclusiv potrivirea formatului de domeniu, nu verificarea căsuței de email sau a identității fizice.';
+      } else {
+        box.classList.add('standard');
+        title.textContent = 'Cont standard (fără badge universitar)';
+        note.textContent = 'Te poți înregistra cu orice adresă de email validă. Contul nu va afișa badge-ul „Validat pe domeniu (nu identitate verificată)”.';
+      }
+    }
+
+    function setExampleEmail(val) {
+      const input = document.getElementById('reg-email');
+      input.value = val;
+      detectDomain(val);
+    }
+
+    function switchTab(tab) {
+      const isReg = tab === 'register';
+      document.getElementById('tab-register').setAttribute('aria-selected', String(isReg));
+      document.getElementById('tab-login').setAttribute('aria-selected', String(!isReg));
+      document.getElementById('panel-register').style.display = isReg ? 'flex' : 'none';
+      document.getElementById('panel-login').style.display = isReg ? 'none' : 'flex';
+    }
+
+    function setState(state, btn) {
+      document.querySelectorAll('.mock-toolbar-group:first-child .mock-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const err = document.getElementById('banner-error');
+      const ok = document.getElementById('banner-success');
+      const regBtn = document.getElementById('reg-submit');
+      const regSpin = document.getElementById('reg-spinner');
+      const regTxt = document.getElementById('reg-submit-text');
+      const loginBtn = document.getElementById('login-submit');
+      const loginSpin = document.getElementById('login-spinner');
+      const loginTxt = document.getElementById('login-submit-text');
+
+      err.style.display = 'none';
+      ok.style.display = 'none';
+      regBtn.disabled = false;
+      regSpin.style.display = 'none';
+      regTxt.textContent = 'Creează cont StudRide';
+      loginBtn.disabled = false;
+      loginSpin.style.display = 'none';
+      loginTxt.textContent = 'Intră în cont';
+
+      if (state === 'loading') {
+        regBtn.disabled = true;
+        regSpin.style.display = 'inline-block';
+        regTxt.textContent = 'Se verifică datele...';
+        loginBtn.disabled = true;
+        loginSpin.style.display = 'inline-block';
+        loginTxt.textContent = 'Se autentifică...';
+      } else if (state === 'error') {
+        err.style.display = 'flex';
+      } else if (state === 'success') {
+        ok.style.display = 'flex';
+      }
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-btn').textContent = next === 'dark' ? 'Întunecat' : 'Luminos';
+    }
+  </script>
+</body>
+</html>

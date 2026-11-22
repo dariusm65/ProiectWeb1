@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudRide · Rezultate Căutare Curse (DS-004)</title>
+  <title>StudRide · Rezultate Căutare Curse &amp; Hartă (DS-004)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <style>
-    /* Design Tokens from docs/design/DESIGN.md */
     :root {
-      --color-primary: #0D9488;
-      --color-primary-hover: #0F766E;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
       --font-size-xs: 0.75rem;
       --font-size-sm: 0.875rem;
       --font-size-base: 1rem;
       --font-size-lg: 1.125rem;
       --font-size-xl: 1.375rem;
-      --font-size-2xl: 1.75rem;
+      --font-size-2xl: 1.875rem;
 
       --space-xs: 0.25rem;
       --space-sm: 0.5rem;
@@ -35,46 +35,63 @@
     }
 
     [data-theme="light"] {
-      --color-bg: #EBF0F5;
-      --color-header: #E3ECEF;
-      --color-surface: #F9FBFD;
-      --color-surface-subtle: #E2E9F0;
-      --color-border: #CBD5E1;
-      --color-border-subtle: #E2E8F0;
-      --color-text: #0F172A;
-      --color-text-muted: #64748B;
-      --color-accent: #0284C7;
-      --color-success: #059669;
-      --color-warning: #D97706;
-      --color-error: #DC2626;
-      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08);
-      --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.12);
+      --color-bg: #F5EFE6;
+      --color-surface: #FCF9F4;
+      --color-surface-subtle: #EAE1D3;
+      --color-header: rgba(245, 239, 230, 0.94);
+      --color-border: rgba(20, 61, 43, 0.14);
+      --color-border-subtle: rgba(20, 61, 43, 0.08);
+      --color-text: #13261D;
+      --color-text-muted: #53665C;
+      --color-primary: #143D2B;
+      --color-primary-hover: #1D543C;
+      --color-primary-contrast: #FCF9F4;
+      --color-primary-soft: #E3EDE7;
+      --color-primary-wordmark: #143D2B;
+      --color-primary-ink: #143D2B;
+      --color-accent: #C88228;
+      --color-node-terminal: #143D2B;
+      --color-node-terminal-ring: #B7DEC9;
+      --color-node-intermediate: #5E7368;
+      --color-success: #1D6F4B;
+      --color-warning: #C88228;
+      --color-error: #B91C1C;
+      --shadow-sm: 0 1px 2px rgba(19, 38, 29, 0.06);
+      --shadow-md: 0 4px 10px -2px rgba(19, 38, 29, 0.10);
+      --shadow-lg: 0 12px 24px -4px rgba(19, 38, 29, 0.14);
     }
 
     [data-theme="dark"] {
-      --color-bg: #0B1120;
-      --color-header: #0F172A;
-      --color-surface: #1E293B;
-      --color-surface-subtle: #131C31;
-      --color-border: #334155;
-      --color-border-subtle: #1E293B;
-      --color-text: #F8FAFC;
-      --color-text-muted: #94A3B8;
-      --color-accent: #38BDF8;
-      --color-success: #10B981;
-      --color-warning: #F59E0B;
+      --color-bg: #0E100F;
+      --color-surface: #171A18;
+      --color-surface-subtle: #1F2321;
+      --color-header: rgba(19, 22, 21, 0.94);
+      --color-border: rgba(244, 240, 232, 0.09);
+      --color-border-subtle: rgba(244, 240, 232, 0.05);
+      --color-text: #F4F0E8;
+      --color-text-muted: #9CA39F;
+      --color-primary: #1F6B47;
+      --color-primary-hover: #278257;
+      --color-primary-contrast: #F4F0E8;
+      --color-primary-soft: rgba(31, 107, 71, 0.18);
+      --color-primary-wordmark: #34A86B;
+      --color-primary-ink: #57C48B;
+      --color-accent: #E5A94C;
+      --color-node-terminal: #34A86B;
+      --color-node-terminal-ring: rgba(52, 168, 107, 0.28);
+      --color-node-intermediate: #8C9992;
+      --color-success: #34A86B;
+      --color-warning: #E5A94C;
       --color-error: #EF4444;
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 14px -2px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 14px 28px -4px rgba(0, 0, 0, 0.55);
     }
 
-    /* Base Reset */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
     }
 
     body {
@@ -88,56 +105,53 @@
       flex-direction: column;
     }
 
-    /* Mock Control Toolbar */
+    :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+    .tabular { font-variant-numeric: tabular-nums; }
+
+    /* Mock State Switcher */
     .mock-toolbar {
-      background: var(--color-header);
+      background: var(--color-surface-subtle);
       border-bottom: 1px solid var(--color-border);
-      padding: var(--space-xs) var(--space-md);
+      padding: 0.4rem var(--space-lg);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: var(--space-md);
+      flex-wrap: wrap;
       font-size: var(--font-size-xs);
-      z-index: 1000;
+      z-index: 60;
     }
 
-    .mock-toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-    }
+    .mock-toolbar-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 
     .mock-btn {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       color: var(--color-text);
-      padding: 4px 8px;
+      padding: 0.25rem 0.65rem;
       border-radius: var(--radius-sm);
-      font-size: var(--font-size-xs);
       font-family: var(--font-sans);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
       cursor: pointer;
-      transition: background var(--transition-fast);
-    }
-
-    .mock-btn:hover {
-      background: var(--color-surface-subtle);
     }
 
     .mock-btn.active {
       background: var(--color-primary);
-      color: #ffffff;
+      color: var(--color-primary-contrast);
       border-color: var(--color-primary);
-      font-weight: 600;
     }
 
-    /* Header & Navbar */
+    /* Sticky Header */
     .app-header {
-      background-color: var(--color-header);
-      border-bottom: 1px solid var(--color-border);
-      padding: var(--space-sm) var(--space-lg);
       position: sticky;
       top: 0;
       z-index: 50;
+      background: var(--color-header);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.7rem var(--space-lg);
     }
 
     .nav-container {
@@ -147,106 +161,81 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--space-md);
+      flex-wrap: wrap;
     }
 
     .brand-link {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: var(--space-sm);
+      gap: 0.65rem;
       text-decoration: none;
       color: inherit;
     }
 
-    .brand-logo-svg {
-      width: 32px;
-      height: 32px;
-      flex-shrink: 0;
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-    }
-
+    .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
     .brand-title {
-      font-size: var(--font-size-lg);
+      font-family: var(--font-display);
+      font-size: 1.3rem;
       font-weight: 700;
-      line-height: 1.1;
       letter-spacing: -0.02em;
     }
-
     .brand-title .stud { color: var(--color-text); }
-    .brand-title .ride { color: var(--color-accent); }
-
+    .brand-title .ride { color: var(--color-primary-wordmark); }
     .brand-subtitle {
-      font-size: 0.65rem;
+      font-size: 0.625rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.14em;
       color: var(--color-text-muted);
       text-transform: uppercase;
+      margin-top: 2px;
     }
 
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-    }
-
+    .nav-actions { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
     .nav-link {
       color: var(--color-text);
       text-decoration: none;
       font-size: var(--font-size-sm);
       font-weight: 500;
-      padding: var(--space-xs) var(--space-sm);
+      padding: 0.3rem 0.5rem;
       border-radius: var(--radius-sm);
     }
-
-    .nav-link:hover {
-      color: var(--color-accent);
-    }
+    .nav-link:hover { color: var(--color-primary-ink); }
 
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: var(--space-xs);
+      gap: 0.4rem;
       font-family: var(--font-sans);
       font-size: var(--font-size-sm);
       font-weight: 600;
-      padding: var(--space-xs) var(--space-md);
+      padding: 0.5rem 0.95rem;
       border-radius: var(--radius-md);
-      border: 1px solid transparent;
-      cursor: pointer;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
       text-decoration: none;
-      transition: all var(--transition-fast);
-      min-height: 36px;
+      cursor: pointer;
+      min-height: 38px;
+      transition: background var(--transition-fast), border-color var(--transition-fast);
     }
 
+    .btn:hover { background: var(--color-surface-subtle); }
+
     .btn-primary {
-      background-color: var(--color-primary);
-      color: #ffffff;
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
       border-color: var(--color-primary);
     }
 
     .btn-primary:hover {
-      background-color: var(--color-primary-hover);
+      background: var(--color-primary-hover);
       border-color: var(--color-primary-hover);
-    }
-
-    .btn-outline {
-      background-color: var(--color-surface);
-      color: var(--color-text);
-      border-color: var(--color-border);
-    }
-
-    .btn-outline:hover {
-      background-color: var(--color-surface-subtle);
-      border-color: var(--color-text-muted);
     }
 
     /* Search & Filter Bar */
     .search-section {
-      background-color: var(--color-surface);
+      background: var(--color-surface);
       border-bottom: 1px solid var(--color-border);
       padding: var(--space-md) var(--space-lg);
       box-shadow: var(--shadow-sm);
@@ -257,25 +246,20 @@
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
+      gap: 0.85rem;
     }
 
     .search-inputs-grid {
       display: grid;
-      grid-template-columns: 1.2fr 1.2fr 1fr auto;
+      grid-template-columns: 1.25fr 1.25fr 0.95fr auto;
       gap: var(--space-sm);
       align-items: end;
     }
 
-    .input-field {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-xs);
-    }
-
+    .input-field { display: flex; flex-direction: column; gap: 0.3rem; }
     .input-label {
       font-size: var(--font-size-xs);
-      font-weight: 600;
+      font-weight: 700;
       color: var(--color-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -288,492 +272,561 @@
       color: var(--color-text);
       font-family: var(--font-sans);
       font-size: var(--font-size-sm);
-      padding: var(--space-xs) var(--space-sm);
+      font-variant-numeric: tabular-nums;
+      padding: 0.5rem 0.75rem;
       border-radius: var(--radius-md);
       min-height: 40px;
-      outline: none;
-      transition: border-color var(--transition-fast);
     }
 
     .input-control:focus {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
     }
 
-    /* Radius & Preference Filters */
     .filter-pills-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
       gap: var(--space-md);
-      padding-top: var(--space-xs);
-      border-top: 1px dashed var(--color-border-subtle);
+      flex-wrap: wrap;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--color-border-subtle);
     }
 
-    .radius-group {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-    }
-
-    .filter-label {
-      font-size: var(--font-size-xs);
-      font-weight: 600;
-      color: var(--color-text-muted);
-      margin-right: var(--space-xs);
-    }
+    .radius-group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .filter-label { font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-muted); }
 
     .chip-btn {
-      background: var(--color-surface-subtle);
-      border: 1px solid var(--color-border);
-      color: var(--color-text);
-      padding: 3px 10px;
+      padding: 0.3rem 0.8rem;
       border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
       font-size: var(--font-size-xs);
-      font-family: var(--font-mono);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
       cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-
-    .chip-btn:hover {
-      border-color: var(--color-accent);
+      min-height: 30px;
     }
 
     .chip-btn.active {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-      color: #ffffff;
-      font-weight: 600;
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border-color: var(--color-primary);
     }
 
-    .filter-toggles {
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-    }
+    .filter-toggles { display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap; }
 
     .checkbox-label {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-xs);
+      gap: 0.45rem;
       font-size: var(--font-size-xs);
-      font-weight: 500;
-      cursor: pointer;
+      font-weight: 600;
       color: var(--color-text);
-      user-select: none;
+      cursor: pointer;
     }
 
-    .checkbox-label input {
-      accent-color: var(--color-primary);
-      width: 14px;
-      height: 14px;
-    }
+    .checkbox-label input { accent-color: var(--color-primary); width: 15px; height: 15px; }
 
-    /* Main Content: Split Results & Map */
+    /* Split Results & Sticky Map Layout */
     .main-layout {
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
       padding: var(--space-lg);
       display: grid;
-      grid-template-columns: 1fr 480px;
+      grid-template-columns: minmax(0, 1.38fr) minmax(360px, 0.92fr);
       gap: var(--space-lg);
+      align-items: start;
       flex: 1;
     }
 
-    /* Results Column */
-    .results-column {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-md);
-    }
+    .results-column { display: flex; flex-direction: column; gap: var(--space-md); }
 
-    .results-header-summary {
+    .results-header {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
       gap: var(--space-sm);
+      flex-wrap: wrap;
     }
 
     .results-count {
-      font-size: var(--font-size-lg);
+      font-family: var(--font-display);
+      font-size: var(--font-size-xl);
       font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
-    .results-filter-note {
+    .results-note {
       font-size: var(--font-size-xs);
       color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
     }
 
-    /* Ride Card */
-    .ride-card {
-      background-color: var(--color-surface);
+    /* Travel-Ticket Ride Card */
+    .ticket-card {
+      background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-md);
+      border-radius: 14px;
       box-shadow: var(--shadow-sm);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-md);
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 178px;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
       position: relative;
     }
 
-    .ride-card:hover {
+    .ticket-card:hover {
+      border-color: var(--color-primary);
       box-shadow: var(--shadow-md);
-      border-color: var(--color-accent);
+      transform: translateY(-1px);
     }
 
-    /* Card Top Bar: Driver & Badges */
-    .ride-card-top {
+    .ticket-card.selected {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px var(--color-primary-soft), var(--shadow-md);
+    }
+
+    .ticket-main {
+      padding: var(--space-md) var(--space-lg);
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-sm);
-      border-bottom: 1px solid var(--color-border-subtle);
-      padding-bottom: var(--space-sm);
+      flex-direction: column;
+      gap: 0.85rem;
     }
 
-    .driver-meta {
+    /* Driver Row */
+    .driver-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: var(--space-sm);
+      flex-wrap: wrap;
     }
+
+    .driver-meta { display: flex; align-items: center; gap: 0.7rem; }
 
     .driver-avatar {
       width: 40px;
       height: 40px;
       border-radius: var(--radius-full);
-      background: var(--color-surface-subtle);
+      background: var(--color-primary-soft);
+      color: var(--color-primary-ink);
       border: 1px solid var(--color-border);
       display: flex;
       align-items: center;
       justify-content: center;
+      font-family: var(--font-display);
       font-weight: 700;
       font-size: var(--font-size-sm);
-      color: var(--color-text);
       flex-shrink: 0;
     }
 
-    .driver-info {
-      display: flex;
-      flex-direction: column;
+    .driver-name-line { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .driver-name { font-weight: 700; font-size: var(--font-size-sm); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.18rem 0.52rem;
+      border-radius: var(--radius-full);
+      font-variant-numeric: tabular-nums;
     }
 
-    .driver-name-row {
+    .badge-uni {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-ink);
+      border: 1px solid var(--color-border);
+    }
+
+    .badge-women {
+      background: rgba(157, 23, 77, 0.10);
+      color: #9D174D;
+      border: 1px solid rgba(157, 23, 77, 0.26);
+    }
+
+    [data-theme="dark"] .badge-women {
+      background: rgba(244, 114, 182, 0.14);
+      color: #F472B6;
+      border-color: rgba(244, 114, 182, 0.30);
+    }
+
+    .badge-cancel {
+      background: rgba(185, 28, 28, 0.10);
+      color: var(--color-error);
+      border: 1px solid rgba(185, 28, 28, 0.28);
+    }
+
+    .rep-row {
       display: flex;
       align-items: center;
-      gap: var(--space-xs);
+      gap: 0.4rem;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
       flex-wrap: wrap;
     }
 
-    .driver-name {
-      font-size: var(--font-size-base);
+    .rep-stars { color: var(--color-accent); font-weight: 700; }
+    .rep-score { color: var(--color-success); font-weight: 700; }
+    .rep-score.warn { color: var(--color-warning); }
+
+    /* Horizontal Route Arc */
+    .route-arc-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--space-md);
+      padding: 0.45rem 0;
+    }
+
+    .endpoint { display: flex; flex-direction: column; }
+    .endpoint.right { text-align: right; }
+
+    .ep-time {
+      font-size: 1.15rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .ep-city {
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
       font-weight: 600;
+      letter-spacing: -0.02em;
       color: var(--color-text);
     }
 
-    .badge-university {
-      background: rgba(5, 150, 105, 0.12);
-      color: var(--color-success);
+    .ep-landmark {
       font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .arc-middle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      min-width: 110px;
+    }
+
+    .arc-meta {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
       font-weight: 600;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      border: 1px solid rgba(5, 150, 105, 0.25);
+    }
+
+    .arc-svg { width: 100%; height: 26px; overflow: visible; }
+
+    /* Expandable Intermediate Stops (D-005) */
+    .stops-details {
+      border-top: 1px solid var(--color-border-subtle);
+      padding-top: 0.55rem;
+    }
+
+    .stops-details summary {
+      list-style: none;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-    }
-
-    .badge-women-only {
-      background: rgba(2, 132, 199, 0.1);
-      color: var(--color-accent);
+      gap: 0.4rem;
       font-size: var(--font-size-xs);
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      border: 1px solid rgba(2, 132, 199, 0.2);
-    }
-
-    .badge-recent-cancel {
-      background: rgba(220, 38, 38, 0.1);
-      color: var(--color-error);
-      font-size: var(--font-size-xs);
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      border: 1px solid rgba(220, 38, 38, 0.2);
-    }
-
-    .driver-reputation-row {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-      font-size: var(--font-size-xs);
-      color: var(--color-text-muted);
-      margin-top: 2px;
-    }
-
-    .rep-stars {
-      color: #F59E0B;
-      font-weight: 600;
-      font-family: var(--font-mono);
-    }
-
-    .rep-score {
-      font-family: var(--font-mono);
-      font-weight: 600;
-      color: var(--color-success);
-    }
-
-    .rep-score.warning {
-      color: var(--color-warning);
-    }
-
-    /* Price & Booking Callout */
-    .card-price-block {
-      text-align: right;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
-
-    .price-amount {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xl);
       font-weight: 700;
-      color: var(--color-text);
-      line-height: 1;
+      color: var(--color-primary-ink);
+      cursor: pointer;
+      user-select: none;
     }
 
-    .price-currency {
-      font-size: var(--font-size-xs);
-      font-weight: 600;
-      color: var(--color-text-muted);
-      text-transform: uppercase;
-    }
+    .stops-details summary::-webkit-details-marker { display: none; }
 
-    .price-segment-note {
-      font-size: 0.7rem;
-      color: var(--color-text-muted);
-      margin-top: 2px;
-    }
-
-    /* Route Timeline & Intermediate Stops */
-    .route-timeline-container {
+    .stops-list {
+      margin-top: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius-md);
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-subtle);
       display: flex;
       flex-direction: column;
-      gap: var(--space-xs);
-      padding: var(--space-xs) 0;
+      gap: 0.4rem;
     }
 
-    .timeline-stop-row {
+    .stop-item {
       display: grid;
-      grid-template-columns: 60px 24px 1fr auto;
+      grid-template-columns: 46px 14px 1fr auto;
       align-items: center;
-      gap: var(--space-sm);
-      position: relative;
+      gap: 0.5rem;
+      font-size: var(--font-size-xs);
+      font-variant-numeric: tabular-nums;
     }
 
-    .stop-time {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--color-text);
-      text-align: right;
+    .stop-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-node-intermediate);
+      justify-self: center;
     }
 
-    .stop-marker {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-    }
-
-    .marker-dot {
+    .stop-dot.key {
       width: 10px;
       height: 10px;
-      border-radius: var(--radius-full);
-      background: var(--color-surface);
-      border: 2px solid var(--color-text-muted);
-      z-index: 2;
+      background: var(--color-node-terminal);
+      box-shadow: 0 0 0 3px var(--color-node-terminal-ring);
     }
 
-    .marker-dot.active {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
-    }
-
-    .timeline-line {
-      position: absolute;
-      top: 14px;
-      bottom: -14px;
-      left: calc(60px + var(--space-sm) + 11px);
-      width: 2px;
-      background: var(--color-border);
-      z-index: 1;
-    }
-
-    .stop-name-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .stop-city {
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--color-text);
-    }
-
-    .stop-city.highlight-match {
-      color: var(--color-primary);
-    }
-
-    .stop-landmark {
-      font-size: var(--font-size-xs);
-      color: var(--color-text-muted);
-    }
-
-    .stop-badge-chip {
+    .stop-tag {
       font-size: 0.7rem;
-      background: var(--color-surface-subtle);
-      color: var(--color-text-muted);
-      padding: 1px 6px;
+      padding: 0.1rem 0.45rem;
       border-radius: var(--radius-sm);
-      font-family: var(--font-mono);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-muted);
     }
 
-    /* Card Bottom: Segment Seat Availability & Booking */
-    .ride-card-footer {
+    /* Card Meta Footer */
+    .ticket-meta-foot {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--space-md);
-      background: var(--color-surface-subtle);
-      border-radius: var(--radius-md);
-      padding: var(--space-sm) var(--space-md);
-      margin-top: var(--space-xs);
-    }
-
-    .seat-status-group {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
+      gap: var(--space-sm);
+      flex-wrap: wrap;
       font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
     }
 
-    .seat-icon {
-      color: var(--color-primary);
-    }
-
-    .seat-count-bold {
-      font-family: var(--font-mono);
+    .seat-pill {
       font-weight: 700;
       color: var(--color-success);
     }
 
-    .preferences-icons {
+    .seat-pill.low { color: var(--color-warning); }
+
+    /* Perforated Right-Hand Ticket Stub */
+    .ticket-stub {
+      border-left: 2px dashed var(--color-border);
+      padding: var(--space-md);
       display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
+      text-align: center;
       gap: var(--space-sm);
+      position: relative;
+      background: linear-gradient(180deg, transparent 0%, rgba(20, 61, 43, 0.025) 100%);
+      border-radius: 0 14px 14px 0;
+    }
+
+    .ticket-stub::before,
+    .ticket-stub::after {
+      content: "";
+      position: absolute;
+      left: -10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+    }
+
+    .ticket-stub::before {
+      top: -10px;
+      clip-path: inset(50% 0 0 0);
+    }
+
+    .ticket-stub::after {
+      bottom: -10px;
+      clip-path: inset(0 0 50% 0);
+    }
+
+    .stub-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
       color: var(--color-text-muted);
+    }
+
+    .stub-price {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.2rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stub-amount {
+      font-family: var(--font-sans);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--color-text);
+    }
+
+    .stub-currency {
+      font-size: var(--font-size-sm);
+      font-weight: 700;
+      color: var(--color-primary-ink);
+    }
+
+    .stub-seat-rule {
+      font-size: 0.7rem;
+      color: var(--color-text-muted);
+      line-height: 1.3;
+    }
+
+    .stub-cta {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.45rem 0.7rem;
       font-size: var(--font-size-xs);
     }
 
-    /* Map Column View */
+    /* Sticky Right Column: Topographic Map + D-010 Fuel Split Box */
     .map-column {
       position: sticky;
-      top: calc(70px + var(--space-md));
-      height: calc(100vh - 120px);
-      background-color: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
+      top: 76px;
       display: flex;
       flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .map-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      overflow: hidden;
       box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
     }
 
     .map-header {
-      padding: var(--space-sm) var(--space-md);
-      background: var(--color-header);
+      padding: 0.65rem var(--space-md);
+      background: var(--color-surface-subtle);
       border-bottom: 1px solid var(--color-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: var(--space-sm);
       font-size: var(--font-size-xs);
-      font-weight: 600;
+      font-weight: 700;
     }
 
-    .map-canvas-container {
-      flex: 1;
-      background: var(--color-bg);
+    .map-canvas {
       position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      height: 310px;
+      background: var(--color-bg);
     }
 
-    .map-svg-mock {
-      width: 100%;
-      height: 100%;
-    }
+    .map-svg { width: 100%; height: 100%; display: block; }
 
-    .map-overlay-card {
+    .map-overlay {
       position: absolute;
-      bottom: var(--space-md);
-      left: var(--space-md);
-      right: var(--space-md);
+      bottom: 0.75rem;
+      left: 0.75rem;
+      right: 0.75rem;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-md);
-      padding: var(--space-sm) var(--space-md);
+      padding: 0.55rem 0.75rem;
       box-shadow: var(--shadow-md);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: var(--space-sm);
       font-size: var(--font-size-xs);
+      font-variant-numeric: tabular-nums;
     }
 
-    /* Empty State */
-    .empty-state-card {
+    /* D-010 Transparent Fuel Split Box */
+    .fuel-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      padding: var(--space-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .fuel-box-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+
+    .fuel-title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .fuel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      padding: 0.25rem 0;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .fuel-row:last-of-type { border-bottom: none; }
+    .fuel-row strong { color: var(--color-text); }
+
+    .fuel-formula {
+      font-size: 0.72rem;
+      color: var(--color-primary-ink);
+      background: var(--color-primary-soft);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 0.5rem 0.65rem;
+      line-height: 1.4;
+    }
+
+    /* States: Loading, Empty, Error */
+    .state-panel { display: none; flex-direction: column; gap: var(--space-md); }
+
+    .empty-card {
       background: var(--color-surface);
       border: 1px dashed var(--color-border);
-      border-radius: var(--radius-lg);
+      border-radius: 14px;
       padding: var(--space-2xl) var(--space-lg);
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: var(--space-md);
+      gap: var(--space-sm);
     }
 
-    .empty-state-icon {
-      width: 48px;
-      height: 48px;
-      color: var(--color-text-muted);
-    }
-
-    .empty-state-title {
+    .empty-title {
+      font-family: var(--font-display);
       font-size: var(--font-size-lg);
       font-weight: 700;
-      color: var(--color-text);
+      letter-spacing: -0.02em;
     }
 
-    .empty-state-desc {
+    .empty-desc {
       font-size: var(--font-size-sm);
       color: var(--color-text-muted);
-      max-width: 420px;
-      line-height: 1.4;
+      max-width: 44ch;
     }
 
-    /* Error State */
     .error-banner {
-      background: rgba(220, 38, 38, 0.08);
+      background: rgba(185, 28, 28, 0.09);
       border: 1px solid var(--color-error);
       border-radius: var(--radius-md);
       padding: var(--space-md);
@@ -781,106 +834,74 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--space-md);
-      color: var(--color-text);
       font-size: var(--font-size-sm);
     }
 
-    .error-banner-content {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-
-    /* Loading Skeletons */
     .skeleton {
       background: linear-gradient(90deg, var(--color-surface-subtle) 25%, var(--color-border) 50%, var(--color-surface-subtle) 75%);
       background-size: 200% 100%;
-      animation: skeleton-loading 1.5s infinite;
+      animation: shimmer 1.4s infinite;
       border-radius: var(--radius-sm);
     }
 
-    @keyframes skeleton-loading {
+    @keyframes shimmer {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
 
-    .skeleton-text { height: 14px; width: 60%; }
-    .skeleton-title { height: 20px; width: 40%; }
-    .skeleton-avatar { width: 40px; height: 40px; border-radius: var(--radius-full); }
-    .skeleton-price { width: 70px; height: 32px; }
-
-    /* Responsiveness */
-    @media (max-width: 1024px) {
-      .main-layout {
-        grid-template-columns: 1fr;
-      }
-      .map-column {
-        position: relative;
-        top: 0;
-        height: 340px;
-        order: -1;
-      }
-      .search-inputs-grid {
-        grid-template-columns: 1fr 1fr;
-      }
+    @media (max-width: 1080px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .map-column { position: static; order: -1; }
+      .search-inputs-grid { grid-template-columns: 1fr 1fr; }
     }
 
-    @media (max-width: 640px) {
-      .search-inputs-grid {
-        grid-template-columns: 1fr;
+    @media (max-width: 680px) {
+      .search-inputs-grid { grid-template-columns: 1fr; }
+      .ticket-card { grid-template-columns: 1fr; }
+      .ticket-stub {
+        border-left: none;
+        border-top: 2px dashed var(--color-border);
+        border-radius: 0 0 14px 14px;
+        flex-direction: row;
+        justify-content: space-between;
+        text-align: left;
       }
-      .filter-pills-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .ride-card-top {
-        flex-direction: column;
-      }
-      .card-price-block {
-        align-items: flex-start;
-      }
+      .ticket-stub::before, .ticket-stub::after { display: none; }
+      .stub-cta { width: auto; }
     }
   </style>
 </head>
 <body>
-
   <!-- Mock Interactive State Switcher -->
-  <div class="mock-toolbar">
+  <div class="mock-toolbar" role="region" aria-label="Controale previzualizare mock">
     <div class="mock-toolbar-group">
       <strong>DS-004 Mock:</strong>
-      <button class="mock-btn active" onclick="switchState('success')">Succes (Real)</button>
-      <button class="mock-btn" onclick="switchState('empty')">Gol (Empty)</button>
-      <button class="mock-btn" onclick="switchState('loading')">Încărcare (Loading)</button>
-      <button class="mock-btn" onclick="switchState('error')">Eroare (Error)</button>
-      <button class="mock-btn" onclick="switchState('long')">Traseu Lung (6 opriri)</button>
+      <button type="button" class="mock-btn active" onclick="switchState('success', this)">Succes (Success)</button>
+      <button type="button" class="mock-btn" onclick="switchState('loading', this)">Încărcare (Loading)</button>
+      <button type="button" class="mock-btn" onclick="switchState('empty', this)">Gol (Empty)</button>
+      <button type="button" class="mock-btn" onclick="switchState('error', this)">Eroare (Error)</button>
     </div>
     <div class="mock-toolbar-group">
       <span>Temă:</span>
-      <button class="mock-btn" id="theme-btn" onclick="toggleTheme()">☀️ Luminos</button>
+      <button type="button" class="mock-btn" id="theme-btn" onclick="toggleTheme()">Luminos</button>
     </div>
   </div>
 
-  <!-- StudRide Header -->
+  <!-- Header -->
   <header class="app-header">
     <div class="nav-container">
-      <a href="#home" class="brand-link">
-        <!-- StudRide SVG Brand Mark (D-001) -->
-        <svg width="40" height="40" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="44" height="44" rx="10" fill="var(--color-primary, #0D9488)"/>
-          <!-- Mortarboard top diamond -->
-          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="#FFFFFF"/>
-          <!-- Faceted cap base (sharp V-bottom, not a U-loop) -->
-          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="#FFFFFF"/>
-          <!-- Left tassel -->
-          <path d="M21 15.2L11.5 16.8V23.5" stroke="#0D9488" stroke-width="1.6" stroke-linecap="round"/>
-          <path d="M11.5 18.8V23.8" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M10.2 23.6H12.8L13.4 26.6H9.6L10.2 23.6Z" fill="#FFFFFF"/>
-          <!-- Cyan dotted route wrapping cleanly from cap center -> right -> under cap -> bottom-left -->
-          <path d="M23.5 15.2C28.5 15.5 33.5 18.5 34 23.5C34 28.5 29 32.5 22.5 32.5C17 32.5 13.5 33.5 10.5 36.5" stroke="#BAE6FD" stroke-width="2" stroke-linecap="round" stroke-dasharray="1.8 2.8"/>
-          <!-- 3 hollow cyan nodes -->
-          <circle cx="34" cy="23.5" r="2.4" fill="var(--color-primary, #0D9488)" stroke="#BAE6FD" stroke-width="2"/>
-          <circle cx="22.5" cy="32.5" r="2.5" fill="var(--color-primary, #0D9488)" stroke="#BAE6FD" stroke-width="2"/>
-          <circle cx="10.5" cy="36.5" r="2.4" fill="var(--color-primary, #0D9488)" stroke="#BAE6FD" stroke-width="2"/>
+      <a href="DS-002-landing-search.html" class="brand-link">
+        <svg width="38" height="38" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="44" height="44" rx="10" fill="var(--color-primary)"/>
+          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="#FCF9F4"/>
+          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="#FCF9F4"/>
+          <path d="M21 15.2L11.5 16.8V23.5" stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M11.5 18.8V23.8" stroke="#FCF9F4" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M10.2 23.6H12.8L13.4 26.6H9.6L10.2 23.6Z" fill="#FCF9F4"/>
+          <path d="M23.5 15.2C28.5 15.5 33.5 18.5 34 23.5C34 28.5 29 32.5 22.5 32.5C17 32.5 13.5 33.5 10.5 36.5" stroke="#9AD6B6" stroke-width="2" stroke-linecap="round" stroke-dasharray="1.8 2.8"/>
+          <circle cx="34" cy="23.5" r="2.4" fill="var(--color-primary)" stroke="#FCF9F4" stroke-width="2"/>
+          <circle cx="22.5" cy="32.5" r="2.5" fill="#9AD6B6" stroke="#FCF9F4" stroke-width="1.8"/>
+          <circle cx="10.5" cy="36.5" r="2.4" fill="var(--color-primary)" stroke="#FCF9F4" stroke-width="2"/>
         </svg>
         <div class="brand-text">
           <span class="brand-title"><span class="stud">Stud</span><span class="ride">Ride</span></span>
@@ -888,52 +909,49 @@
         </div>
       </a>
 
-      <nav class="nav-actions">
-        <a href="#search" class="nav-link">Caută cursă</a>
-        <a href="#publish" class="btn btn-outline">+ Publică cursă</a>
-        <a href="#rides" class="nav-link">Cursele mele</a>
-        <a href="#profile" class="nav-link">Profilul meu</a>
+      <nav class="nav-actions" aria-label="Navigație principală">
+        <a href="DS-002-landing-search.html" class="nav-link">Acasă</a>
+        <a href="#publish" class="btn">+ Publică cursă</a>
+        <a href="#dashboard" class="nav-link">Cursele mele</a>
+        <a href="DS-003-auth.html" class="nav-link">Contul meu</a>
       </nav>
     </div>
   </header>
 
-  <!-- Search & Filter Controls -->
-  <section class="search-section">
+  <!-- Search & Filters -->
+  <section class="search-section" aria-label="Filtre căutare curse">
     <div class="search-container">
       <div class="search-inputs-grid">
         <div class="input-field">
           <label class="input-label" for="search-origin">Plecare (Origine)</label>
-          <input type="text" id="search-origin" class="input-control" value="Cluj-Napoca (Campus Hașdeu)">
+          <input id="search-origin" type="text" class="input-control" value="Cluj-Napoca (Campus Hașdeu)">
         </div>
         <div class="input-field">
           <label class="input-label" for="search-dest">Destinație</label>
-          <input type="text" id="search-dest" class="input-control" value="Sibiu (Gara Mare)">
+          <input id="search-dest" type="text" class="input-control" value="Sibiu (Gara Mare)">
         </div>
         <div class="input-field">
           <label class="input-label" for="search-date">Data plecării</label>
-          <input type="date" id="search-date" class="input-control" value="2026-11-20">
+          <input id="search-date" type="date" class="input-control" value="2026-11-20">
         </div>
-        <button class="btn btn-primary" style="height: 40px; padding: 0 var(--space-lg);">
-          Caută curse
-        </button>
+        <button type="button" class="btn btn-primary" style="min-height: 40px; padding: 0 1.3rem;">Caută curse</button>
       </div>
 
-      <!-- Filters: Radius & Preferences (from SURVEY.md) -->
       <div class="filter-pills-row">
-        <div class="radius-group">
-          <span class="filter-label">Rază de căutare:</span>
-          <button class="chip-btn active" onclick="setRadius(this, '1 km')">1 km (Implicit)</button>
-          <button class="chip-btn" onclick="setRadius(this, '3 km')">3 km</button>
-          <button class="chip-btn" onclick="setRadius(this, '5 km')">5 km</button>
+        <div class="radius-group" role="group" aria-label="Rază de căutare">
+          <span class="filter-label">Rază de căutare (D-017):</span>
+          <button type="button" class="chip-btn active" onclick="setRadius(this, '1 km')">1 km (Implicit)</button>
+          <button type="button" class="chip-btn" onclick="setRadius(this, '3 km')">3 km</button>
+          <button type="button" class="chip-btn" onclick="setRadius(this, '5 km')">5 km</button>
         </div>
 
         <div class="filter-toggles">
           <label class="checkbox-label">
-            <input type="checkbox" id="filter-women-only">
+            <input type="checkbox" id="filter-women" onchange="applyFilters()">
             <span>Doar curse pentru femei (Women-only)</span>
           </label>
           <label class="checkbox-label">
-            <input type="checkbox" id="filter-verified" checked>
+            <input type="checkbox" id="filter-uni" checked onchange="applyFilters()">
             <span>Doar șoferi validați universitar</span>
           </label>
         </div>
@@ -941,473 +959,528 @@
     </div>
   </section>
 
-  <!-- Split Results & Interactive Map Layout -->
+  <!-- Main Split Layout -->
   <main class="main-layout">
-
-    <!-- Results List Column -->
-    <div class="results-column" id="results-view">
-
-      <!-- State: Error Banner -->
-      <div id="state-error" class="error-banner" style="display: none;">
-        <div class="error-banner-content">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
+    <section class="results-column" aria-label="Lista de curse disponibile">
+      <!-- State: Error -->
+      <div id="state-error" class="state-panel">
+        <div class="error-banner" role="alert">
           <div>
-            <strong>Eroare la căutarea segmentelor:</strong> Serviciul de geocodare nu răspunde momentan.
+            <strong>Eroare la căutarea segmentelor:</strong> Serviciul de geocodare (Nominatim/Photon) nu răspunde momentan. Reîncearcă peste câteva secunde.
           </div>
+          <button type="button" class="btn" onclick="switchState('success', document.querySelector('.mock-toolbar .mock-btn'))">Reîncearcă</button>
         </div>
-        <button class="btn btn-outline" style="border-color: var(--color-error); font-size: var(--font-size-xs);" onclick="switchState('success')">Reîncearcă</button>
       </div>
 
-      <!-- Results Header Count -->
-      <div class="results-header-summary" id="results-summary">
-        <h1 class="results-count">3 curse disponibile</h1>
-        <span class="results-filter-note">Segment: Cluj-Napoca → Sibiu · Rază 1 km</span>
-      </div>
-
-      <!-- State: Loading Skeleton Container -->
-      <div id="state-loading" style="display: none; display: flex; flex-direction: column; gap: var(--space-md);">
-        <div class="ride-card">
-          <div class="ride-card-top">
-            <div class="driver-meta">
-              <div class="skeleton skeleton-avatar"></div>
-              <div style="display: flex; flex-direction: column; gap: 6px; width: 180px;">
-                <div class="skeleton skeleton-title"></div>
-                <div class="skeleton skeleton-text"></div>
+      <!-- State: Loading -->
+      <div id="state-loading" class="state-panel" aria-busy="true" aria-label="Se încarcă rezultatele">
+        <div class="ticket-card" style="cursor: default;">
+          <div class="ticket-main">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 50%;"></div>
+              <div style="display: flex; flex-direction: column; gap: 6px; width: 200px;">
+                <div class="skeleton" style="height: 15px; width: 70%;"></div>
+                <div class="skeleton" style="height: 12px; width: 90%;"></div>
               </div>
             </div>
-            <div class="skeleton skeleton-price"></div>
+            <div class="skeleton" style="height: 36px; width: 100%;"></div>
+            <div class="skeleton" style="height: 14px; width: 55%;"></div>
           </div>
-          <div style="height: 70px; display: flex; flex-direction: column; gap: 10px; justify-content: center;">
-            <div class="skeleton" style="height: 14px; width: 85%;"></div>
-            <div class="skeleton" style="height: 14px; width: 70%;"></div>
+          <div class="ticket-stub">
+            <div class="skeleton" style="height: 12px; width: 65%;"></div>
+            <div class="skeleton" style="height: 34px; width: 70%;"></div>
+            <div class="skeleton" style="height: 36px; width: 100%; border-radius: 8px;"></div>
           </div>
-          <div class="skeleton" style="height: 38px; border-radius: var(--radius-md);"></div>
         </div>
       </div>
 
-      <!-- State: Empty View Container -->
-      <div id="state-empty" class="empty-state-card" style="display: none;">
-        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M16 16s-1.5-2-4-2-4 2-4 2"/>
-          <line x1="9" y1="9" x2="9.01" y2="9"/>
-          <line x1="15" y1="9" x2="15.01" y2="9"/>
-        </svg>
-        <div class="empty-state-title">Nicio cursă găsită pe acest segment</div>
-        <div class="empty-state-desc">
-          Nu există șoferi care trec prin punctele selectate pe 20 Nov 2026 în raza de 1 km.
-          Încearcă să extinzi raza de căutare la 3 km sau 5 km pentru a include opririle de pe centură.
-        </div>
-        <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-xs);">
-          <button class="btn btn-outline" onclick="setRadius(document.querySelectorAll('.chip-btn')[1], '3 km'); switchState('success');">Extinde la 3 km</button>
-          <button class="btn btn-primary" onclick="setRadius(document.querySelectorAll('.chip-btn')[2], '5 km'); switchState('success');">Extinde la 5 km</button>
+      <!-- State: Empty -->
+      <div id="state-empty" class="state-panel">
+        <div class="empty-card">
+          <h1 class="empty-title">Nicio cursă găsită pe acest segment</h1>
+          <p class="empty-desc">
+            Nu există șoferi disponibili pe 20 Nov 2026 în raza de 1 km. Încearcă să extinzi raza de căutare la 3 km sau 5 km pentru a include opririle de pe centură.
+          </p>
+          <div style="display: flex; gap: var(--space-sm); margin-top: 0.5rem;">
+            <button type="button" class="btn" onclick="setRadius(document.querySelectorAll('.chip-btn')[1], '3 km'); switchState('success', document.querySelector('.mock-toolbar .mock-btn'));">Extinde la 3 km</button>
+            <button type="button" class="btn btn-primary" onclick="setRadius(document.querySelectorAll('.chip-btn')[2], '5 km'); switchState('success', document.querySelector('.mock-toolbar .mock-btn'));">Extinde la 5 km</button>
+          </div>
         </div>
       </div>
 
-      <!-- State: Success View (Real survey routes) -->
-      <div id="state-success" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <!-- State: Success -->
+      <div id="state-success" class="state-panel" style="display: flex;">
+        <div class="results-header">
+          <h1 class="results-count" id="results-count">3 curse disponibile</h1>
+          <span class="results-note" id="results-note">Rază activă: 1 km · 1 loc / pasager</span>
+        </div>
 
-        <!-- Ride Card 1: Sibiu -> Cluj-Napoca (Alba Iulia & Turda stops) -->
-        <article class="ride-card">
-          <div class="ride-card-top">
-            <div class="driver-meta">
-              <div class="driver-avatar">AM</div>
-              <div class="driver-info">
-                <div class="driver-name-row">
-                  <span class="driver-name">Andrei M.</span>
-                  <!-- Domain-validated university badge (CONTEXT.md) -->
-                  <span class="badge-university" title="Email validat: @stud.ubbcluj.ro">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                    UBB Cluj
-                  </span>
-                  <span class="badge-women-only">Women-only</span>
-                </div>
-                <div class="driver-reputation-row">
-                  <span class="rep-stars">★ 4.95</span>
-                  <span>(24 curse)</span>
-                  <span>·</span>
-                  <span class="rep-score" title="Scor seriozitate calculat din evenimente">100% seriozitate</span>
+        <!-- Ride 1: Women-only with Female Driver (D-018) -->
+        <article class="ticket-card selected" data-ride="r1" data-women="true" data-uni="true" onclick="selectRide('r1')">
+          <div class="ticket-main">
+            <div class="driver-row">
+              <div class="driver-meta">
+                <div class="driver-avatar" aria-hidden="true">IP</div>
+                <div>
+                  <div class="driver-name-line">
+                    <span class="driver-name">Ioana P.</span>
+                    <span class="badge badge-uni" title="Validat pe domeniu (nu identitate verificată): @stud.ubbcluj.ro">UBB Cluj · Validat pe domeniu</span>
+                    <span class="badge badge-women" title="Eligibil doar pentru femei (D-018)">Women-only</span>
+                  </div>
+                  <div class="rep-row">
+                    <span class="rep-stars">★ 4.95</span>
+                    <span>(24 curse)</span>
+                    <span>·</span>
+                    <span class="rep-score">100% seriozitate</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Price & Segment Note (D-010) -->
-            <div class="card-price-block">
-              <div>
-                <span class="price-amount">38</span>
-                <span class="price-currency">lei</span>
+            <div class="route-arc-row">
+              <div class="endpoint">
+                <span class="ep-time">16:30</span>
+                <span class="ep-city">Cluj-Napoca</span>
+                <span class="ep-landmark">Campus Hașdeu</span>
               </div>
-              <span class="price-segment-note">preț segment Cluj → Sibiu</span>
+              <div class="arc-middle">
+                <span class="arc-meta">168 km · 2 opriri</span>
+                <svg class="arc-svg" viewBox="0 0 180 26" fill="none" aria-hidden="true">
+                  <path d="M8 20 Q 90 -4 172 20" stroke="var(--color-primary)" stroke-width="2" stroke-dasharray="4 4"/>
+                  <circle cx="8" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="8" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                  <circle cx="64" cy="10" r="3" fill="var(--color-node-intermediate)"/>
+                  <circle cx="116" cy="10" r="3" fill="var(--color-node-intermediate)"/>
+                  <circle cx="172" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="172" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                </svg>
+              </div>
+              <div class="endpoint right">
+                <span class="ep-time">19:15</span>
+                <span class="ep-city">Sibiu</span>
+                <span class="ep-landmark">Gara Mare</span>
+              </div>
+            </div>
+
+            <details class="stops-details" open onclick="event.stopPropagation();">
+              <summary>Vezi opririle intermediare (4 opriri · D-005)</summary>
+              <div class="stops-list">
+                <div class="stop-item"><strong>16:30</strong><span class="stop-dot key"></span><span><strong>Cluj-Napoca</strong> · Campus Hașdeu</span><span class="stop-tag">Urcare</span></div>
+                <div class="stop-item"><span>17:05</span><span class="stop-dot"></span><span>Turda · Parcare Penny</span><span class="stop-tag">2 locuri</span></div>
+                <div class="stop-item"><span>17:55</span><span class="stop-dot"></span><span>Alba Iulia · OMV Calea Moților</span><span class="stop-tag">2 locuri</span></div>
+                <div class="stop-item"><strong>19:15</strong><span class="stop-dot key"></span><span><strong>Sibiu</strong> · Gara Mare</span><span class="stop-tag">Coborâre</span></div>
+              </div>
+            </details>
+
+            <div class="ticket-meta-foot">
+              <span>Disponibilitate segment: <span class="seat-pill">2 locuri libere din 3</span></span>
+              <span>Bagaj mediu · Fără fumat · Animale OK</span>
             </div>
           </div>
 
-          <!-- Vertical Timeline with Segment Highlighting (Twist) -->
-          <div class="route-timeline-container">
-            <!-- Origin Stop -->
-            <div class="timeline-stop-row">
-              <span class="stop-time">16:30</span>
-              <div class="stop-marker">
-                <span class="marker-dot active"></span>
-              </div>
-              <div class="stop-name-group">
-                <span class="stop-city highlight-match">Cluj-Napoca</span>
-                <span class="stop-landmark">Campus Hașdeu (Punct urcare căutat)</span>
-              </div>
-              <span class="stop-badge-chip">Urcare pasager</span>
+          <div class="ticket-stub">
+            <span class="stub-kicker">Preț segment</span>
+            <div class="stub-price">
+              <span class="stub-amount">38</span>
+              <span class="stub-currency">lei</span>
             </div>
-            <div class="timeline-line"></div>
-
-            <!-- Intermediate Stop 1 -->
-            <div class="timeline-stop-row" style="margin: 6px 0;">
-              <span class="stop-time" style="color: var(--color-text-muted);">17:05</span>
-              <div class="stop-marker">
-                <span class="marker-dot"></span>
-              </div>
-              <div class="stop-name-group">
-                <span class="stop-city">Turda</span>
-                <span class="stop-landmark">Parcare Penny / Centru</span>
-              </div>
-              <span class="stop-badge-chip" style="opacity: 0.7;">Oprire intermediară</span>
-            </div>
-
-            <!-- Intermediate Stop 2 -->
-            <div class="timeline-stop-row" style="margin: 6px 0;">
-              <span class="stop-time" style="color: var(--color-text-muted);">17:55</span>
-              <div class="stop-marker">
-                <span class="marker-dot"></span>
-              </div>
-              <div class="stop-name-group">
-                <span class="stop-city">Alba Iulia</span>
-                <span class="stop-landmark">Gara / OMV Calea Moților</span>
-              </div>
-              <span class="stop-badge-chip" style="opacity: 0.7;">Oprire intermediară</span>
-            </div>
-
-            <!-- Destination Stop -->
-            <div class="timeline-stop-row">
-              <span class="stop-time">19:15</span>
-              <div class="stop-marker">
-                <span class="marker-dot active"></span>
-              </div>
-              <div class="stop-name-group">
-                <span class="stop-city highlight-match">Sibiu</span>
-                <span class="stop-landmark">Gara Mare (Punct coborâre căutat)</span>
-              </div>
-              <span class="stop-badge-chip">Coborâre</span>
-            </div>
-          </div>
-
-          <!-- Bottom: Segment Seat Availability & Booking Action -->
-          <div class="ride-card-footer">
-            <div class="seat-status-group">
-              <svg class="seat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/>
-                <path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>
-                <path d="M5 18v2M19 18v2"/>
-              </svg>
-              <!-- Segment availability display (pure function output) -->
-              <span>Disponibilitate segment: <span class="seat-count-bold">2 locuri libere</span></span>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: var(--space-md);">
-              <div class="preferences-icons" title="Bagaj mediu, fără fumat, animale permise">
-                <span title="Bagaj mediu inclus">🧳 Mediu</span>
-                <span title="Fără fumat">🚭 Fără fum</span>
-                <span title="Animale permise">🐾 Animale OK</span>
-              </div>
-              <a href="#book-ds005" class="btn btn-primary" style="min-height: 32px; padding: 4px 12px; font-size: var(--font-size-xs);">
-                Rezervă segment
-              </a>
-            </div>
+            <span class="stub-seat-rule">1 loc / pasager<br>Cost împărțit D-010</span>
+            <button type="button" class="btn btn-primary stub-cta" onclick="event.stopPropagation();">Rezervă segment</button>
           </div>
         </article>
 
-        <!-- Ride Card 2: Sibiu -> Cluj-Napoca (Alba Iulia stop, partially booked segment) -->
-        <article class="ride-card">
-          <div class="ride-card-top">
-            <div class="driver-meta">
-              <div class="driver-avatar" style="background: rgba(2, 132, 199, 0.15); color: var(--color-accent);">RD</div>
-              <div class="driver-info">
-                <div class="driver-name-row">
-                  <span class="driver-name">Radu D.</span>
-                  <span class="badge-university" title="Email validat: @ulbsibiu.ro">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                    ULBS Sibiu
-                  </span>
-                  <span class="badge-recent-cancel" title="Anulare în ziua cursei în ultimele 30 zile (-5 puncte)">Anulare recentă</span>
-                </div>
-                <div class="driver-reputation-row">
-                  <span class="rep-stars">★ 4.80</span>
-                  <span>(12 curse)</span>
-                  <span>·</span>
-                  <span class="rep-score warning" title="Scor scăzut după anulare recentă">95% seriozitate</span>
+        <!-- Ride 2: Recent Cancellation Badge (D-016) -->
+        <article class="ticket-card" data-ride="r2" data-women="false" data-uni="true" onclick="selectRide('r2')">
+          <div class="ticket-main">
+            <div class="driver-row">
+              <div class="driver-meta">
+                <div class="driver-avatar" aria-hidden="true">RD</div>
+                <div>
+                  <div class="driver-name-line">
+                    <span class="driver-name">Radu D.</span>
+                    <span class="badge badge-uni" title="Validat pe domeniu (nu identitate verificată): @ulbsibiu.ro">ULBS Sibiu · Validat pe domeniu</span>
+                    <span class="badge badge-cancel" title="Anulare în ziua plecării în ultimele 30 zile (-5 pp · D-016)">Anulare recentă</span>
+                  </div>
+                  <div class="rep-row">
+                    <span class="rep-stars">★ 4.80</span>
+                    <span>(12 curse)</span>
+                    <span>·</span>
+                    <span class="rep-score warn">95% seriozitate</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="card-price-block">
-              <div>
-                <span class="price-amount">42</span>
-                <span class="price-currency">lei</span>
+            <div class="route-arc-row">
+              <div class="endpoint">
+                <span class="ep-time">18:00</span>
+                <span class="ep-city">Cluj-Napoca</span>
+                <span class="ep-landmark">Iulius Mall</span>
               </div>
-              <span class="price-segment-note">preț segment Cluj → Sibiu</span>
+              <div class="arc-middle">
+                <span class="arc-meta">168 km · 1 oprire</span>
+                <svg class="arc-svg" viewBox="0 0 180 26" fill="none" aria-hidden="true">
+                  <path d="M8 20 Q 90 -4 172 20" stroke="var(--color-primary)" stroke-width="2" stroke-dasharray="4 4"/>
+                  <circle cx="8" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="8" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                  <circle cx="90" cy="8" r="3" fill="var(--color-node-intermediate)"/>
+                  <circle cx="172" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="172" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                </svg>
+              </div>
+              <div class="endpoint right">
+                <span class="ep-time">20:25</span>
+                <span class="ep-city">Sibiu</span>
+                <span class="ep-landmark">B-dul Victoriei</span>
+              </div>
+            </div>
+
+            <details class="stops-details" onclick="event.stopPropagation();">
+              <summary>Vezi opririle intermediare (3 opriri · D-005)</summary>
+              <div class="stops-list">
+                <div class="stop-item"><strong>18:00</strong><span class="stop-dot key"></span><span><strong>Cluj-Napoca</strong> · Iulius Mall</span><span class="stop-tag">Urcare</span></div>
+                <div class="stop-item"><span>19:10</span><span class="stop-dot"></span><span>Alba Iulia · Autogară (1 pasager coboară)</span><span class="stop-tag">1 loc</span></div>
+                <div class="stop-item"><strong>20:25</strong><span class="stop-dot key"></span><span><strong>Sibiu</strong> · B-dul Victoriei</span><span class="stop-tag">Coborâre</span></div>
+              </div>
+            </details>
+
+            <div class="ticket-meta-foot">
+              <span>Disponibilitate segment: <span class="seat-pill low">1 loc liber din 3</span></span>
+              <span>Bagaj mic · Fără fumat</span>
             </div>
           </div>
 
-          <!-- Timeline -->
-          <div class="route-timeline-container">
-            <div class="timeline-stop-row">
-              <span class="stop-time">18:00</span>
-              <div class="stop-marker"><span class="marker-dot active"></span></div>
-              <div class="stop-name-group">
-                <span class="stop-city highlight-match">Cluj-Napoca</span>
-                <span class="stop-landmark">Iulius Mall (Preluare în raza de 1 km)</span>
-              </div>
-              <span class="stop-badge-chip">Urcare</span>
+          <div class="ticket-stub">
+            <span class="stub-kicker">Preț segment</span>
+            <div class="stub-price">
+              <span class="stub-amount">42</span>
+              <span class="stub-currency">lei</span>
             </div>
-            <div class="timeline-line"></div>
-
-            <div class="timeline-stop-row" style="margin: 6px 0;">
-              <span class="stop-time" style="color: var(--color-text-muted);">19:10</span>
-              <div class="stop-marker"><span class="marker-dot"></span></div>
-              <div class="stop-name-group">
-                <span class="stop-city">Alba Iulia</span>
-                <span class="stop-landmark">Autogara</span>
-              </div>
-              <span class="stop-badge-chip" style="opacity: 0.7;">1 pasager coboară aici</span>
-            </div>
-
-            <div class="timeline-stop-row">
-              <span class="stop-time">20:25</span>
-              <div class="stop-marker"><span class="marker-dot active"></span></div>
-              <div class="stop-name-group">
-                <span class="stop-city highlight-match">Sibiu</span>
-                <span class="stop-landmark">Calea Dumbrăvii / B-dul Victoriei</span>
-              </div>
-              <span class="stop-badge-chip">Coborâre</span>
-            </div>
-          </div>
-
-          <div class="ride-card-footer">
-            <div class="seat-status-group">
-              <svg class="seat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/>
-                <path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>
-              </svg>
-              <span>Disponibilitate segment: <span class="seat-count-bold" style="color: var(--color-warning);">1 loc liber</span></span>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: var(--space-md);">
-              <div class="preferences-icons">
-                <span>🧳 Bagaj mic</span>
-                <span>🚭 Fără fum</span>
-              </div>
-              <a href="#book-ds005" class="btn btn-primary" style="min-height: 32px; padding: 4px 12px; font-size: var(--font-size-xs);">
-                Rezervă segment
-              </a>
-            </div>
+            <span class="stub-seat-rule">1 loc / pasager<br>Cost împărțit D-010</span>
+            <button type="button" class="btn btn-primary stub-cta" onclick="event.stopPropagation();">Rezervă segment</button>
           </div>
         </article>
 
-      </div>
-
-      <!-- State: Long Text / Multiple Small Localities (SURVEY.md Route 4 & 10) -->
-      <div id="state-long" style="display: none; flex-direction: column; gap: var(--space-md);">
-        <article class="ride-card">
-          <div class="ride-card-top">
-            <div class="driver-meta">
-              <div class="driver-avatar">DM</div>
-              <div class="driver-info">
-                <div class="driver-name-row">
-                  <span class="driver-name">Darius-Constantin M.</span>
-                  <span class="badge-university">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                    UPB București
-                  </span>
-                </div>
-                <div class="driver-reputation-row">
-                  <span class="rep-stars">★ 5.00</span>
-                  <span>(38 curse)</span>
-                  <span>·</span>
-                  <span class="rep-score">100% seriozitate</span>
+        <!-- Ride 3: 6-Stop Bacău -> București Route (SURVEY.md) -->
+        <article class="ticket-card" data-ride="r3" data-women="false" data-uni="true" onclick="selectRide('r3')">
+          <div class="ticket-main">
+            <div class="driver-row">
+              <div class="driver-meta">
+                <div class="driver-avatar" aria-hidden="true">DM</div>
+                <div>
+                  <div class="driver-name-line">
+                    <span class="driver-name">Darius-Constantin M.</span>
+                    <span class="badge badge-uni" title="Validat pe domeniu (nu identitate verificată): @stud.acs.upb.ro">UPB București · Validat pe domeniu</span>
+                  </div>
+                  <div class="rep-row">
+                    <span class="rep-stars">★ 5.00</span>
+                    <span>(38 curse)</span>
+                    <span>·</span>
+                    <span class="rep-score">100% seriozitate</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="card-price-block">
-              <div><span class="price-amount">65</span><span class="price-currency">lei</span></div>
-              <span class="price-segment-note">preț segment Bacău → București</span>
+
+            <div class="route-arc-row">
+              <div class="endpoint">
+                <span class="ep-time">07:00</span>
+                <span class="ep-city">Bacău</span>
+                <span class="ep-landmark">Stadionul Municipal</span>
+              </div>
+              <div class="arc-middle">
+                <span class="arc-meta">298 km · 5 opriri int.</span>
+                <svg class="arc-svg" viewBox="0 0 180 26" fill="none" aria-hidden="true">
+                  <path d="M8 20 Q 90 -4 172 20" stroke="var(--color-primary)" stroke-width="2" stroke-dasharray="4 4"/>
+                  <circle cx="8" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="8" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                  <circle cx="38" cy="13" r="2.6" fill="var(--color-node-intermediate)"/>
+                  <circle cx="64" cy="9" r="2.6" fill="var(--color-node-intermediate)"/>
+                  <circle cx="90" cy="8" r="2.6" fill="var(--color-node-intermediate)"/>
+                  <circle cx="116" cy="9" r="2.6" fill="var(--color-node-intermediate)"/>
+                  <circle cx="142" cy="13" r="2.6" fill="var(--color-node-intermediate)"/>
+                  <circle cx="172" cy="20" r="6.5" fill="var(--color-node-terminal-ring)"/>
+                  <circle cx="172" cy="20" r="3.8" fill="var(--color-node-terminal)"/>
+                </svg>
+              </div>
+              <div class="endpoint right">
+                <span class="ep-time">11:50</span>
+                <span class="ep-city">București</span>
+                <span class="ep-landmark">Piața Romană</span>
+              </div>
+            </div>
+
+            <details class="stops-details" onclick="event.stopPropagation();">
+              <summary>Vezi toate cele 6 opriri ale traseului Bacău → București (D-005)</summary>
+              <div class="stops-list">
+                <div class="stop-item"><strong>07:00</strong><span class="stop-dot key"></span><span><strong>Bacău</strong> · Parcare Stadionul Municipal</span><span class="stop-tag">Origine</span></div>
+                <div class="stop-item"><span>07:45</span><span class="stop-dot"></span><span>Adjud · Intersecție DN2</span><span class="stop-tag">3 locuri</span></div>
+                <div class="stop-item"><span>08:20</span><span class="stop-dot"></span><span>Mărășești · Monumentul Eroilor</span><span class="stop-tag">3 locuri</span></div>
+                <div class="stop-item"><span>08:50</span><span class="stop-dot"></span><span>Focșani · Benzinăria Rompetrol</span><span class="stop-tag">3 locuri</span></div>
+                <div class="stop-item"><span>10:00</span><span class="stop-dot"></span><span>Buzău · Rond Spătaru</span><span class="stop-tag">3 locuri</span></div>
+                <div class="stop-item"><span>10:50</span><span class="stop-dot"></span><span>Ploiești · Nord / AFI</span><span class="stop-tag">3 locuri</span></div>
+                <div class="stop-item"><strong>11:50</strong><span class="stop-dot key"></span><span><strong>București</strong> · Piața Romană / Politehnica</span><span class="stop-tag">Destinație</span></div>
+              </div>
+            </details>
+
+            <div class="ticket-meta-foot">
+              <span>Disponibilitate segment: <span class="seat-pill">3 locuri libere din 3</span></span>
+              <span>Bagaj mare · Fără fumat</span>
             </div>
           </div>
 
-          <!-- Long Route with 6 Stops -->
-          <div class="route-timeline-container">
-            <div class="timeline-stop-row">
-              <span class="stop-time">07:00</span>
-              <div class="stop-marker"><span class="marker-dot active"></span></div>
-              <div class="stop-name-group"><span class="stop-city highlight-match">Bacău</span><span class="stop-landmark">Parcare Stadionul Municipal</span></div>
-              <span class="stop-badge-chip">Origine</span>
+          <div class="ticket-stub">
+            <span class="stub-kicker">Preț segment</span>
+            <div class="stub-price">
+              <span class="stub-amount">65</span>
+              <span class="stub-currency">lei</span>
             </div>
-            <div class="timeline-line"></div>
-
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">07:45</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Adjud</span><span class="stop-landmark">Intersecție DN2</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">08:20</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Mărășești</span><span class="stop-landmark">Monumentul Eroilor</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">08:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Focșani</span><span class="stop-landmark">Gara / Benzinăria Rompetrol</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">10:00</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Buzău</span><span class="stop-landmark">Centură Nord / Rond Spătaru</span></div></div>
-            <div class="timeline-stop-row" style="margin: 4px 0;"><span class="stop-time" style="color: var(--color-text-muted);">10:50</span><div class="stop-marker"><span class="marker-dot"></span></div><div class="stop-name-group"><span class="stop-city">Ploiești</span><span class="stop-landmark">Ploiești Nord / Mall Afi</span></div></div>
-
-            <div class="timeline-stop-row">
-              <span class="stop-time">11:50</span>
-              <div class="stop-marker"><span class="marker-dot active"></span></div>
-              <div class="stop-name-group"><span class="stop-city highlight-match">București</span><span class="stop-landmark">Piața Romană / Politehnica</span></div>
-              <span class="stop-badge-chip">Destinație</span>
-            </div>
-          </div>
-
-          <div class="ride-card-footer">
-            <div class="seat-status-group">
-              <svg class="seat-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg>
-              <span>Disponibilitate segment: <span class="seat-count-bold">3 locuri libere</span></span>
-            </div>
-            <a href="#book-ds005" class="btn btn-primary" style="min-height: 32px; padding: 4px 12px; font-size: var(--font-size-xs);">Rezervă segment</a>
+            <span class="stub-seat-rule">1 loc / pasager<br>Cost împărțit D-010</span>
+            <button type="button" class="btn btn-primary stub-cta" onclick="event.stopPropagation();">Rezervă segment</button>
           </div>
         </article>
       </div>
+    </section>
 
-    </div>
+    <!-- Sticky Right Column: Topographic Map + D-010 Fuel Split Box -->
+    <aside class="map-column" aria-label="Hartă traseu și defalcare cost">
+      <div class="map-card">
+        <div class="map-header">
+          <span>Hartă topografică România · Traseu selectat</span>
+          <span class="tabular" style="color: var(--color-primary-ink);">Rază: <span id="map-radius-val">1 km</span></span>
+        </div>
 
-    <!-- Right Column: Interactive Leaflet Route Map Mock -->
-    <aside class="map-column">
-      <div class="map-header">
-        <span>Hartă traseu & opriri intermediare</span>
-        <span style="font-family: var(--font-mono); color: var(--color-accent);">Rază activă: <span id="map-radius-val">1 km</span></span>
-      </div>
+        <div class="map-canvas">
+          <svg class="map-svg" viewBox="0 0 460 310" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hartă topografică a rutei selectate">
+            <rect width="460" height="310" fill="var(--color-bg)"/>
+            <!-- Topographic contour lines -->
+            <path d="M-20 70 Q 110 35 230 95 T 480 65" stroke="var(--color-border)" stroke-width="1.2"/>
+            <path d="M-20 140 Q 130 95 250 155 T 480 130" stroke="var(--color-border)" stroke-width="1.2"/>
+            <path d="M-20 215 Q 140 175 260 230 T 480 205" stroke="var(--color-border)" stroke-width="1.2"/>
+            <path d="M-20 275 Q 160 245 300 285 T 480 265" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+            <!-- Subtle Carpathian ridge silhouette -->
+            <path d="M60 190 Q 190 120 310 175 T 440 150" stroke="var(--color-primary)" stroke-width="18" stroke-linecap="round" opacity="0.08"/>
 
-      <div class="map-canvas-container">
-        <!-- Pure Inline SVG Map Mock conforming to D-001 (Zero external tile download dependency) -->
-        <svg class="map-svg-mock" viewBox="0 0 480 500" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Background Grid & Geography Silhouette -->
-          <rect width="480" height="500" fill="var(--color-bg)"/>
-          <path d="M0 100H480M0 200H480M0 300H480M0 400H480" stroke="var(--color-border-subtle)" stroke-width="1" stroke-dasharray="4 4"/>
-          <path d="M100 0V500M200 0V500M300 0V500M400 0V500" stroke="var(--color-border-subtle)" stroke-width="1" stroke-dasharray="4 4"/>
+            <!-- Dynamic route path -->
+            <path id="map-route-line" d="M105 62 L168 112 L212 182 L338 242" stroke="var(--color-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path id="map-route-dash" d="M105 62 L168 112 L212 182 L338 242" stroke="#9AD6B6" stroke-width="1.8" stroke-dasharray="5 5" stroke-linecap="round"/>
 
-          <!-- River / Terrain Accent Lines -->
-          <path d="M-20 80 Q 180 120 220 280 T 490 420" stroke="var(--color-border)" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+            <!-- Radius rings -->
+            <circle id="radius-origin" cx="105" cy="62" r="22" fill="rgba(20, 61, 43, 0.12)" stroke="var(--color-node-terminal)" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <circle id="radius-dest" cx="338" cy="242" r="22" fill="rgba(20, 61, 43, 0.12)" stroke="var(--color-node-terminal)" stroke-width="1.5" stroke-dasharray="3 3"/>
 
-          <!-- Route Path: Cluj -> Turda -> Alba Iulia -> Sibiu -->
-          <path id="route-path-svg" d="M120 70 L180 140 L220 270 L340 410" stroke="var(--color-primary)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M120 70 L180 140 L220 270 L340 410" stroke="var(--color-accent)" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round"/>
+            <!-- Stops group (updated dynamically) -->
+            <g id="map-stops-layer">
+              <g transform="translate(105, 62)">
+                <circle r="10.5" fill="var(--color-node-terminal-ring)"/>
+                <circle r="5.5" fill="var(--color-node-terminal)" stroke="var(--color-surface)" stroke-width="2"/>
+                <rect x="12" y="-11" width="98" height="22" rx="5" fill="var(--color-surface)" stroke="var(--color-border)"/>
+                <text x="18" y="4" fill="var(--color-text)" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Cluj-Napoca</text>
+              </g>
+              <g transform="translate(168, 112)">
+                <circle r="4.5" fill="var(--color-node-intermediate)" stroke="var(--color-surface)" stroke-width="2"/>
+                <text x="9" y="4" fill="var(--color-text-muted)" font-family="DM Sans, sans-serif" font-size="10" font-weight="600">Turda</text>
+              </g>
+              <g transform="translate(212, 182)">
+                <circle r="4.5" fill="var(--color-node-intermediate)" stroke="var(--color-surface)" stroke-width="2"/>
+                <text x="9" y="4" fill="var(--color-text-muted)" font-family="DM Sans, sans-serif" font-size="10" font-weight="600">Alba Iulia</text>
+              </g>
+              <g transform="translate(338, 242)">
+                <circle r="10.5" fill="var(--color-node-terminal-ring)"/>
+                <circle r="5.5" fill="var(--color-node-terminal)" stroke="var(--color-surface)" stroke-width="2"/>
+                <rect x="-80" y="-11" width="66" height="22" rx="5" fill="var(--color-surface)" stroke="var(--color-border)"/>
+                <text x="-70" y="4" fill="var(--color-text)" font-family="DM Sans, sans-serif" font-size="11" font-weight="700">Sibiu</text>
+              </g>
+            </g>
+          </svg>
 
-          <!-- 1 km Radius Buffer Circles around Pickup & Dropoff -->
-          <circle id="radius-origin-circle" cx="120" cy="70" r="28" fill="rgba(2, 132, 199, 0.15)" stroke="var(--color-accent)" stroke-width="1.5" stroke-dasharray="3 3"/>
-          <circle id="radius-dest-circle" cx="340" cy="410" r="28" fill="rgba(13, 148, 136, 0.15)" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="3 3"/>
-
-          <!-- Map Pins: Cluj-Napoca (Origin) -->
-          <g transform="translate(120, 70)">
-            <circle cx="0" cy="0" r="7" fill="var(--color-accent)" stroke="#ffffff" stroke-width="2"/>
-            <rect x="12" y="-12" width="105" height="22" rx="4" fill="var(--color-surface)" stroke="var(--color-border)"/>
-            <text x="18" y="3" fill="var(--color-text)" font-family="var(--font-sans)" font-size="11" font-weight="600">Cluj (Campus)</text>
-          </g>
-
-          <!-- Intermediate Pin: Turda -->
-          <g transform="translate(180, 140)">
-            <circle cx="0" cy="0" r="5" fill="var(--color-text-muted)" stroke="#ffffff" stroke-width="2"/>
-            <text x="10" y="4" fill="var(--color-text-muted)" font-family="var(--font-sans)" font-size="10">Turda</text>
-          </g>
-
-          <!-- Intermediate Pin: Alba Iulia -->
-          <g transform="translate(220, 270)">
-            <circle cx="0" cy="0" r="5" fill="var(--color-text-muted)" stroke="#ffffff" stroke-width="2"/>
-            <text x="10" y="4" fill="var(--color-text-muted)" font-family="var(--font-sans)" font-size="10">Alba Iulia</text>
-          </g>
-
-          <!-- Map Pin: Sibiu (Destination) -->
-          <g transform="translate(340, 410)">
-            <circle cx="0" cy="0" r="8" fill="var(--color-primary)" stroke="#ffffff" stroke-width="2"/>
-            <rect x="12" y="-12" width="95" height="22" rx="4" fill="var(--color-surface)" stroke="var(--color-border)"/>
-            <text x="18" y="3" fill="var(--color-text)" font-family="var(--font-sans)" font-size="11" font-weight="600">Sibiu (Gară)</text>
-          </g>
-        </svg>
-
-        <!-- Floating Map Overlay Card -->
-        <div class="map-overlay-card">
-          <div style="display: flex; flex-direction: column;">
-            <strong style="color: var(--color-text);">Traseu Cluj-Napoca → Sibiu</strong>
-            <span style="color: var(--color-text-muted); font-size: 0.7rem;">165 km · 2 opriri pe segment</span>
+          <div class="map-overlay">
+            <div>
+              <strong id="map-route-title">Cluj-Napoca → Sibiu</strong>
+              <div style="color: var(--color-text-muted);" id="map-route-sub">168 km · 2 opriri intermediare · Ioana P.</div>
+            </div>
+            <span class="badge badge-uni" title="Rezultat servit din geocoding_cache (D-009)">Cache geocodare OK</span>
           </div>
-          <span class="badge-university" style="font-size: 0.7rem;">Geocodare Cache OK</span>
         </div>
       </div>
+
+      <!-- D-010 Transparent Fuel Split Box -->
+      <section class="fuel-box" aria-labelledby="fuel-heading">
+        <div class="fuel-box-head">
+          <h2 class="fuel-title" id="fuel-heading">Împărțire transparentă cost (D-010)</h2>
+          <span class="badge badge-uni">Fără profit</span>
+        </div>
+        <div class="fuel-row">
+          <span>Cost total declarat al cursei</span>
+          <strong id="fuel-total">152 lei</strong>
+        </div>
+        <div class="fuel-row">
+          <span>Împărțire egală (locuri oferite + șofer)</span>
+          <strong id="fuel-shares">3 + 1 = 4 părți</strong>
+        </div>
+        <div class="fuel-row">
+          <span>Preț loc rută completă (plafon)</span>
+          <strong id="fuel-seat">38 lei / loc</strong>
+        </div>
+        <div class="fuel-row">
+          <span>Segment selectat (<span id="fuel-ratio">168 / 168 km</span>)</span>
+          <strong style="color: var(--color-primary-ink);" id="fuel-segment">38 lei</strong>
+        </div>
+        <div class="fuel-formula" id="fuel-formula">
+          Formula D-010: <strong>152 lei / (3 + 1) = 38 lei</strong>. Suma tuturor pasagerilor nu depășește niciodată costul declarat de șofer.
+        </div>
+      </section>
     </aside>
-
   </main>
 
   <script>
-    // State switcher for mock review
-    function switchState(state) {
-      document.querySelectorAll('.mock-toolbar .mock-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
-
-      const success = document.getElementById('state-success');
-      const empty = document.getElementById('state-empty');
-      const loading = document.getElementById('state-loading');
-      const error = document.getElementById('state-error');
-      const longText = document.getElementById('state-long');
-      const summary = document.getElementById('results-summary');
-
-      // Hide all states
-      success.style.display = 'none';
-      empty.style.display = 'none';
-      loading.style.display = 'none';
-      error.style.display = 'none';
-      longText.style.display = 'none';
-
-      if (state === 'success') {
-        success.style.display = 'flex';
-        summary.style.display = 'flex';
-        document.querySelector('.results-count').innerText = '2 curse disponibile';
-      } else if (state === 'empty') {
-        empty.style.display = 'flex';
-        summary.style.display = 'none';
-      } else if (state === 'loading') {
-        loading.style.display = 'flex';
-        summary.style.display = 'none';
-      } else if (state === 'error') {
-        error.style.display = 'flex';
-        summary.style.display = 'none';
-      } else if (state === 'long') {
-        longText.style.display = 'flex';
-        summary.style.display = 'flex';
-        document.querySelector('.results-count').innerText = '1 cursă (traseu lung Bacău–București)';
+    const RIDES = {
+      r1: {
+        title: 'Cluj-Napoca → Sibiu',
+        sub: '168 km · 2 opriri intermediare · Ioana P. (Women-only)',
+        path: 'M105 62 L168 112 L212 182 L338 242',
+        origin: [105, 62],
+        dest: [338, 242],
+        stops: [
+          { x: 105, y: 62, label: 'Cluj-Napoca', key: true, left: false },
+          { x: 168, y: 112, label: 'Turda', key: false },
+          { x: 212, y: 182, label: 'Alba Iulia', key: false },
+          { x: 338, y: 242, label: 'Sibiu', key: true, left: true }
+        ],
+        totalCost: '152 lei',
+        shares: '3 + 1 = 4 părți',
+        seatFull: '38 lei / loc',
+        ratio: '168 / 168 km',
+        segment: '38 lei',
+        formula: 'Formula D-010: 152 lei / (3 + 1) = 38 lei. Suma plăților pasagerilor nu depășește costul declarat al cursei.'
+      },
+      r2: {
+        title: 'Cluj-Napoca → Sibiu',
+        sub: '168 km · 1 oprire intermediară · Radu D.',
+        path: 'M105 62 L212 182 L338 242',
+        origin: [105, 62],
+        dest: [338, 242],
+        stops: [
+          { x: 105, y: 62, label: 'Cluj-Napoca', key: true, left: false },
+          { x: 212, y: 182, label: 'Alba Iulia', key: false },
+          { x: 338, y: 242, label: 'Sibiu', key: true, left: true }
+        ],
+        totalCost: '168 lei',
+        shares: '3 + 1 = 4 părți',
+        seatFull: '42 lei / loc',
+        ratio: '168 / 168 km',
+        segment: '42 lei',
+        formula: 'Formula D-010: 168 lei / (3 + 1) = 42 lei. Prețul este blocat pe rezervare la creare.'
+      },
+      r3: {
+        title: 'Bacău → București',
+        sub: '298 km · 5 opriri intermediare · Darius-Constantin M.',
+        path: 'M290 36 L278 76 L268 112 L256 146 L235 188 L205 224 L185 262',
+        origin: [290, 36],
+        dest: [185, 262],
+        stops: [
+          { x: 290, y: 36, label: 'Bacău', key: true, left: false },
+          { x: 278, y: 76, label: 'Adjud', key: false },
+          { x: 268, y: 112, label: 'Mărășești', key: false },
+          { x: 256, y: 146, label: 'Focșani', key: false },
+          { x: 235, y: 188, label: 'Buzău', key: false },
+          { x: 205, y: 224, label: 'Ploiești', key: false },
+          { x: 185, y: 262, label: 'București', key: true, left: false }
+        ],
+        totalCost: '260 lei',
+        shares: '3 + 1 = 4 părți',
+        seatFull: '65 lei / loc',
+        ratio: '298 / 298 km',
+        segment: '65 lei',
+        formula: 'Formula D-010: 260 lei / (3 + 1) = 65 lei. Sub-segmentele (ex. Bacău–Focșani) se rotunjesc half-up în lei întregi.'
       }
+    };
+
+    function selectRide(id) {
+      const r = RIDES[id];
+      if (!r) return;
+
+      document.querySelectorAll('.ticket-card[data-ride]').forEach(c => {
+        c.classList.toggle('selected', c.getAttribute('data-ride') === id);
+      });
+
+      document.getElementById('map-route-line').setAttribute('d', r.path);
+      document.getElementById('map-route-dash').setAttribute('d', r.path);
+      document.getElementById('radius-origin').setAttribute('cx', r.origin[0]);
+      document.getElementById('radius-origin').setAttribute('cy', r.origin[1]);
+      document.getElementById('radius-dest').setAttribute('cx', r.dest[0]);
+      document.getElementById('radius-dest').setAttribute('cy', r.dest[1]);
+
+      const layer = document.getElementById('map-stops-layer');
+      layer.innerHTML = r.stops.map(s => {
+        if (s.key) {
+          const rx = s.left ? -84 : 12;
+          const tx = s.left ? -76 : 18;
+          return `<g transform="translate(${s.x}, ${s.y})">
+            <circle r="10.5" fill="var(--color-node-terminal-ring)"/>
+            <circle r="5.5" fill="var(--color-node-terminal)" stroke="var(--color-surface)" stroke-width="2"/>
+            <rect x="${rx}" y="-11" width="72" height="22" rx="5" fill="var(--color-surface)" stroke="var(--color-border)"/>
+            <text x="${tx}" y="4" fill="var(--color-text)" font-family="DM Sans, sans-serif" font-size="10.5" font-weight="700">${s.label}</text>
+          </g>`;
+        }
+        return `<g transform="translate(${s.x}, ${s.y})">
+          <circle r="4.5" fill="var(--color-node-intermediate)" stroke="var(--color-surface)" stroke-width="2"/>
+          <text x="9" y="4" fill="var(--color-text-muted)" font-family="DM Sans, sans-serif" font-size="10" font-weight="600">${s.label}</text>
+        </g>`;
+      }).join('');
+
+      document.getElementById('map-route-title').textContent = r.title;
+      document.getElementById('map-route-sub').textContent = r.sub;
+      document.getElementById('fuel-total').textContent = r.totalCost;
+      document.getElementById('fuel-shares').textContent = r.shares;
+      document.getElementById('fuel-seat').textContent = r.seatFull;
+      document.getElementById('fuel-ratio').textContent = r.ratio;
+      document.getElementById('fuel-segment').textContent = r.segment;
+      document.getElementById('fuel-formula').textContent = r.formula;
     }
 
-    // Radius pill selector
+    function applyFilters() {
+      const onlyWomen = document.getElementById('filter-women').checked;
+      const onlyUni = document.getElementById('filter-uni').checked;
+      let visible = 0;
+
+      document.querySelectorAll('.ticket-card[data-ride]').forEach(card => {
+        const isWomen = card.getAttribute('data-women') === 'true';
+        const isUni = card.getAttribute('data-uni') === 'true';
+        const show = (!onlyWomen || isWomen) && (!onlyUni || isUni);
+        card.style.display = show ? 'grid' : 'none';
+        if (show) visible++;
+      });
+
+      document.getElementById('results-count').textContent =
+        visible === 1 ? '1 cursă disponibilă' : visible + ' curse disponibile';
+    }
+
+    function switchState(state, btn) {
+      document.querySelectorAll('.mock-toolbar-group:first-child .mock-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      ['success', 'loading', 'empty', 'error'].forEach(s => {
+        document.getElementById('state-' + s).style.display = s === state ? 'flex' : 'none';
+      });
+    }
+
     function setRadius(btn, val) {
       document.querySelectorAll('.radius-group .chip-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('map-radius-val').innerText = val;
+      if (btn) btn.classList.add('active');
+      document.getElementById('map-radius-val').textContent = val;
+      document.getElementById('results-note').textContent = 'Rază activă: ' + val + ' · 1 loc / pasager';
 
-      const originCircle = document.getElementById('radius-origin-circle');
-      const destCircle = document.getElementById('radius-dest-circle');
-      let radiusPixels = 28;
-      if (val === '3 km') radiusPixels = 45;
-      if (val === '5 km') radiusPixels = 65;
-
-      if (originCircle) originCircle.setAttribute('r', radiusPixels);
-      if (destCircle) destCircle.setAttribute('r', radiusPixels);
+      const rPx = val === '5 km' ? 46 : val === '3 km' ? 34 : 22;
+      document.getElementById('radius-origin').setAttribute('r', rPx);
+      document.getElementById('radius-dest').setAttribute('r', rPx);
     }
 
-    // Theme toggle
     function toggleTheme() {
       const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
-
-      const btn = document.getElementById('theme-btn');
-      btn.innerText = next === 'dark' ? '🌙 Întunecat' : '☀️ Luminos';
+      document.getElementById('theme-btn').textContent = next === 'dark' ? 'Întunecat' : 'Luminos';
     }
   </script>
 </body>
