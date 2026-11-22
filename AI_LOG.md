@@ -182,3 +182,12 @@ The user audited the operational mechanics across all decisions and documentatio
 ### Verification
 - Red run confirmed `domain.test.js` failed on missing modules; green run: **21 passed | 14 skipped (35)** (`15/15` `domain.test.js` + `6/6` static `database.test.js`; `10` DB + `4` bookingAcceptance MySQL integration tests skipped here because MySQL is unreachable in sandbox — to be verified locally against `docker compose up -d`).
 - `0` test assertions modified; `python3 docs/agents/tools/ledger-lint.py` passed (`✓ ledger ok`).
+
+### 3-Specialist Parallel Review & Fixes (2026-11-22)
+Parallel read-only review (Performance & SQL Specialist, Security & Invariant Engineer, Domain & Edge-Case Auditor) surfaced 7 issues, all fixed on `feat/segment-core-logic`:
+1. **Persisted lazy reconciliation on domain errors:** Committed `reconcileRideBookings` updates/notifications before rethrowing `BookingDomainError` so departure-time expirations and `pending_reconfirmation` lapses are never rolled back.
+2. **Authorization & `D-019` guards:** Added `users.is_suspended` checks for driver & passenger (`D-013`, `D-016`), self-booking guard, and duplicate active booking guard per passenger per ride (`D-019`).
+3. **Strict `D-003` selective rejection:** Restricted `findCompetingPendingBookingsToReject` to segments whose capacity *just* dropped from `> 0` to `0` (`pre.freeSeats > 0 && post.freeSeats === 0`).
+4. **SQL batching & index alignment:** Replaced N+1 loops with batched `UPDATE ... WHERE id IN (?)` and multi-row `INSERT INTO notifications (...) VALUES ? ON DUPLICATE KEY UPDATE id = id`; dropped `ORDER BY id ASC` from the locked `bookings` query (sorting in JS).
+5. **Input validation & edge cases:** Normalized/validated positive integer IDs (`rideId`, `bookingId`, `driverId`), validated active `b.price_lei` in `validateTripCostCap`, allowed `pickupDistKm === dropoffDistKm` (`0` lei), rejected numeric `declaredTripCost` with `> 2` decimal places, and guarded soft-removed stops in `getAvailableSeatsForRange`.
+6. **Regression tests:** Added unit tests (`domain.test.js`: 18 passing) and MySQL integration tests (`bookingAcceptance.test.js`: 6 integration tests including error-code concurrency check, persisted departure-time expiry, and suspended/self/duplicate guards).

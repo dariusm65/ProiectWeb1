@@ -130,6 +130,7 @@ describe.skipIf(!admin)('integration: transactional booking acceptance (MySQL)',
     const rejected = results.filter((r) => r.status === 'rejected');
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
+    expect(['BOOKING_NOT_PENDING', 'NO_SEATS_AVAILABLE']).toContain(rejected[0].reason.code);
 
     const [rows] = await pool.query('SELECT id, status FROM bookings WHERE ride_id = ? ORDER BY id', [rideId]);
     const statuses = rows.map((r) => r.status).sort();
@@ -260,5 +261,64 @@ describe.skipIf(!admin)('integration: transactional booking acceptance (MySQL)',
     await pool.query("UPDATE rides SET status = 'cancelled' WHERE id = ?", [rideId]);
     await expect(acceptBooking(pool, { rideId, bookingId: b2, driverId, now }))
       .rejects.toThrow(/RIDE_NOT_ACTIVE|active/i);
+  });
+
+  it('persists lazy departure-time expiry and notification even when acceptBooking throws BOOKING_NOT_PENDING', async () => {
+    const { driverId, rideId, stopIds: [cluj, , , sibiu] } = await createRideWithStops({
+      availableSeats: 2,
+      declaredTripCost: 100,
+      departureTime: '2026-12-10 16:00:00',
+    });
+    const p1 = await createUser('dep1');
+    const b1 = await createBooking({ rideId, passengerId: p1, pickupStopId: cluj, dropoffStopId: sibiu, priceLei: 30 });
+
+    const atDeparture = new Date('2026-12-10T16:00:00Z');
+    await expect(acceptBooking(pool, { rideId, bookingId: b1, driverId, now: atDeparture }))
+      .rejects.toThrow(/BOOKING_NOT_PENDING/);
+
+    // Expiration must be committed (NOT rolled back)
+    const [[row]] = await pool.query('SELECT status FROM bookings WHERE id = ?', [b1]);
+    expect(row.status).toBe('expired');
+    const [notifs] = await pool.query(
+      'SELECT user_id FROM notifications WHERE idempotency_key = ?',
+      [`booking_expired:${b1}`],
+    );
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0].user_id).toBe(p1);
+  });
+
+  it('enforces suspended-user, self-booking, and D-019 duplicate active booking guards', async () => {
+    const { driverId, rideId, stopIds: [cluj, turda, alba, sibiu] } = await createRideWithStops({
+      availableSeats: 3,
+      declaredTripCost: 200,
+    });
+    const passengerId = await createUser('dup');
+    const now = new Date('2026-12-10T10:00:00Z');
+
+    // Self-booking rejected
+    const selfBooking = await createBooking({ rideId, passengerId: driverId, pickupStopId: cluj, dropoffStopId: turda, priceLei: 10 });
+    await expect(acceptBooking(pool, { rideId, bookingId: selfBooking, driverId, now }))
+      .rejects.toThrow(/SELF_BOOKING_NOT_ALLOWED/);
+
+    // Duplicate active booking for same passenger on same ride rejected (D-019)
+    const bFirst = await createBooking({ rideId, passengerId, pickupStopId: cluj, dropoffStopId: turda, priceLei: 10 });
+    const bSecond = await createBooking({ rideId, passengerId, pickupStopId: alba, dropoffStopId: sibiu, priceLei: 15 });
+    await acceptBooking(pool, { rideId, bookingId: bFirst, driverId, now });
+    await expect(acceptBooking(pool, { rideId, bookingId: bSecond, driverId, now }))
+      .rejects.toThrow(/DUPLICATE_ACTIVE_BOOKING/);
+
+    // Suspended passenger rejected
+    const suspPassenger = await createUser('suspp');
+    await pool.query('UPDATE users SET is_suspended = TRUE WHERE id = ?', [suspPassenger]);
+    const bSuspP = await createBooking({ rideId, passengerId: suspPassenger, pickupStopId: cluj, dropoffStopId: turda, priceLei: 10 });
+    await expect(acceptBooking(pool, { rideId, bookingId: bSuspP, driverId, now }))
+      .rejects.toThrow(/PASSENGER_SUSPENDED/);
+
+    // Suspended driver rejected
+    const okPassenger = await createUser('okp');
+    const bOk = await createBooking({ rideId, passengerId: okPassenger, pickupStopId: cluj, dropoffStopId: turda, priceLei: 10 });
+    await pool.query('UPDATE users SET is_suspended = TRUE WHERE id = ?', [driverId]);
+    await expect(acceptBooking(pool, { rideId, bookingId: bOk, driverId, now }))
+      .rejects.toThrow(/USER_SUSPENDED/);
   });
 });

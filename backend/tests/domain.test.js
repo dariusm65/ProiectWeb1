@@ -201,6 +201,37 @@ describe('domain: segmentAvailability (D-005, D-019)', () => {
       stops: clujSibiuStops, bookings: [], availableSeats: 3, pickupStopId: 999, dropoffStopId: 2,
     })).toThrow(/stop/i);
   });
+
+  it('rejects soft-removed pickup or dropoff stop in getAvailableSeatsForRange', () => {
+    const stopsWithSoftRemoval = [
+      { id: 1, stop_order: 10, city_name: 'Cluj-Napoca', removed_at: null },
+      { id: 2, stop_order: 20, city_name: 'Turda', removed_at: '2026-11-20 12:00:00' },
+      { id: 3, stop_order: 30, city_name: 'Sibiu', removed_at: null },
+    ];
+    expect(() => getAvailableSeatsForRange({
+      stops: stopsWithSoftRemoval, bookings: [], availableSeats: 2, pickupStopId: 2, dropoffStopId: 3,
+    })).toThrow(/removed/i);
+  });
+
+  it('strict D-003 selective rejection: does not reject pending booking on a disjoint already-saturated segment', () => {
+    // available_seats = 1
+    // B1 (pending_reconfirmation) already saturates Alba(3)->Sibiu(4) (pre freeSeats = 0)
+    // Driver accepts B2 on Cluj(1)->Turda(2) (only Cluj->Turda drops from 1 to 0)
+    // Competing pending B3 on Alba(3)->Sibiu(4) was already at 0 before B2; MUST NOT be rejected by B2
+    const bookings = [
+      { id: 1, pickup_stop_id: 3, dropoff_stop_id: 4, status: 'pending_reconfirmation' },
+      { id: 2, pickup_stop_id: 1, dropoff_stop_id: 2, status: 'pending' },
+      { id: 3, pickup_stop_id: 3, dropoff_stop_id: 4, status: 'pending' },
+    ];
+    const { toReject, toKeepPending } = findCompetingPendingBookingsToReject({
+      stops: clujSibiuStops,
+      bookings,
+      availableSeats: 1,
+      acceptedBookingId: '2', // also verifies string ID normalization
+    });
+    expect(toReject).toEqual([]);
+    expect(toKeepPending.map((b) => b.id)).toEqual([3]);
+  });
 });
 
 // ------------------------------------------------ Proportional Pricing (D-010)
@@ -297,5 +328,31 @@ describe('domain: segmentPricing (D-010) & reconfirmDeadline (D-007)', () => {
     // 15 min before departure (<= 2h branch): min(now + 30m = 18:15, dep = 18:00) = 18:00
     const d4 = computeReconfirmDeadline({ modifiedAt: new Date('2026-12-01T17:45:00Z'), departureTime: dep });
     expect(d4.toISOString()).toBe('2026-12-01T18:00:00.000Z');
+  });
+
+  it('allows same-city zero-distance segment (returns 0 lei) and enforces strict decimal/price validation', () => {
+    expect(calculateSegmentPrice({
+      declaredTripCost: 120, availableSeats: 3, pickupDistKm: 32, dropoffDistKm: 32, totalDistKm: 168,
+    })).toBe(0);
+
+    // Numeric >2 decimal places rejected consistently with strings
+    expect(() => calculateSegmentPrice({
+      declaredTripCost: 10.005, availableSeats: 2, pickupDistKm: 0, dropoffDistKm: 50, totalDistKm: 100,
+    })).toThrow(RangeError);
+    expect(() => calculateSegmentPrice({
+      declaredTripCost: '10.005', availableSeats: 2, pickupDistKm: 0, dropoffDistKm: 50, totalDistKm: 100,
+    })).toThrow(RangeError);
+
+    // Negative or non-integer active booking price_lei rejected in validateTripCostCap
+    expect(() => validateTripCostCap({
+      declaredTripCost: 100,
+      existingBookings: [{ id: 1, status: 'confirmed', price_lei: -10 }],
+      additionalPriceLei: 20,
+    })).toThrow(RangeError);
+    expect(() => validateTripCostCap({
+      declaredTripCost: 100,
+      existingBookings: [{ id: 1, status: 'confirmed', price_lei: 12.5 }],
+      additionalPriceLei: 20,
+    })).toThrow(RangeError);
   });
 });

@@ -104,6 +104,9 @@ export function getAvailableSeatsForRange({ stops, bookings, availableSeats, pic
   if (!pickup || !dropoff) {
     throw new Error('Unknown pickup or dropoff stop');
   }
+  if (pickup.removed_at != null || dropoff.removed_at != null) {
+    throw new Error('Pickup or dropoff stop has been removed');
+  }
   if (pickup.stop_order >= dropoff.stop_order) {
     throw new Error('pickup stop_order must be strictly less than dropoff stop_order');
   }
@@ -122,13 +125,24 @@ export function getAvailableSeatsForRange({ stops, bookings, availableSeats, pic
 /**
  * After accepting `acceptedBookingId` (treating it as `confirmed`), partition all
  * other `pending` bookings on the ride into:
- * - `toReject`: traverses at least one elementary segment whose remaining freeSeats === 0
- * - `toKeepPending`: all traversed elementary segments still have freeSeats >= 1 (D-003, D-005)
+ * - `toReject`: traverses at least one elementary segment whose remaining capacity
+ *   just dropped to 0 (pre.freeSeats > 0 && post.freeSeats === 0) (D-003, D-005)
+ * - `toKeepPending`: all other competing pending bookings
  */
 export function findCompetingPendingBookingsToReject({ stops, bookings, availableSeats, acceptedBookingId }) {
+  const targetId = Number(acceptedBookingId);
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw new RangeError('acceptedBookingId must be a positive integer');
+  }
+
   const stopById = indexAllStops(stops);
+  const preSegments = computeSegmentAvailability({
+    stops,
+    bookings,
+    availableSeats,
+  });
   const postAcceptanceBookings = bookings.map((b) =>
-    b.id === acceptedBookingId ? { ...b, status: 'confirmed' } : b,
+    Number(b.id) === targetId ? { ...b, status: 'confirmed' } : b,
   );
   const postSegments = computeSegmentAvailability({
     stops,
@@ -136,19 +150,22 @@ export function findCompetingPendingBookingsToReject({ stops, bookings, availabl
     availableSeats,
   });
 
-  const saturatedSegments = postSegments.filter((seg) => seg.freeSeats === 0);
+  // Strict D-003: only segments whose capacity *just* dropped from >0 to 0
+  const newlySaturatedSegments = postSegments.filter(
+    (seg, idx) => preSegments[idx].freeSeats > 0 && seg.freeSeats === 0,
+  );
   const toReject = [];
   const toKeepPending = [];
 
   for (const b of bookings) {
-    if (b.id === acceptedBookingId || b.status !== 'pending') continue;
+    if (Number(b.id) === targetId || b.status !== 'pending') continue;
     const interval = bookingOrderInterval(b, stopById);
     if (!interval) continue;
     const [bStart, bEnd] = interval;
-    const hitsSaturated = saturatedSegments.some((seg) =>
+    const hitsNewlySaturated = newlySaturatedSegments.some((seg) =>
       intervalsOverlap(bStart, bEnd, seg.fromOrder, seg.toOrder),
     );
-    if (hitsSaturated) {
+    if (hitsNewlySaturated) {
       toReject.push(b);
     } else {
       toKeepPending.push(b);

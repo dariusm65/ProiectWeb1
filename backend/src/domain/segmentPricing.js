@@ -7,14 +7,23 @@ const MS_PER_HOUR = 60 * MS_PER_MINUTE;
 
 /**
  * Parse a non-negative decimal cost (number or string like "152.00") into integer bani (x 100) as BigInt.
+ * Rejects values with more than 2 decimal places consistently for both numbers and strings.
  */
 function parseCostToBani(declaredTripCost) {
   if (declaredTripCost === null || declaredTripCost === undefined) {
     throw new RangeError('declaredTripCost is required');
   }
-  const str = typeof declaredTripCost === 'number'
-    ? (Number.isFinite(declaredTripCost) ? declaredTripCost.toFixed(2) : '')
-    : String(declaredTripCost).trim();
+  let str;
+  if (typeof declaredTripCost === 'number') {
+    if (!Number.isFinite(declaredTripCost) || declaredTripCost < 0) {
+      throw new RangeError(`Invalid declaredTripCost: ${declaredTripCost}`);
+    }
+    str = String(declaredTripCost);
+  } else if (typeof declaredTripCost === 'string') {
+    str = declaredTripCost.trim();
+  } else {
+    throw new RangeError(`Invalid declaredTripCost: ${declaredTripCost}`);
+  }
 
   if (!/^\d+(\.\d{1,2})?$/.test(str)) {
     throw new RangeError(`Invalid declaredTripCost: ${declaredTripCost}`);
@@ -56,9 +65,12 @@ export function calculateSegmentPrice({
     !Number.isInteger(dropoffDistKm) ||
     pickupDistKm < 0 ||
     dropoffDistKm > totalDistKm ||
-    pickupDistKm >= dropoffDistKm
+    pickupDistKm > dropoffDistKm
   ) {
-    throw new RangeError('pickupDistKm must be < dropoffDistKm within [0, totalDistKm]');
+    throw new RangeError('pickupDistKm must be <= dropoffDistKm within [0, totalDistKm]');
+  }
+  if (pickupDistKm === dropoffDistKm) {
+    return 0;
   }
 
   const denominator = BigInt(totalDistKm) * BigInt(availableSeats + 1) * 100n;
@@ -80,7 +92,11 @@ export function validateTripCostCap({ declaredTripCost, existingBookings, additi
   let currentActiveTotalLei = 0;
   for (const b of existingBookings) {
     if (!CAPACITY_CONSUMING_STATUSES.has(b.status)) continue;
-    currentActiveTotalLei += Number(b.price_lei || 0);
+    const price = b.price_lei;
+    if (!Number.isInteger(price) || price < 0) {
+      throw new RangeError(`Invalid active booking price_lei: ${price}`);
+    }
+    currentActiveTotalLei += price;
   }
 
   const projectedTotalLei = currentActiveTotalLei + additionalPriceLei;
