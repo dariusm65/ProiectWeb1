@@ -1,20 +1,25 @@
 # Implementation Plan · Database Schema & Versioned Migrations (P18 StudRide)
 
+> **Post-build amendments:** During `/build` and PR review on `feat/db-schema-and-migrations`, the implementation applied these approved adjustments to the baseline plan below:
+> - `known_places` seeds **only** the 36 localities from `SURVEY.md` (with nullable `latitude`/`longitude` + `source_query`/`queried_on`), populated by `002_seed_known_place_coordinates.sql` via `backend/database/fetch-nominatim.js`; `geocoding_cache` is not pre-seeded.
+> - System accounts use neutral addresses (`admin@studride.local`, `moderator@studride.local`) created in `seed.js` with runtime `bcryptjs` hashing from `ADMIN_PASSWORD`/`MODERATOR_PASSWORD` in `.env` (no passwords or hashes committed).
+> - Migration `001_initial_schema.sql` uses `ON DELETE RESTRICT` on audit/booking/chat/review/infraction FKs, `ON DELETE SET NULL` on nullable `reports.reporter_id`, `CHECK` constraints (`available_seats >= 1`, `declared_trip_cost >= 0`, `pickup_stop_id <> dropoff_stop_id`, `price_lei >= 0`, `cancellation_fee_lei >= 0`, `reviewer_id <> reviewed_user_id`), `UNIQUE KEY` on stop orders, and composite search/booking indexes.
+
 This document presents the revised implementation plan for the database schema, versioned migrations engine, Docker setup, and idempotent seed script for **StudRide** (P18 Student Carpooling with Segment Matching), strictly adhering to all approved decisions and user corrections:
-- [D-003](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L47): MySQL 8 + raw SQL with `mysql2`, no ORM, versioned migrations via `schema_migrations`, idempotent live/local seed.
-- [D-004](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L58): User accounts, email authentication, university domain validation.
-- [D-005](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L69): Segment seat tracking, non-consumption by pending/expired/rejected/cancelled bookings.
-- [D-006](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L79): Recurring rides as rule + exceptions + stop templates, instances materialized on demand.
-- [D-007](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L89): Reconfirmation deadlines, lazy lapse tracking, soft stop removal (`removed_at`), stop reordering.
-- [D-008](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L99): Post-arrival ratings only for completed rides.
-- [D-009](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L109): Dedicated `geocoding_cache` table.
-- [D-010](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L119): Locked `price_lei` on bookings, declared trip cost cap.
-- [D-011](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L129): Chat messages and notifications in MySQL.
-- [D-012](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L139): Full Docker Compose setup (`docker-compose.yml`) + live URL support.
-- [D-013](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L149): bcrypt password hashes, RBAC roles (`user`, `moderator`, `admin`), account status.
-- [D-016](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L179): Infraction event log for on-read seriousness score computation.
-- [D-018](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L199): Private `gender` field for women-only eligibility.
-- [D-019](file:///home/csdc/Work/ProiectWeb1/docs/agents/DECISIONS.md#L209): Exactly 1 seat per booking.
+- [D-003](../agents/DECISIONS.md): MySQL 8 + raw SQL with `mysql2`, no ORM, versioned migrations via `schema_migrations`, idempotent live/local seed.
+- [D-004](../agents/DECISIONS.md): User accounts, email authentication, university domain validation.
+- [D-005](../agents/DECISIONS.md): Segment seat tracking, non-consumption by pending/expired/rejected/cancelled bookings.
+- [D-006](../agents/DECISIONS.md): Recurring rides as rule + exceptions + stop templates, instances materialized on demand.
+- [D-007](../agents/DECISIONS.md): Reconfirmation deadlines, lazy lapse tracking, soft stop removal (`removed_at`), stop reordering.
+- [D-008](../agents/DECISIONS.md): Post-arrival ratings only for completed rides.
+- [D-009](../agents/DECISIONS.md): Dedicated `geocoding_cache` table.
+- [D-010](../agents/DECISIONS.md): Locked `price_lei` on bookings, declared trip cost cap.
+- [D-011](../agents/DECISIONS.md): Chat messages and notifications in MySQL.
+- [D-012](../agents/DECISIONS.md): Full Docker Compose setup (`docker-compose.yml`) + live URL support.
+- [D-013](../agents/DECISIONS.md): bcrypt password hashes, RBAC roles (`user`, `moderator`, `admin`), account status.
+- [D-016](../agents/DECISIONS.md): Infraction event log for on-read seriousness score computation.
+- [D-018](../agents/DECISIONS.md): Private `gender` field for women-only eligibility.
+- [D-019](../agents/DECISIONS.md): Exactly 1 seat per booking.
 
 ---
 
@@ -38,7 +43,7 @@ This document presents the revised implementation plan for the database schema, 
    * Tracks executed versions in `schema_migrations` (`id`, `version`, `applied_at`).
    * Executes each migration script inside a dedicated transaction (`START TRANSACTION ... COMMIT`), rolling back and halting on failure.
 2. **Pre-Seeding Known Places without Fake User/Ride Data (per user requirement):**
-   * Instead of generating synthetic rides or test passenger accounts, the seed populates a dedicated `known_places` table containing real stops, cities, and pickup points identified in [SURVEY.md](file:///home/csdc/Work/ProiectWeb1/SURVEY.md).
+   * Instead of generating synthetic rides or test passenger accounts, the seed populates a dedicated `known_places` table containing real stops, cities, and pickup points identified in [SURVEY.md](../../SURVEY.md).
    * Exact coordinates are sourced from OpenStreetMap / Nominatim with `source = 'OpenStreetMap/Nominatim'`.
    * Only essential system administrative accounts (`admin@ulbsibiu.ro` and `moderator@ulbsibiu.ro`) are created for management testing. All colleague accounts and rides will be created by real users post-deployment per the Definition of Done.
 3. **Recurring Ride Template Architecture (per D-006):**

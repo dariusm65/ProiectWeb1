@@ -119,3 +119,25 @@ The user audited the operational mechanics across all decisions and documentatio
 - Output goes to seeds/002_seed_known_place_coordinates.sql (UPDATE rows with source_query + queried_on), NOT into 001: the existing static test forbids coordinate literals in 001 and assertions may not be changed. 001 keeps the NULL/TODO marker.
 - Review found one wrong match: plain query 'Boița, Romania' returned a Hunedoara hamlet; the survey route (Valea Oltului) needs the Sibiu county commune. Fixed with a query override ('Boița, Sibiu, Romania') and re-ran. Other ambiguous names (Vulcan, Zimbor, Vinga, Sântana, Câineni, Voiteg) match the survey routes' counties; each SQL row keeps Nominatim's display_name as a comment for review.
 - NOT done: starting MySQL and running the 10 integration tests. No docker/podman/mysqld exists in this environment and I did not install one. A local untracked .env was created from .env.example (git-ignored).
+
+
+---
+
+## Session 2026-11-22 — PR #1 review fixes (branch feat/db-schema-and-migrations)
+
+### Changes applied from parallel review (Performance, Security, SEO/GEO)
+1. `docker-compose.yml`: bound MySQL port to `127.0.0.1` loopback only; moved healthcheck root password from CLI `-p` flag to `MYSQL_PWD` env var.
+2. `backend/database/migrations/001_initial_schema.sql`:
+   - Switched `ON DELETE CASCADE` to `ON DELETE RESTRICT` on `rides.driver_id`, `bookings.*`, `chat_messages.*`, `reviews.*`, and `user_infractions.user_id`; made `reports.reporter_id` nullable with `ON DELETE SET NULL`.
+   - Added `CHECK` constraints (`available_seats >= 1`, `declared_trip_cost >= 0` on `rides` and `recurring_ride_rules`; `pickup_stop_id <> dropoff_stop_id`, `price_lei >= 0`, `cancellation_fee_lei IS NULL OR cancellation_fee_lei >= 0` on `bookings`; `reviewer_id <> reviewed_user_id` on `reviews`).
+   - Promoted `(ride_id, stop_order)` on `ride_stops` and `(rule_id, stop_order)` on `recurring_rule_stops` to `UNIQUE KEY`.
+   - Dropped redundant `idx_users_email` and `idx_known_places_city`; replaced separate ride status/departure indexes with composite `idx_rides_status_departure (status, departure_time)`; replaced `idx_bookings_status` with composite `idx_bookings_ride_status (ride_id, status)` and `idx_bookings_status_deadline (status, reconfirm_deadline)`.
+3. `backend/src/db.js` & `backend/database/seed.js`: added `timezone: 'Z'`, `queueLimit: 50`, `enableKeepAlive: true`, `keepAliveInitialDelay: 10000` in `db.js`; wrapped `seed()` in a transaction and skipped `bcrypt.hash` when the system account already exists.
+4. `backend/database/fetch-nominatim.js`: stripped newlines from `display_name` comments, escaped `\` before `'` in `sql()`, and validated coordinate bounds with `Number.isFinite`.
+5. `docs/design/mocks/DS-004-search-results.html`: removed duplicate `display: flex;` on `#state-loading`; changed the Women-only ride driver to `Elena M.` (`EM`) to match `README.md`.
+6. `docs/plans/db-schema-and-migrations.md`: replaced local `file:///` links with repo-relative links and added a "Post-build amendments" note at the top.
+
+### Verification
+- `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).
+- `npm test --prefix backend`: 6/6 static tests passed, 0 test assertions modified; 10 MySQL integration tests skipped here (no Docker/MySQL in sandbox — re-run locally against Docker MySQL before merging).
+- `node --check` on `db.js`, `seed.js`, `fetch-nominatim.js`: passed.

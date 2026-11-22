@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS users (
   gender ENUM('female', 'male', 'prefer_not_to_say') NOT NULL DEFAULT 'prefer_not_to_say',
   is_suspended BOOLEAN NOT NULL DEFAULT FALSE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_users_email (email),
   INDEX idx_users_domain (university_domain),
   INDEX idx_users_role (role)
 ) ENGINE=InnoDB;
@@ -34,8 +33,7 @@ CREATE TABLE IF NOT EXISTS known_places (
   source_query VARCHAR(255) NULL, -- exact Nominatim query that produced the coordinates
   queried_on DATE NULL,           -- date of that query
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_known_place (city, name),
-  INDEX idx_known_places_city (city)
+  UNIQUE KEY uq_known_place (city, name)
 ) ENGINE=InnoDB;
 
 -- 4. Recurring Ride Rules (Master Template) (D-006)
@@ -48,8 +46,8 @@ CREATE TABLE IF NOT EXISTS recurring_ride_rules (
   start_date DATE NOT NULL,
   end_date DATE NULL,
   days_of_week JSON NOT NULL, -- e.g. ["friday"]
-  available_seats INT NOT NULL, -- passenger seats excluding driver (CONTEXT.md)
-  declared_trip_cost DECIMAL(10, 2) NOT NULL,
+  available_seats INT NOT NULL CHECK (available_seats >= 1), -- passenger seats excluding driver (CONTEXT.md)
+  declared_trip_cost DECIMAL(10, 2) NOT NULL CHECK (declared_trip_cost >= 0),
   luggage_allowed BOOLEAN NOT NULL DEFAULT TRUE,
   pets_allowed BOOLEAN NOT NULL DEFAULT FALSE,
   smoking_allowed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -70,7 +68,7 @@ CREATE TABLE IF NOT EXISTS recurring_rule_stops (
   distance_from_origin_km INT NOT NULL DEFAULT 0,
   estimated_offset_minutes INT NOT NULL DEFAULT 0,
   FOREIGN KEY (rule_id) REFERENCES recurring_ride_rules(id) ON DELETE CASCADE,
-  INDEX idx_rule_stops_order (rule_id, stop_order)
+  UNIQUE KEY uq_rule_stops_order (rule_id, stop_order)
 ) ENGINE=InnoDB;
 
 -- 6. Recurring Ride Exceptions (D-006)
@@ -94,8 +92,8 @@ CREATE TABLE IF NOT EXISTS rides (
   destination_name VARCHAR(150) NOT NULL,
   departure_time DATETIME NOT NULL,
   estimated_arrival_time DATETIME NOT NULL,
-  available_seats INT NOT NULL, -- passenger seats excluding driver (CONTEXT.md)
-  declared_trip_cost DECIMAL(10, 2) NOT NULL,
+  available_seats INT NOT NULL CHECK (available_seats >= 1), -- passenger seats excluding driver (CONTEXT.md)
+  declared_trip_cost DECIMAL(10, 2) NOT NULL CHECK (declared_trip_cost >= 0),
   luggage_allowed BOOLEAN NOT NULL DEFAULT TRUE,
   pets_allowed BOOLEAN NOT NULL DEFAULT FALSE,
   smoking_allowed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -103,10 +101,9 @@ CREATE TABLE IF NOT EXISTS rides (
   status ENUM('active', 'completed', 'cancelled') NOT NULL DEFAULT 'active',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_rule_instance (recurring_rule_id, instance_date),
-  FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (driver_id) REFERENCES users(id) ON DELETE RESTRICT,
   FOREIGN KEY (recurring_rule_id) REFERENCES recurring_ride_rules(id) ON DELETE SET NULL,
-  INDEX idx_rides_departure (departure_time),
-  INDEX idx_rides_status (status)
+  INDEX idx_rides_status_departure (status, departure_time)
 ) ENGINE=InnoDB;
 
 -- 8. Ride Stops Table (Ordered Waypoints with Soft Removal) (D-005, D-007, D-010)
@@ -122,7 +119,7 @@ CREATE TABLE IF NOT EXISTS ride_stops (
   estimated_arrival_time DATETIME NOT NULL,
   removed_at DATETIME NULL, -- soft removal: bookings keep valid FK references
   FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,
-  INDEX idx_ride_stops_order (ride_id, stop_order),
+  UNIQUE KEY uq_ride_stops_order (ride_id, stop_order),
   INDEX idx_stops_city (city_name),
   INDEX idx_stops_coords (latitude, longitude)
 ) ENGINE=InnoDB;
@@ -134,16 +131,18 @@ CREATE TABLE IF NOT EXISTS bookings (
   passenger_id INT NOT NULL,
   pickup_stop_id INT NOT NULL,
   dropoff_stop_id INT NOT NULL,
-  price_lei INT NOT NULL, -- permanently locked at booking creation time (D-010)
+  price_lei INT NOT NULL CHECK (price_lei >= 0), -- permanently locked at booking creation time (D-010)
   status ENUM('pending', 'confirmed', 'rejected', 'cancelled', 'pending_reconfirmation', 'expired') NOT NULL DEFAULT 'pending',
   reconfirm_deadline DATETIME NULL,
-  cancellation_fee_lei INT NULL,
+  cancellation_fee_lei INT NULL CHECK (cancellation_fee_lei IS NULL OR cancellation_fee_lei >= 0),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,
-  FOREIGN KEY (passenger_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (pickup_stop_id) REFERENCES ride_stops(id),
-  FOREIGN KEY (dropoff_stop_id) REFERENCES ride_stops(id),
-  INDEX idx_bookings_status (status),
+  CHECK (pickup_stop_id <> dropoff_stop_id),
+  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE RESTRICT,
+  FOREIGN KEY (passenger_id) REFERENCES users(id) ON DELETE RESTRICT,
+  FOREIGN KEY (pickup_stop_id) REFERENCES ride_stops(id) ON DELETE RESTRICT,
+  FOREIGN KEY (dropoff_stop_id) REFERENCES ride_stops(id) ON DELETE RESTRICT,
+  INDEX idx_bookings_ride_status (ride_id, status),
+  INDEX idx_bookings_status_deadline (status, reconfirm_deadline),
   INDEX idx_bookings_passenger (passenger_id)
 ) ENGINE=InnoDB;
 
@@ -154,8 +153,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sender_id INT NOT NULL,
   message_text TEXT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,
-  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE RESTRICT,
+  FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE RESTRICT,
   INDEX idx_chat_ride (ride_id, created_at)
 ) ENGINE=InnoDB;
 
@@ -182,10 +181,11 @@ CREATE TABLE IF NOT EXISTS reviews (
   rating_stars TINYINT NOT NULL CHECK (rating_stars BETWEEN 1 AND 5),
   comment TEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (reviewer_id <> reviewed_user_id),
   UNIQUE KEY uq_ride_review (ride_id, reviewer_id, reviewed_user_id),
-  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE CASCADE,
-  FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (reviewed_user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE RESTRICT,
+  FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE RESTRICT,
+  FOREIGN KEY (reviewed_user_id) REFERENCES users(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- 13. User Infractions Table (D-016)
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS user_infractions (
   infraction_type ENUM('driver_late_cancel', 'passenger_late_cancel') NOT NULL,
   penalty_percentage_points INT NOT NULL, -- 5 for driver, 3 for passenger
   occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
   FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE SET NULL,
   INDEX idx_infractions_user (user_id, occurred_at)
 ) ENGINE=InnoDB;
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS user_infractions (
 -- 14. Moderation Reports Table (D-013, CONTEXT.md)
 CREATE TABLE IF NOT EXISTS reports (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  reporter_id INT NOT NULL,
+  reporter_id INT NULL,
   reported_user_id INT NULL,
   ride_id INT NULL,
   message_id INT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS reports (
   resolved_by INT NULL,
   resolved_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (ride_id) REFERENCES rides(id) ON DELETE SET NULL,
   FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,

@@ -15,7 +15,8 @@ const SEED_OUT = path.join(dir, 'seeds/002_seed_known_place_coordinates.sql');
 const QUERIED_ON = '2026-11-19'; // date recorded with every row, as requested
 const USER_AGENT = 'StudRide-ULBS-coursework/0.1 (student project; contact via GitHub repo ProiectWeb1)';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const sql = (s) => s.replace(/'/g, "''");
+const sql = (s) => s.replace(/\\/g, '\\\\').replace(/'/g, "''");
+const cleanComment = (s) => String(s ?? '').replace(/[\r\n]+/g, ' ');
 
 const places = [...fs.readFileSync(SEED_IN, 'utf8').matchAll(/^\s*\('([^']+)',\s*'([^']+)'\)/gm)]
   .map((m) => ({ city: m[1], name: m[2] }));
@@ -35,8 +36,20 @@ for (const p of places) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const [hit] = await res.json();
     if (!hit) throw new Error('no result');
-    rows.push({ ...p, query, lat: Number(hit.lat).toFixed(7), lon: Number(hit.lon).toFixed(7), display: hit.display_name });
-    console.log(`ok   ${query} -> ${hit.lat}, ${hit.lon}  (${hit.display_name})`);
+    const latNum = Number(hit.lat);
+    const lonNum = Number(hit.lon);
+    if (!Number.isFinite(latNum) || latNum < -90 || latNum > 90 ||
+        !Number.isFinite(lonNum) || lonNum < -180 || lonNum > 180) {
+      throw new Error(`invalid coordinates: ${hit.lat}, ${hit.lon}`);
+    }
+    rows.push({
+      ...p,
+      query,
+      lat: latNum.toFixed(7),
+      lon: lonNum.toFixed(7),
+      display: cleanComment(hit.display_name),
+    });
+    console.log(`ok   ${query} -> ${hit.lat}, ${hit.lon}  (${cleanComment(hit.display_name)})`);
   } catch (e) {
     missing.push(p.name);
     console.log(`FAIL ${query}: ${e.message}`);

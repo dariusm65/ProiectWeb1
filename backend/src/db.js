@@ -16,10 +16,18 @@ export function dbConfig(overrides = {}) {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     charset: 'utf8mb4',
+    timezone: 'Z',
     ...overrides,
   };
 }
 
 export function createPool() {
-  return mysql.createPool({ ...dbConfig(), waitForConnections: true, connectionLimit: 10 });
+  return mysql.createPool({
+    ...dbConfig(),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 50,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+  });
 }

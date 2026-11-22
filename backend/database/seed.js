@@ -27,15 +27,24 @@ export async function seed(conn) {
     if (!a.password()) throw new Error(`${a.envVar} is not set (see .env.example)`);
   }
   const files = fs.readdirSync(seedsDir).filter((f) => f.endsWith('.sql')).sort();
-  for (const file of files) await conn.query(fs.readFileSync(path.join(seedsDir, file), 'utf8'));
 
-  for (const a of SYSTEM_ACCOUNTS) {
-    const hash = await bcrypt.hash(a.password(), 10);
-    // Existing accounts are left untouched (password changes are not re-applied by the seed).
-    await conn.query(
-      `INSERT INTO users (email, password_hash, full_name, role) VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE email = email`,
-      [a.email, hash, a.name, a.role]);
+  await conn.beginTransaction();
+  try {
+    for (const file of files) await conn.query(fs.readFileSync(path.join(seedsDir, file), 'utf8'));
+
+    for (const a of SYSTEM_ACCOUNTS) {
+      const [existing] = await conn.query('SELECT 1 FROM users WHERE email = ? LIMIT 1', [a.email]);
+      if (existing.length > 0) continue; // skip bcrypt.hash on idempotent re-runs
+      const hash = await bcrypt.hash(a.password(), 10);
+      await conn.query(
+        `INSERT INTO users (email, password_hash, full_name, role) VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE email = email`,
+        [a.email, hash, a.name, a.role]);
+    }
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
   }
 }
 
