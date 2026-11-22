@@ -191,3 +191,18 @@ Parallel read-only review (Performance & SQL Specialist, Security & Invariant En
 4. **SQL batching & index alignment:** Replaced N+1 loops with batched `UPDATE ... WHERE id IN (?)` and multi-row `INSERT INTO notifications (...) VALUES ? ON DUPLICATE KEY UPDATE id = id`; dropped `ORDER BY id ASC` from the locked `bookings` query (sorting in JS).
 5. **Input validation & edge cases:** Normalized/validated positive integer IDs (`rideId`, `bookingId`, `driverId`), validated active `b.price_lei` in `validateTripCostCap`, allowed `pickupDistKm === dropoffDistKm` (`0` lei), rejected numeric `declaredTripCost` with `> 2` decimal places, and guarded soft-removed stops in `getAvailableSeatsForRange`.
 6. **Regression tests:** Added unit tests (`domain.test.js`: 18 passing) and MySQL integration tests (`bookingAcceptance.test.js`: 6 integration tests including error-code concurrency check, persisted departure-time expiry, and suspended/self/duplicate guards).
+
+---
+
+## Session 2026-11-22 (Part 3) — Slice 3: Express API Foundation, Auth (JWT + RBAC), OpenAPI & CI (`feat/express-auth-ci`)
+
+### What was planned & built
+1. **Ledger updates (`Q-002`, `Q-005`):** Marked `Q-002` and `Q-005` as `answered` in `docs/agents/OPEN-QUESTIONS.md` with the accredited Romanian university root + subdomain + `EXTRA_UNIVERSITY_DOMAINS` rule (`D-004`).
+2. **Express API & Middleware (`D-002`, `D-013`, `D-014`):** Added `express`, `cors`, `helmet`, `zod`, `jsonwebtoken`, `swagger-ui-express`, and devDependency `supertest`. Built `backend/src/app.js` (injectable `pool` factory), `backend/src/server.js` (startup `migrate()`/`seed()` + graceful shutdown), `backend/src/middleware/validate.js` (Zod), `backend/src/middleware/errorHandler.js`, `GET /api/health` (`200 { status: 'ok', db: 'up' }` / `503`), and OpenAPI 3.0 spec at `GET /api/openapi.json` & `GET /api/docs`.
+3. **Auth, University Domain Allowlist & Live-DB RBAC (`D-004`, `D-013`, `D-018`):** Built `backend/src/domain/universityDomains.js`, `backend/src/middleware/auth.js` (`signAccessToken`, `requireAuth` verifying live DB `role` & `is_suspended`, `requireRole`), and `backend/src/routes/auth.js` (`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` with `bcryptjs` cost 10, `university_badge_note: "domain-validated (not identity-verified)"`, and optional `gender`).
+4. **GitHub Actions CI (`D-015`):** Created `.github/workflows/ci.yml` with MySQL 8.0 service container running `npm test --prefix backend` and `python3 docs/agents/tools/ledger-lint.py` on `push` to `main` and `pull_request`.
+5. **Tests (TDD):** Added `backend/tests/universityDomains.test.js` (5 unit tests) and `backend/tests/auth.test.js` (6 Supertest + MySQL integration tests on `studride_test_auth`).
+
+### Verification
+- TDD red run confirmed `universityDomains.test.js` failed on missing module; green run: **29 passed | 22 skipped (51)** (`5/5` `universityDomains.test.js`, `18/18` `domain.test.js`, `6/6` static `database.test.js`; `22` MySQL integration tests skipped in sandbox due to `ECONNREFUSED`).
+- `0` test assertions changed; `node --check` passed on all 7 new backend modules; `python3 docs/agents/tools/ledger-lint.py --fix` & `ledger-lint.py` passed (`✓ ledger ok`).

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-and-ledger:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: studride
+          MYSQL_USER: studride
+          MYSQL_PASSWORD: ci-user-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Run Vitest unit, DB integration, concurrency, and API tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DB_NAME: studride
+          DB_USER: studride
+          DB_PASSWORD: ci-user-password
+          DB_ROOT_PASSWORD: ci-root-password
+          TEST_DB_USER: root
+          TEST_DB_PASSWORD: ci-root-password
+          ADMIN_PASSWORD: ci-admin-password
+          MODERATOR_PASSWORD: ci-moderator-password
+          JWT_SECRET: ci-test-jwt-secret-key-at-least-32-chars
+        run: npm test --prefix backend
+
+      - name: Run ledger lint
+        run: python3 docs/agents/tools/ledger-lint.py

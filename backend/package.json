@@ -5,16 +5,25 @@
   "type": "module",
   "description": "StudRide (P18) backend: MySQL schema, migrations and seed",
   "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
     "migrate": "node database/migrate.js",
     "seed": "node database/seed.js",
     "test": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
-    "mysql2": "^3.11.0"
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.11.0",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "supertest": "^7.3.2",
     "vitest": "^2.1.0"
   }
 }
