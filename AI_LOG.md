@@ -166,3 +166,28 @@ The user audited the operational mechanics across all decisions and documentatio
 - Brand mark uses Deep Forest Green (`#143D2B` light / `#1F6B47` dark), Warm Cream (`#FCF9F4`) for the graduation cap & tassel, and soft Sage Mint (`#9AD6B6`) + Warm Cream (`#FCF9F4`) for the curved 3-stop dotted route line and stop markers.
 - Route origin & destination markers (timelines, route arcs, topographic map pins, and hero road stops) now use a Forest Green & Soft Sage double-ring (`#143D2B` + `#B7DEC9` light / `#34A86B` + `rgba(52, 168, 107, 0.28)` dark), with muted intermediate stop dots (`#5E7368` light / `#8C9992` dark).
 - Scoped Warm Amber (`#C88228` / `#E5A94C`) strictly to driver star ratings (`★`) and subtle decorative warmth, never on route nodes or the logo.
+
+---
+
+## Session 2026-11-22 (Part 2) — Slice 2: Core Business Logic (`feat/segment-core-logic`)
+
+### What was planned & built
+1. **Pure Segment Availability (`backend/src/domain/segmentAvailability.js`):** Half-open `stop_order` interval overlap (`[pickupOrder, dropoffOrder)` against active segments), soft-removed stop resolution (`removed_at IS NOT NULL`), capacity counting restricted to `confirmed` + `pending_reconfirmation` (`D-005`, `D-019`), and selective competing `pending` booking partitioning (`D-003`).
+2. **Pure Proportional Segment Pricing & Reconfirmation Deadline (`backend/src/domain/segmentPricing.js`):** Exact `BigInt` rational `round_half_up` implementation of `D-010`, `validateTripCostCap` (summing only `confirmed` + `pending_reconfirmation`), and `computeReconfirmDeadline` (`D-007`).
+3. **Transactional Booking Acceptance (`backend/src/services/bookingAcceptanceService.js`):** Raw SQL (`mysql2/promise`) InnoDB transaction with canonical `SELECT ... FOR UPDATE` lock order (`rides` → `ride_stops` → `bookings`), lazy expiry (`pending -> expired` at departure) and lazy lapse (`pending_reconfirmation -> expired` past `reconfirm_deadline`) with idempotent notifications (`notifications.idempotency_key`), guards (`ride.status === 'active'`, driver ownership, non-removed pickup/dropoff stops, `D-010` cost cap), and selective auto-rejection of saturated competing `pending` bookings.
+4. **Tests (written first — TDD):**
+   - `backend/tests/domain.test.js` (15 deterministic unit tests covering all `D-005`, `D-010`, and `D-007` behaviors).
+   - `backend/tests/bookingAcceptance.test.js` (4 MySQL integration tests on dedicated throwaway DB `studride_test_bookings`: 2-connection `Promise.all` concurrency, selective auto-rejection, lazy lapse + idempotent driver notification, and acceptance guards).
+
+### Verification
+- Red run confirmed `domain.test.js` failed on missing modules; green run: **21 passed | 14 skipped (35)** (`15/15` `domain.test.js` + `6/6` static `database.test.js`; `10` DB + `4` bookingAcceptance MySQL integration tests skipped here because MySQL is unreachable in sandbox — to be verified locally against `docker compose up -d`).
+- `0` test assertions modified; `python3 docs/agents/tools/ledger-lint.py` passed (`✓ ledger ok`).
+
+### 3-Specialist Parallel Review & Fixes (2026-11-22)
+Parallel read-only review (Performance & SQL Specialist, Security & Invariant Engineer, Domain & Edge-Case Auditor) surfaced 7 issues, all fixed on `feat/segment-core-logic`:
+1. **Persisted lazy reconciliation on domain errors:** Committed `reconcileRideBookings` updates/notifications before rethrowing `BookingDomainError` so departure-time expirations and `pending_reconfirmation` lapses are never rolled back.
+2. **Authorization & `D-019` guards:** Added `users.is_suspended` checks for driver & passenger (`D-013`, `D-016`), self-booking guard, and duplicate active booking guard per passenger per ride (`D-019`).
+3. **Strict `D-003` selective rejection:** Restricted `findCompetingPendingBookingsToReject` to segments whose capacity *just* dropped from `> 0` to `0` (`pre.freeSeats > 0 && post.freeSeats === 0`).
+4. **SQL batching & index alignment:** Replaced N+1 loops with batched `UPDATE ... WHERE id IN (?)` and multi-row `INSERT INTO notifications (...) VALUES ? ON DUPLICATE KEY UPDATE id = id`; dropped `ORDER BY id ASC` from the locked `bookings` query (sorting in JS).
+5. **Input validation & edge cases:** Normalized/validated positive integer IDs (`rideId`, `bookingId`, `driverId`), validated active `b.price_lei` in `validateTripCostCap`, allowed `pickupDistKm === dropoffDistKm` (`0` lei), rejected numeric `declaredTripCost` with `> 2` decimal places, and guarded soft-removed stops in `getAvailableSeatsForRange`.
+6. **Regression tests:** Added unit tests (`domain.test.js`: 18 passing) and MySQL integration tests (`bookingAcceptance.test.js`: 6 integration tests including error-code concurrency check, persisted departure-time expiry, and suspended/self/duplicate guards).
