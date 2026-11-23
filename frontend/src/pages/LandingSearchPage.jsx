@@ -33,9 +33,9 @@ const POPULAR_CORRIDORS = [
 
 export function LandingSearchPage() {
   useDocumentMeta({
-    title: 'StudRide · Carpooling Studențesc pe Segmente în România (DS-002)',
+    title: 'StudRide · Carpooling Studențesc pe Segmente în România',
     description:
-      'Caută și rezervă exact segmentul de cursă studențească de care ai nevoie în România, cu rază implicită 1 km (D-017) și cost împărțit fără profit (D-010).',
+      'Caută și rezervă exact segmentul de cursă studențească de care ai nevoie în România, cu rază implicită 1 km și cost împărțit fără profit.',
   });
 
   const navigate = useNavigate();
@@ -82,21 +82,21 @@ export function LandingSearchPage() {
             Drumul spre casă, <em>împărțit corect</em> între studenți.
           </h1>
           <p className="hero-subcopy">
-            Rezervă exact segmentul de care ai nevoie — cu opriri intermediare clare (D-005), cost de combustibil
-            împărțit transparent (D-010) și reputație dublă bazată pe seriozitate (D-016).
+            Rezervă exact segmentul de care ai nevoie — cu opriri intermediare clare, cost de combustibil
+            împărțit transparent și reputație dublă bazată pe seriozitate.
           </p>
           <div className="hero-metrics">
             <div className="metric-item">
               <span className="metric-val">1 km</span>
-              <span className="metric-lbl">Rază implicită de preluare (D-017)</span>
+              <span className="metric-lbl">Rază implicită de preluare</span>
             </div>
             <div className="metric-item">
               <span className="metric-val">100%</span>
-              <span className="metric-lbl">Cost împărțit fără profit (D-010)</span>
+              <span className="metric-lbl">Cost împărțit fără profit</span>
             </div>
             <div className="metric-item">
               <span className="metric-val">1 loc</span>
-              <span className="metric-lbl">Per rezervare de student (D-019)</span>
+              <span className="metric-lbl">Per rezervare de student</span>
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ export function LandingSearchPage() {
           <div className="search-footer">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }} role="group" aria-label="Rază de căutare">
               <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-                Rază de căutare (D-017):
+                Rază de căutare:
               </span>
               {[
                 { val: 1, label: '1 km (Implicit)' },
@@ -242,7 +242,7 @@ export function LandingSearchPage() {
                   checked={womenOnly}
                   onChange={(e) => setWomenOnly(e.target.checked)}
                 />
-                <span>Doar curse pentru femei (Women-only · D-018)</span>
+                <span>Doar curse pentru femei (Women-only)</span>
               </label>
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
                 <input
@@ -259,7 +259,7 @@ export function LandingSearchPage() {
 
       <section className="corridors-section" aria-labelledby="corridors-title">
         <h2 className="section-title" id="corridors-title">
-          Rute frecvente din comunitatea studențească (SURVEY.md)
+          Rute frecvente din comunitatea studențească
         </h2>
         <div className="corridors-grid">
           {POPULAR_CORRIDORS.map((c) => (

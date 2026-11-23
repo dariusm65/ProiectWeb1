@@ -278,5 +278,36 @@ describe('SearchResultsPage (DS-004), RideDetailsPage (DS-005) & PublicProfilePa
     expect(screen.getByText(/96%/)).toBeInTheDocument();
     expect(screen.getByText(/Anulare recentă/i)).toBeInTheDocument();
     expect(screen.getByText(/Punctuală la oprirea din Turda!/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\b(D-\d{3}|DS-\d{3}|C-\d{3}|Q-\d{3}|PATTERN-|Slice \d)\b/);
+  });
+
+  it('never renders internal ledger or spec IDs in user-facing UI text across pages', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ rides: [SAMPLE_SEARCH_RIDE] }),
+    });
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/rides?originLat=46.77&originLng=23.6&destLat=45.79&destLng=24.15&date=2026-12-04&radiusKm=1']}>
+        <ThemeProvider>
+          <AuthProvider fetchFn={fetchMock}>
+            <Routes>
+              <Route path="/rides" element={<SearchResultsPage />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Ioana P.')).toBeInTheDocument();
+    });
+
+    const internalIdPattern = /\b(D-\d{3}|DS-\d{3}|C-\d{3}|Q-\d{3}|PATTERN-|Slice \d)\b/;
+    expect(container.textContent).not.toMatch(internalIdPattern);
+    expect(document.title).not.toMatch(internalIdPattern);
+    const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    expect(metaDesc).not.toMatch(internalIdPattern);
   });
 });

@@ -150,8 +150,8 @@ export function RouteMap({
             <strong>{title}</strong>
             {subtitle && <div style={{ color: 'var(--color-text-muted)' }}>{subtitle}</div>}
           </div>
-          <span className="badge badge-uni" title="Rezultat servit prin geocoding_cache (D-009)">
-            Cache geocodare OK
+          <span className="badge badge-uni" title="Rezultat servit din cache-ul local de geocodare">
+            Hartă pregătită
           </span>
         </div>
       </div>

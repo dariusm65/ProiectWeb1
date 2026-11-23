@@ -21,10 +21,10 @@ export function PublicProfilePage() {
 
   useDocumentMeta({
     title: profile
-      ? `StudRide · Profil Public ${profile.full_name} & Reputație (DS-010)`
-      : 'StudRide · Profil Public Student & Reputație Dublă (DS-010)',
+      ? `StudRide · Profil Public ${profile.full_name} & Reputație`
+      : 'StudRide · Profil Public Student & Reputație Dublă',
     description:
-      'Profil public student StudRide cu rating 1–5 stele după sosire (D-008), scor de seriozitate 0%–100% (D-016) și badge universitar validat pe domeniu (D-004).',
+      'Profil public student StudRide cu rating 1–5 stele după sosire, scor de seriozitate 0%–100% și badge universitar validat pe domeniu.',
   });
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export function PublicProfilePage() {
                 ★ {profile.rating_average !== null ? Number(profile.rating_average).toFixed(1) : '—'}
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                {profile.rating_count} evaluări (D-008)
+                {profile.rating_count} evaluări
               </div>
             </div>
             <div>
@@ -103,14 +103,14 @@ export function PublicProfilePage() {
                 {profile.seriousness_score}%
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Scor seriozitate (D-016)
+                Scor seriozitate
               </div>
             </div>
           </div>
         </div>
 
         <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-          Transparență D-004 &amp; confidențialitate: Badge-ul universitar indică exclusiv potrivirea domeniului de
+          Transparență &amp; confidențialitate: Badge-ul universitar indică exclusiv potrivirea domeniului de
           email la înregistrare (nu identitate verificată). Adresa de email, numărul de telefon și genul nu sunt
           niciodată expuse public.
         </p>

@@ -15,9 +15,9 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 export function SearchResultsPage() {
   useDocumentMeta({
-    title: 'StudRide · Rezultate Căutare Curse & Hartă Segmente (DS-004)',
+    title: 'StudRide · Rezultate Căutare Curse & Hartă Segmente',
     description:
-      'Compară cursele studențești disponibile pe segmentul tău, cu preț proporțional în lei (D-010), scor de seriozitate, rating și badge universitar pe domeniu.',
+      'Compară cursele studențești disponibile pe segmentul tău, cu preț proporțional în lei, scor de seriozitate, rating și badge universitar pe domeniu.',
   });
 
   const { fetchFn } = useAuth();
@@ -147,7 +147,7 @@ export function SearchResultsPage() {
           <div className="search-footer">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }} role="group" aria-label="Rază de căutare">
               <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-                Rază de căutare (D-017):
+                Rază de căutare:
               </span>
               {[
                 { val: 1, label: '1 km (Implicit)' },
@@ -201,7 +201,7 @@ export function SearchResultsPage() {
                   : `${rides.length} curse disponibile`}
             </h1>
             <span className="tabular" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              Rază activă: {radiusKm} km · 1 loc / pasager (D-019)
+              Rază activă: {radiusKm} km · 1 loc / pasager
             </span>
           </div>
 
@@ -338,7 +338,7 @@ export function SearchResultsPage() {
                   </div>
 
                   <details className="stops-details" onClick={(e) => e.stopPropagation()}>
-                    <summary>Vezi opririle intermediare ({stopsList.length} opriri · D-005)</summary>
+                    <summary>Vezi opririle intermediare ({stopsList.length} opriri)</summary>
                     <div className="stops-list">
                       {stopsList.map((s, idx) => (
                         <div key={s.id || idx} className="stop-item">
@@ -375,9 +375,9 @@ export function SearchResultsPage() {
                     <span className="stub-currency">lei</span>
                   </div>
                   <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-                    1 loc / pasager (D-019)
+                    1 loc / pasager
                     <br />
-                    Cost împărțit D-010
+                    Cost împărțit echitabil
                   </span>
                   <Link
                     to={`/rides/${ride.ride_id}`}
@@ -415,7 +415,7 @@ export function SearchResultsPage() {
                 id="fuel-heading"
                 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}
               >
-                Împărțire transparentă cost (D-010)
+                Împărțire transparentă cost
               </h2>
               <span className="badge badge-uni">Fără profit</span>
             </div>
@@ -442,7 +442,7 @@ export function SearchResultsPage() {
               </strong>
             </div>
             <div className="fuel-formula">
-              Formula D-010: <strong>{declaredTripCost} lei / ({availableSeats} + 1)</strong>. Suma tuturor pasagerilor
+              Calcul transparent: <strong>{declaredTripCost} lei / ({availableSeats} + 1)</strong>. Suma tuturor pasagerilor
               nu depășește niciodată costul declarat de șofer.
             </div>
           </section>

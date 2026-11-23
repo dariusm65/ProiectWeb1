@@ -13,7 +13,7 @@ export function UniversityBadge({ hasBadge, note }) {
 export function WomenOnlyBadge({ womenOnly }) {
   if (!womenOnly) return null;
   return (
-    <span className="badge badge-women" title="Eligibil exclusiv pentru conturi cu genul Femeie (D-018)">
+    <span className="badge badge-women" title="Eligibil exclusiv pentru conturi cu genul Femeie">
       Women-only
     </span>
   );
@@ -24,7 +24,7 @@ export function RecentCancellationBadge({ hasRecentCancellation }) {
   return (
     <span
       className="badge badge-cancel"
-      title="Șoferul a anulat o cursă în ziua plecării în ultimele 30 de zile (-5 pp · D-016)"
+      title="Șoferul a anulat o cursă în ziua plecării în ultimele 30 de zile"
     >
       Anulare recentă
     </span>

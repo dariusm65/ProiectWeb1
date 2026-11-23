@@ -94,7 +94,7 @@ export function GeocodeAutocomplete({
       />
       {loading && (
         <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-          Geocodare Nominatim / Cache (D-009)...
+          Se caută localitatea...
         </span>
       )}
       {open && suggestions.length > 0 && (

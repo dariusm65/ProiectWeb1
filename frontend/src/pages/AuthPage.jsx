@@ -13,9 +13,9 @@ const QUICK_EXAMPLE_EMAILS = [
 
 export function AuthPage() {
   useDocumentMeta({
-    title: 'StudRide · Autentificare & Înregistrare Student (DS-003)',
+    title: 'StudRide · Autentificare & Înregistrare Student',
     description:
-      'Creează un cont StudRide sau autentifică-te. Domeniile universitare din România primesc badge-ul Validat pe domeniu (nu identitate verificată) conform D-004.',
+      'Creează un cont StudRide sau autentifică-te. Domeniile universitare din România primesc badge-ul Validat pe domeniu (nu identitate verificată).',
   });
 
   const navigate = useNavigate();
@@ -117,19 +117,19 @@ export function AuthPage() {
         </p>
         <ul className="policy-list">
           <li className="policy-item">
-            <strong>Badge universitar pe domeniu (D-004)</strong>
+            <strong>Badge universitar pe domeniu</strong>
             Etichetat explicit ca „{UNIVERSITY_BADGE_LABEL_RO}”. Nu verificăm accesul la căsuța poștală sau actul de
             identitate.
           </li>
           <li className="policy-item">
-            <strong>Opțiune privată pentru curse Women-only (D-018)</strong>
+            <strong>Opțiune privată pentru curse Women-only</strong>
             Genul auto-declarat rămâne privat și este folosit exclusiv pentru eligibilitatea curselor „Women-only”
             (doar conturile cu <strong>Femeie</strong> pot publica sau rezerva).
           </li>
           <li className="policy-item">
-            <strong>Reputație dublă din prima zi (D-016)</strong>
+            <strong>Reputație dublă din prima zi</strong>
             Fiecare cont nou începe cu scor de seriozitate 100% și rating 1–5 stele acordat doar după finalizarea
-            cursei (D-008).
+            cursei.
           </li>
         </ul>
       </section>
@@ -276,7 +276,7 @@ export function AuthPage() {
             </div>
 
             <fieldset className="gender-group">
-              <legend className="field-label">Gen auto-declarat (opțional, privat · D-018)</legend>
+              <legend className="field-label">Gen auto-declarat (opțional, privat)</legend>
               <div className="gender-options">
                 {[
                   { value: 'female', label: 'Femeie' },

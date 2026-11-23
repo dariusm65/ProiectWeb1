@@ -26,10 +26,10 @@ export function RideDetailsPage() {
 
   useDocumentMeta({
     title: details
-      ? `StudRide · Cursă ${details.ride.origin_name} → ${details.ride.destination_name} (DS-005)`
-      : 'StudRide · Detalii Cursă & Segmente (DS-005)',
+      ? `StudRide · Cursă ${details.ride.origin_name} → ${details.ride.destination_name}`
+      : 'StudRide · Detalii Cursă & Segmente',
     description:
-      'Cronologia opririlor intermediare, disponibilitatea locurilor pe fiecare segment (D-005), prețul proporțional (D-010) și reputația șoferului (D-016).',
+      'Cronologia opririlor intermediare, disponibilitatea locurilor pe fiecare segment, prețul proporțional și reputația șoferului.',
   });
 
   useEffect(() => {
@@ -106,11 +106,11 @@ export function RideDetailsPage() {
       return;
     }
     if (ride.women_only && user.gender !== 'female') {
-      setCtaNotice('Această cursă este marcată Women-only (D-018): doar conturile cu genul Femeie pot rezerva un loc.');
+      setCtaNotice('Această cursă este marcată Women-only: doar conturile cu genul Femeie pot rezerva un loc.');
       return;
     }
     setCtaNotice(
-      `Segment pregătit pentru rezervare (${pickupStop?.city_name} → ${dropoffStop?.city_name}, 1 loc, preț blocat ${dynamicPriceLei} lei conform D-010). Fluxul complet de confirmare și chat se activează în Slice 7.`,
+      `Segment pregătit pentru rezervare (${pickupStop?.city_name} → ${dropoffStop?.city_name}, 1 loc, preț blocat ${dynamicPriceLei} lei). Rezervarea directă și chatul cursei vor fi disponibile în curând.`,
     );
   };
 
@@ -119,9 +119,9 @@ export function RideDetailsPage() {
       <section className="results-column" aria-labelledby="ride-details-heading">
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-uni">Traseu pe segmente · D-005 &amp; D-010</span>
+            <span className="badge badge-uni">Traseu pe segmente</span>
             <WomenOnlyBadge womenOnly={ride.women_only} />
-            {ride.recurring_rule_id && <span className="badge badge-amber">Instanță cursă recurentă (D-006)</span>}
+            {ride.recurring_rule_id && <span className="badge badge-amber">Cursă recurentă</span>}
           </div>
 
           <h1
@@ -243,7 +243,7 @@ export function RideDetailsPage() {
       <aside className="map-column" aria-label="Reputație șofer și selector segment">
         <section className="card" aria-labelledby="driver-rep-heading" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <h2 id="driver-rep-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
-            Reputație șofer (D-016)
+            Reputație șofer
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <strong style={{ fontSize: 'var(--font-size-base)' }}>{driver?.full_name}</strong>
@@ -265,7 +265,7 @@ export function RideDetailsPage() {
 
         <section className="card" aria-labelledby="segment-selector-heading" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <h2 id="segment-selector-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
-            Selectează segmentul tău (D-010, D-019)
+            Selectează segmentul tău
           </h2>
 
           <div className="field">

@@ -54,9 +54,9 @@ const INITIAL_STOPS = [
 
 export function PublishRidePage() {
   useDocumentMeta({
-    title: 'StudRide · Publică o Cursă Unică sau Recurentă (DS-006)',
+    title: 'StudRide · Publică o Cursă Unică sau Recurentă',
     description:
-      'Publică o cursă studențească pe segmente intermediare cu geocodare Nominatim (D-009), plafon de cost împărțit (D-010), opțiune Women-only (D-018) și program recurent (D-006).',
+      'Publică o cursă studențească pe segmente intermediare cu geocodare automată, plafon de cost împărțit echitabil, opțiune Women-only și program recurent.',
   });
 
   const navigate = useNavigate();
@@ -294,7 +294,7 @@ export function PublishRidePage() {
           })),
         };
         await recurringRidesApi.createRule(payload, { fetchFn });
-        setSuccessMsg('Regula de cursă recurentă (D-006) a fost salvată! Instanțele vor fi materializate la căutare.');
+        setSuccessMsg('Regula de cursă recurentă a fost salvată! Instanțele vor fi generate automat la căutare.');
       }
     } catch (err) {
       setErrorMsg(err.message || 'Publicarea cursei a eșuat.');
@@ -340,7 +340,7 @@ export function PublishRidePage() {
               aria-selected={mode === 'recurring'}
               onClick={() => setMode('recurring')}
             >
-              Cursă recurentă (D-006)
+              Cursă recurentă
             </button>
           </div>
 
@@ -361,7 +361,7 @@ export function PublishRidePage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
             <section aria-labelledby="schedule-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
               <h2 id="schedule-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
-                1. Program plecare ({mode === 'single' ? 'Cursă unică' : 'Regulă săptămânală Europe/Bucharest · D-020'})
+                1. Program plecare ({mode === 'single' ? 'Cursă unică' : 'Regulă săptămânală, ora României'})
               </h2>
 
               {mode === 'single' ? (
@@ -441,7 +441,7 @@ export function PublishRidePage() {
             <section aria-labelledby="stops-builder-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h2 id="stops-builder-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
-                  2. Constructor dinamic de opriri ({stops.length} opriri · D-009)
+                  2. Constructor dinamic de opriri ({stops.length} opriri)
                 </h2>
                 <button type="button" className="btn" onClick={addIntermediateStop}>
                   + Adaugă oprire intermediară
@@ -527,7 +527,7 @@ export function PublishRidePage() {
 
             <section aria-labelledby="cost-prefs-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
               <h2 id="cost-prefs-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
-                3. Locuri pasageri, consum combustibil &amp; preferințe (D-010, D-018)
+                3. Locuri pasageri, consum combustibil &amp; preferințe
               </h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-sm)', alignItems: 'end' }}>
@@ -568,7 +568,7 @@ export function PublishRidePage() {
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="pub-cost">Cost total declarat (lei · D-010)</label>
+                  <label htmlFor="pub-cost">Cost total declarat (lei)</label>
                   <input
                     id="pub-cost"
                     type="number"
@@ -619,12 +619,12 @@ export function PublishRidePage() {
                     checked={canPublishWomenOnly ? womenOnly : false}
                     onChange={(e) => setWomenOnly(e.target.checked)}
                   />
-                  <span>Cursă exclusiv pentru femei (Women-only · D-018)</span>
+                  <span>Cursă exclusiv pentru femei (Women-only)</span>
                 </label>
               </div>
               {!canPublishWomenOnly && (
                 <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                  Notă D-018: Opțiunea „Women-only” este activă exclusiv pentru șoferii cu genul auto-declarat „Femeie”.
+                  Notă: Opțiunea „Women-only” este activă exclusiv pentru șoferii cu genul auto-declarat „Femeie”.
                 </p>
               )}
             </section>
@@ -640,14 +640,14 @@ export function PublishRidePage() {
         </div>
       </section>
 
-      <aside className="map-column" aria-label="Previzualizare plafon cost D-010 și hartă">
+      <aside className="map-column" aria-label="Previzualizare plafon cost și hartă">
         <section className="fuel-box" aria-labelledby="d010-preview-heading">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2
               id="d010-preview-heading"
               style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}
             >
-              Previzualizare plafon cost (D-010)
+              Previzualizare plafon cost
             </h2>
             <span className="badge badge-uni">Additivitate exactă</span>
           </div>
@@ -689,14 +689,14 @@ export function PublishRidePage() {
           })}
 
           <div className="fuel-formula">
-            Invarianta D-010: Sub-segmentele se rotunjesc half-up și însumează exact <strong>{seatFullCapLei} lei</strong>.
+            Regula de împărțire echitabilă: Sub-segmentele se rotunjesc la leu întreg și însumează exact <strong>{seatFullCapLei} lei</strong>.
             Încasările totale nu depășesc niciodată costul declarat ({declaredTripCost} lei).
           </div>
         </section>
 
         <RouteMap
           title={`${stops[0]?.city_name || 'Origine'} → ${stops[stops.length - 1]?.city_name || 'Destinație'}`}
-          subtitle={`${totalDistKm} km · Clic pe hartă pentru reverse geocoding (D-009)`}
+          subtitle={`${totalDistKm} km · Clic pe hartă pentru a adăuga o oprire`}
           radiusKm={1}
           stops={stops}
           onMapClickCoordinate={handleMapClickReverseGeocode}

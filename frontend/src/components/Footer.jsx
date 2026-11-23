@@ -5,12 +5,12 @@ export function Footer() {
     <footer className="app-footer">
       <div className="footer-inner">
         <div>
-          <strong>StudRide (P18)</strong> · Carpooling studențesc pe segmente intermediare · ULBS Tehnologii Web
+          <strong>StudRide</strong> · Carpooling studențesc pe segmente intermediare · ULBS Tehnologii Web
         </div>
         <div>
-          Badge universitar: <em>Validat pe domeniu (nu identitate verificată)</em> (D-004) · 1 loc / rezervare (D-019) ·{' '}
+          Badge universitar: <em>Validat pe domeniu (nu identitate verificată)</em> · 1 loc / rezervare ·{' '}
           <a href="/api/docs" style={{ color: 'var(--color-primary-ink)', fontWeight: 600 }}>
-            OpenAPI Docs
+            Documentație API
           </a>
         </div>
       </div>
