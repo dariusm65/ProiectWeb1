@@ -313,6 +313,138 @@ export const openapiSpec = {
           },
         },
       },
+      ChatMessage: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          ride_id: { type: 'integer' },
+          sender_id: { type: 'integer' },
+          message_text: { type: 'string' },
+          created_at: { type: 'string', format: 'date-time' },
+          sender: {
+            type: 'object',
+            description: 'Safe sender summary; never exposes email, phone, gender or password_hash',
+            properties: {
+              id: { type: 'integer' },
+              full_name: { type: 'string' },
+              has_university_badge: { type: 'boolean' },
+              university_badge_note: { type: 'string', nullable: true },
+            },
+          },
+        },
+      },
+      Notification: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          user_id: { type: 'integer' },
+          type: { type: 'string' },
+          title: { type: 'string' },
+          message: { type: 'string' },
+          is_read: { type: 'boolean' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      Review: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          ride_id: { type: 'integer' },
+          reviewer_id: { type: 'integer' },
+          reviewed_user_id: { type: 'integer' },
+          rating_stars: { type: 'integer', minimum: 1, maximum: 5 },
+          comment: { type: 'string', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+          reviewer: {
+            type: 'object',
+            description: 'Safe reviewer summary; never exposes email, phone, gender or password_hash',
+            properties: {
+              id: { type: 'integer' },
+              full_name: { type: 'string' },
+              has_university_badge: { type: 'boolean' },
+              university_badge_note: { type: 'string', nullable: true },
+            },
+          },
+        },
+      },
+      UserPublicProfileAndReviews: {
+        type: 'object',
+        properties: {
+          user: {
+            type: 'object',
+            description: 'Public profile & dual reputation summary (D-008, D-016); never exposes email, phone, gender or password_hash',
+            properties: {
+              id: { type: 'integer' },
+              full_name: { type: 'string' },
+              has_university_badge: { type: 'boolean' },
+              university_badge_note: { type: 'string', nullable: true },
+              rating_average: { type: 'number', nullable: true },
+              rating_count: { type: 'integer' },
+              seriousness_score: { type: 'integer', minimum: 0, maximum: 100 },
+              has_recent_cancellation_badge: { type: 'boolean' },
+              created_at: { type: 'string', format: 'date-time' },
+            },
+          },
+          reviews: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Review' },
+          },
+        },
+      },
+      Report: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          reporter_id: { type: 'integer', nullable: true },
+          reported_user_id: { type: 'integer', nullable: true },
+          ride_id: { type: 'integer', nullable: true },
+          message_id: { type: 'integer', nullable: true },
+          reason: { type: 'string' },
+          details: { type: 'string', nullable: true },
+          status: { type: 'string', enum: ['pending', 'resolved', 'dismissed'] },
+          resolved_by: { type: 'integer', nullable: true },
+          resolved_at: { type: 'string', format: 'date-time', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      AdminUserSummary: {
+        type: 'object',
+        description: 'Moderation user summary with email and dual reputation metrics; never exposes password_hash',
+        properties: {
+          id: { type: 'integer' },
+          email: { type: 'string', format: 'email' },
+          full_name: { type: 'string' },
+          phone: { type: 'string', nullable: true },
+          university_domain: { type: 'string', nullable: true },
+          has_university_badge: { type: 'boolean' },
+          university_badge_note: { type: 'string', nullable: true },
+          role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
+          gender: { type: 'string', enum: ['female', 'male', 'prefer_not_to_say'] },
+          is_suspended: { type: 'boolean' },
+          rating_average: { type: 'number', nullable: true },
+          rating_count: { type: 'integer' },
+          seriousness_score: { type: 'integer', minimum: 0, maximum: 100 },
+          infraction_count: { type: 'integer' },
+          has_recent_cancellation_badge: { type: 'boolean' },
+          created_at: { type: 'string', format: 'date-time' },
+        },
+      },
+      PlatformStats: {
+        type: 'object',
+        properties: {
+          total_users: { type: 'integer' },
+          suspended_users: { type: 'integer' },
+          university_validated_users: { type: 'integer' },
+          total_rides: { type: 'integer' },
+          active_rides: { type: 'integer' },
+          cancelled_rides: { type: 'integer' },
+          total_bookings: { type: 'integer' },
+          confirmed_bookings: { type: 'integer' },
+          total_reports: { type: 'integer' },
+          pending_reports: { type: 'integer' },
+          total_reviews: { type: 'integer' },
+        },
+      },
     },
   },
   paths: {
@@ -890,6 +1022,517 @@ export const openapiSpec = {
           403: { description: 'Not the rule owner' },
           404: { description: 'Rule not found' },
           409: { description: 'Exception already exists for this date' },
+        },
+      },
+    },
+    '/api/rides/{rideId}/messages': {
+      get: {
+        summary: 'List chat messages for a ride (driver and confirmed / pending_reconfirmation passengers only, D-011)',
+        description:
+          'Runs lazy reconciliation first so overdue pending_reconfirmation bookings lose access immediately (403). Ordered deterministically by created_at ASC, id ASC.',
+        tags: ['Chat'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'rideId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'Ordered ride chat messages',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { messages: { type: 'array', items: { $ref: '#/components/schemas/ChatMessage' } } },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not an active chat participant (D-011)' },
+          404: { description: 'Ride not found' },
+        },
+      },
+      post: {
+        summary: 'Post a chat message to an active ride (driver and confirmed / pending_reconfirmation passengers only, D-011)',
+        description:
+          'Trims and validates message_text (1..2000 chars), rejects posting to cancelled rides (409), persists the message, and fans out idempotent chat_message notifications to other active chat participants.',
+        tags: ['Chat'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'rideId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['message_text'],
+                properties: {
+                  message_text: { type: 'string', minLength: 1, maxLength: 2000 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Message posted',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { message: { $ref: '#/components/schemas/ChatMessage' } } },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not an active chat participant (D-011)' },
+          404: { description: 'Ride not found' },
+          409: { description: 'Ride is cancelled (RIDE_NOT_ACTIVE)' },
+        },
+      },
+    },
+    '/api/rides/{rideId}/reviews': {
+      post: {
+        summary: 'Submit a post-arrival mutual 1–5 star rating (D-008)',
+        description:
+          'Unlocked strictly after estimated_arrival_time <= now on non-cancelled rides. Mutual between the ride driver and passengers with a confirmed booking on that ride. Enforces 1 review per (ride_id, reviewer_id, reviewed_user_id) pair.',
+        tags: ['Reviews'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'rideId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['reviewed_user_id', 'rating_stars'],
+                properties: {
+                  reviewed_user_id: { type: 'integer' },
+                  rating_stars: { type: 'integer', minimum: 1, maximum: 5 },
+                  comment: { type: 'string', maxLength: 1000, nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Review created',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { review: { $ref: '#/components/schemas/Review' } } },
+              },
+            },
+          },
+          400: { description: 'Validation error or self-review (SELF_REVIEW_NOT_ALLOWED)' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'REVIEW_BEFORE_ARRIVAL or NOT_CONFIRMED_PARTICIPANT (D-008)' },
+          404: { description: 'Ride not found' },
+          409: { description: 'RIDE_CANCELLED or DUPLICATE_REVIEW' },
+        },
+      },
+    },
+    '/api/users/{userId}/reviews': {
+      get: {
+        summary: 'Public student profile, dual reputation summary, and received reviews (D-008, D-016)',
+        description:
+          'Returns star rating average & count, event-sourced seriousness score %, domain-validated university badge & disclosure note, 30-day "Anulare recentă" badge, and chronological reviews without exposing PII.',
+        tags: ['Reviews'],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'Public user reputation and reviews',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPublicProfileAndReviews' } } },
+          },
+          400: { description: 'Invalid userId' },
+          404: { description: 'User not found' },
+        },
+      },
+    },
+    '/api/users/{userId}': {
+      get: {
+        summary: 'Public student profile and dual reputation summary (alias of GET /api/users/{userId}/reviews)',
+        tags: ['Reviews'],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'Public user reputation and reviews',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/UserPublicProfileAndReviews' } } },
+          },
+          400: { description: 'Invalid userId' },
+          404: { description: 'User not found' },
+        },
+      },
+    },
+    '/api/notifications': {
+      get: {
+        summary: "Poll the authenticated user's in-app notifications (D-011)",
+        description:
+          'Reconciles lazy expirations/lapses on caller rides first, then returns notifications newest-first with unread_count summary.',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'unreadOnly',
+            in: 'query',
+            schema: { type: 'boolean', default: false },
+            description: 'When true, returns only unread notifications (is_read = false)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Caller notifications and unread count',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    notifications: { type: 'array', items: { $ref: '#/components/schemas/Notification' } },
+                    unread_count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/notifications/{notificationId}/read': {
+      patch: {
+        summary: 'Mark one notification as read (owner only, D-011)',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'notificationId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'Notification marked read',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    notification: { $ref: '#/components/schemas/Notification' },
+                    unread_count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not the notification owner' },
+          404: { description: 'Notification not found' },
+        },
+      },
+    },
+    '/api/notifications/read-all': {
+      post: {
+        summary: "Mark all of the authenticated user's notifications as read (D-011)",
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'All notifications marked read',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    marked_read_count: { type: 'integer' },
+                    unread_count: { type: 'integer', example: 0 },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/reports': {
+      post: {
+        summary: 'File a moderation report against a user, ride, or chat message (D-013, CONTEXT.md)',
+        description:
+          'Requires at least one of reported_user_id, ride_id, or message_id. Verifies referenced entities exist and rejects self-reporting.',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['reason'],
+                properties: {
+                  reported_user_id: { type: 'integer', nullable: true },
+                  ride_id: { type: 'integer', nullable: true },
+                  message_id: { type: 'integer', nullable: true },
+                  reason: { type: 'string', minLength: 1, maxLength: 100 },
+                  details: { type: 'string', maxLength: 2000, nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Report filed in pending status',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { report: { $ref: '#/components/schemas/Report' } } },
+              },
+            },
+          },
+          400: { description: 'Validation error, missing target, or self-report' },
+          401: { description: 'Unauthorized' },
+          404: { description: 'Referenced user, ride, or message not found' },
+        },
+      },
+    },
+    '/api/admin/reports': {
+      get: {
+        summary: 'List moderation reports (moderator / admin only, D-013)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            schema: { type: 'string', enum: ['pending', 'resolved', 'dismissed'] },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Moderation reports',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { reports: { type: 'array', items: { $ref: '#/components/schemas/Report' } } },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires moderator or admin role' },
+        },
+      },
+    },
+    '/api/admin/reports/{reportId}': {
+      patch: {
+        summary: 'Resolve or dismiss a moderation report (moderator / admin only, D-013)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'reportId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['resolved', 'dismissed'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Report updated',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { report: { $ref: '#/components/schemas/Report' } } },
+              },
+            },
+          },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires moderator or admin role' },
+          404: { description: 'Report not found' },
+        },
+      },
+    },
+    '/api/admin/users': {
+      get: {
+        summary: 'List users with seriousness scores, infraction counts, star ratings, and suspension status (moderator / admin only, D-013, D-016)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Users list for moderation',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { users: { type: 'array', items: { $ref: '#/components/schemas/AdminUserSummary' } } },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires moderator or admin role' },
+        },
+      },
+    },
+    '/api/admin/users/{userId}/suspend': {
+      post: {
+        summary: 'Suspend a user account with transactional cancellation cascade (moderator / admin only, D-013, D-016)',
+        description:
+          'Sets is_suspended = true, cancels all active future rides published by the user (notifying passengers), cancels all active future passenger bookings held by the user (freeing segment seats and notifying drivers), and assesses zero seriousness score penalties or cancellation fees (D-016). Enforces role hierarchy (moderator -> user only; admin -> user or moderator) and blocks self-suspension.',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  reason: { type: 'string', maxLength: 255, nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'User suspended and future rides/bookings cancelled',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: { $ref: '#/components/schemas/AdminUserSummary' },
+                    cancelled_rides: { type: 'integer' },
+                    cancelled_passenger_bookings: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Self-suspension not allowed' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Insufficient role permissions or hierarchy' },
+          404: { description: 'User not found' },
+        },
+      },
+    },
+    '/api/admin/users/{userId}/unsuspend': {
+      post: {
+        summary: 'Unsuspend a user account (moderator / admin only, D-013)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'User unsuspended',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { user: { $ref: '#/components/schemas/AdminUserSummary' } } },
+              },
+            },
+          },
+          400: { description: 'Self-moderation not allowed' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Insufficient role permissions or hierarchy' },
+          404: { description: 'User not found' },
+        },
+      },
+    },
+    '/api/admin/rides/{rideId}/cancel': {
+      post: {
+        summary: 'Moderative ride cancellation without driver seriousness penalty (moderator / admin only, D-013, D-016)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'rideId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  reason: { type: 'string', maxLength: 255, nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Ride cancelled by moderator',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    cancelled_ride_id: { type: 'integer' },
+                    cancelled_bookings: { type: 'integer' },
+                    infraction_recorded: { type: 'boolean', example: false },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires moderator or admin role' },
+          404: { description: 'Ride not found' },
+          409: { description: 'Ride is not active' },
+        },
+      },
+    },
+    '/api/admin/users/{userId}/role': {
+      patch: {
+        summary: 'Promote or demote a user between user and moderator roles (admin only, D-013, CONTEXT.md)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['role'],
+                properties: {
+                  role: { type: 'string', enum: ['user', 'moderator'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Role updated',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { user: { $ref: '#/components/schemas/AdminUserSummary' } } },
+              },
+            },
+          },
+          400: { description: 'Validation error or self-moderation' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires admin role or target is an admin' },
+          404: { description: 'User not found' },
+        },
+      },
+    },
+    '/api/admin/stats': {
+      get: {
+        summary: 'Platform statistics summary (admin only, D-013, CONTEXT.md)',
+        tags: ['Moderation'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Platform statistics',
+            content: {
+              'application/json': {
+                schema: { type: 'object', properties: { stats: { $ref: '#/components/schemas/PlatformStats' } } },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Requires admin role' },
         },
       },
     },
