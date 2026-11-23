@@ -76,6 +76,9 @@ describe('Europe/Bucharest wall-clock conversion (D-020)', () => {
     expect(bucharestLocalToUtc('2026-03-29', '12:00:00').toISOString()).toBe('2026-03-29T09:00:00.000Z');
     // 2026-03-29 00:30 local is still UTC+2
     expect(bucharestLocalToUtc('2026-03-29', '00:30:00').toISOString()).toBe('2026-03-28T22:30:00.000Z');
+    // 2026-03-29 03:30 local falls inside the non-existent spring-forward hour (03:00 -> 04:00):
+    // resolves forward to 04:30 EEST (01:30Z), never backward to 02:30 EET (00:30Z)
+    expect(bucharestLocalToUtc('2026-03-29', '03:30:00').toISOString()).toBe('2026-03-29T01:30:00.000Z');
     // 2026-10-25: clocks go back 04:00 -> 03:00; 12:00 local is UTC+2
     expect(bucharestLocalToUtc('2026-10-25', '12:00:00').toISOString()).toBe('2026-10-25T10:00:00.000Z');
   });

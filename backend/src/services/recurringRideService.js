@@ -3,6 +3,7 @@
 // are created lazily when a date is searched. Bookings attach to the instance, never the rule.
 import { ApiError } from '../errors.js';
 import { assertCanPublish } from './rideService.js';
+import { reconcileRideBookings } from './bookingAcceptanceService.js';
 import {
   ruleAppliesOn,
   toDateString,
@@ -225,6 +226,10 @@ export async function addException(pool, user, ruleId, { exception_date: dateStr
     );
     const ride = rides[0];
     if (ride && ride.status === 'active') {
+      // Lazily expire overdue pending_reconfirmation / departure-time pending bookings first (D-003, D-007)
+      // so an already-lapsed booking never triggers a driver_late_cancel infraction or cancellation alert.
+      await reconcileRideBookings(conn, { rideId: ride.id, ride, now });
+
       const [bookings] = await conn.query(
         `SELECT id, passenger_id, status FROM bookings
          WHERE ride_id = ? AND status IN ('pending', 'confirmed', 'pending_reconfirmation') FOR UPDATE`,

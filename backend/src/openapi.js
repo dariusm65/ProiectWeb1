@@ -98,6 +98,17 @@ export const openapiSpec = {
           estimated_offset_minutes: { type: 'integer', minimum: 0, description: 'Minutes after departure; first stop 0, strictly increasing' },
         },
       },
+      RuleStop: {
+        allOf: [
+          {
+            type: 'object',
+            properties: {
+              stop_order: { type: 'integer', description: 'Server-assigned in steps of 10' },
+            },
+          },
+          { $ref: '#/components/schemas/RuleStopInput' },
+        ],
+      },
       RideOptions: {
         type: 'object',
         required: ['available_seats', 'declared_trip_cost'],
@@ -218,9 +229,15 @@ export const openapiSpec = {
               start_date: { type: 'string', format: 'date' },
               end_date: { type: 'string', format: 'date', nullable: true },
               days_of_week: { type: 'array', items: { type: 'string' } },
+              available_seats: { type: 'integer' },
+              declared_trip_cost: { type: 'number' },
+              luggage_allowed: { type: 'boolean' },
+              pets_allowed: { type: 'boolean' },
+              smoking_allowed: { type: 'boolean' },
+              women_only: { type: 'boolean' },
             },
           },
-          stops: { type: 'array', items: { $ref: '#/components/schemas/RuleStopInput' } },
+          stops: { type: 'array', items: { $ref: '#/components/schemas/RuleStop' } },
         },
       },
     },

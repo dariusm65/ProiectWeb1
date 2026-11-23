@@ -220,8 +220,11 @@ export async function getRideDetails(pool, rideId, now) {
   };
 }
 
-/** Best (pickup, dropoff) stop pair for a ride: pickup before dropoff, least total walking distance. */
-function bestStopPair(stops, origin, dest, radiusKm) {
+/**
+ * All (pickup, dropoff) stop pairs within radiusKm where pickup.stop_order < dropoff.stop_order,
+ * ordered ascending by summed walking distance so the first pair with >= 1 free seat wins.
+ */
+function candidateStopPairs(stops, origin, dest, radiusKm) {
   const pickups = [];
   const dropoffs = [];
   for (const s of stops) {
@@ -231,15 +234,14 @@ function bestStopPair(stops, origin, dest, radiusKm) {
     if (toOrigin <= radiusKm) pickups.push({ stop: s, walkKm: toOrigin });
     if (toDest <= radiusKm) dropoffs.push({ stop: s, walkKm: toDest });
   }
-  let best = null;
+  const pairs = [];
   for (const p of pickups) {
     for (const d of dropoffs) {
       if (p.stop.stop_order >= d.stop.stop_order) continue;
-      const total = p.walkKm + d.walkKm;
-      if (best === null || total < best.total) best = { pickup: p, dropoff: d, total };
+      pairs.push({ pickup: p, dropoff: d, total: p.walkKm + d.walkKm });
     }
   }
-  return best;
+  return pairs.sort((a, b) => a.total - b.total || a.pickup.stop.stop_order - b.pickup.stop.stop_order);
 }
 
 /**
@@ -296,8 +298,8 @@ export async function searchRides(pool, params, now) {
 
   const matches = [];
   for (const ride of candidates) {
-    const pair = bestStopPair(stopsByRide.get(ride.id) ?? [], origin, dest, radiusKm);
-    if (pair) matches.push({ ride, pair });
+    const pairs = candidateStopPairs(stopsByRide.get(ride.id) ?? [], origin, dest, radiusKm);
+    if (pairs.length > 0) matches.push({ ride, pairs });
   }
   if (matches.length === 0) return [];
 
@@ -311,19 +313,28 @@ export async function searchRides(pool, params, now) {
   );
 
   const results = [];
-  for (const { ride, pair } of matches) {
+  for (const { ride, pairs } of matches) {
     const stops = allStops.filter((s) => s.ride_id === ride.id);
     const bookings = allBookings.filter((b) => b.ride_id === ride.id);
+    let chosen = null;
+    for (const candidate of pairs) {
+      const freeSeats = getAvailableSeatsForRange({
+        stops,
+        bookings,
+        availableSeats: ride.available_seats,
+        pickupStopId: candidate.pickup.stop.id,
+        dropoffStopId: candidate.dropoff.stop.id,
+      });
+      if (freeSeats >= 1) {
+        chosen = { pair: candidate, freeSeats };
+        break;
+      }
+    }
+    if (!chosen) continue;
+
+    const { pair, freeSeats } = chosen;
     const pickup = pair.pickup.stop;
     const dropoff = pair.dropoff.stop;
-    const freeSeats = getAvailableSeatsForRange({
-      stops,
-      bookings,
-      availableSeats: ride.available_seats,
-      pickupStopId: pickup.id,
-      dropoffStopId: dropoff.id,
-    });
-    if (freeSeats < 1) continue;
 
     const active = activeStops(stops);
     results.push({

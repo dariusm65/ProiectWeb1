@@ -533,6 +533,55 @@ describe.skipIf(!admin)('integration: geocoding, rides, search & recurring rides
       expect(sub.body.rides[0].segment_price_lei).toBe(22);
     });
 
+    it('picks the second-closest stop pair within radiusKm when the closest pair traverses a saturated segment', async () => {
+      const driver = await createUser();
+      const base = new Date('2026-12-04T16:00:00Z').getTime();
+      // Two Turda stops ~1.1 km apart: Turda Nord (stop 10) and Turda Sud (stop 20), then Sibiu (stop 30)
+      const created = await publish(driver, '2026-12-04', {
+        available_seats: 1,
+        declared_trip_cost: 120,
+        stops: [
+          {
+            city_name: 'Turda',
+            location_name: 'Turda Nord',
+            latitude: 46.58,
+            longitude: 23.78,
+            distance_from_origin_km: 0,
+            estimated_arrival_time: new Date(base).toISOString(),
+          },
+          {
+            city_name: 'Turda',
+            location_name: 'Turda Sud',
+            latitude: 46.57,
+            longitude: 23.78,
+            distance_from_origin_km: 4,
+            estimated_arrival_time: new Date(base + 10 * 60 * 1000).toISOString(),
+          },
+          {
+            city_name: 'Sibiu',
+            location_name: 'Gara Sibiu',
+            latitude: 45.79,
+            longitude: 24.15,
+            distance_from_origin_km: 120,
+            estimated_arrival_time: new Date(base + 150 * 60 * 1000).toISOString(),
+          },
+        ],
+      });
+      const [sNord, sSud] = created.stops;
+      const localPassenger = await createUser();
+      // Saturate ONLY the local Turda Nord -> Turda Sud segment
+      await addBooking(created.ride.id, localPassenger.id, sNord.id, sSud.id, 'confirmed');
+
+      // Passenger searching near Turda Nord (46.579, 23.78) with radiusKm=3:
+      // Turda Nord is ~0.11 km away (closest, but saturated); Turda Sud is ~1.0 km away (within 3 km and free)
+      const res = await search({ originLat: 46.579, originLng: 23.78, radiusKm: 3 });
+      expect(res.status).toBe(200);
+      expect(res.body.rides).toHaveLength(1);
+      expect(res.body.rides[0].pickup_stop.location_name).toBe('Turda Sud');
+      expect(res.body.rides[0].dropoff_stop.location_name).toBe('Gara Sibiu');
+      expect(res.body.rides[0].free_seats).toBe(1);
+    });
+
     it('a pending booking does not consume capacity (D-003/D-005)', async () => {
       const created = await publish(await createUser(), '2026-12-04', { available_seats: 1 });
       const passenger = await createUser();
@@ -760,6 +809,27 @@ describe.skipIf(!admin)('integration: geocoding, rides, search & recurring rides
       expect(ex.status).toBe(201);
       expect(ex.body.infraction_recorded).toBe(false);
       expect(ex.body.cancelled_bookings).toBe(1);
+      const [inf] = await pool.query('SELECT COUNT(*) AS n FROM user_infractions');
+      expect(inf[0].n).toBe(0);
+    });
+
+    it('D-007 + Q-B3: a same-day exception with only an overdue pending_reconfirmation lapses it to expired and records no infraction', async () => {
+      const driver = await createUser();
+      const ruleId = await createRule(driver, { days_of_week: ['tuesday'] });
+      const found = (await search({ date: '2026-12-01' })).body.rides[0];
+      const [stops] = await pool.query('SELECT id FROM ride_stops WHERE ride_id = ? ORDER BY stop_order', [found.ride_id]);
+      const passenger = await createUser();
+      const bookingId = await addBooking(found.ride_id, passenger.id, stops[0].id, stops[3].id, 'pending_reconfirmation');
+      // reconfirm_deadline already passed before NOW (2026-12-01T09:00:00Z)
+      await pool.query("UPDATE bookings SET reconfirm_deadline = '2026-12-01 08:00:00' WHERE id = ?", [bookingId]);
+
+      const ex = await request(app).post(`/api/recurring-rides/${ruleId}/exceptions`).set(auth(driver)).send({ exception_date: '2026-12-01' });
+      expect(ex.status).toBe(201);
+      expect(ex.body.infraction_recorded).toBe(false);
+      expect(ex.body.cancelled_bookings).toBe(0);
+
+      const [[bRow]] = await pool.query('SELECT status FROM bookings WHERE id = ?', [bookingId]);
+      expect(bRow.status).toBe('expired');
       const [inf] = await pool.query('SELECT COUNT(*) AS n FROM user_infractions');
       expect(inf[0].n).toBe(0);
     });

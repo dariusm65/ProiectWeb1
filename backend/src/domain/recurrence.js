@@ -73,8 +73,15 @@ export function bucharestLocalToUtc(dateStr, timeStr) {
   const t = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(timeStr));
   if (!t) throw new RangeError(`Invalid time: ${timeStr}`);
   const localMs = Date.UTC(y, mo - 1, d, Number(t[1]), Number(t[2]), Number(t[3] ?? 0));
-  const first = localMs - offsetMs(localMs);
-  return new Date(localMs - offsetMs(first)); // second pass settles instants near a DST change
+  // Anchor before the requested time (localMs - 3h) so the first pass uses the pre-transition offset
+  const preOff = offsetMs(localMs - 3 * 60 * MS_PER_MINUTE);
+  const first = localMs - preOff;
+  const postOff = offsetMs(first);
+  if (postOff === preOff) return new Date(first);
+  const second = localMs - postOff;
+  // If `second + offsetMs(second)` does not round-trip to `localMs`, `timeStr` fell inside a
+  // spring-forward DST gap (e.g. 03:30 when clocks jump 03:00 -> 04:00): return `first` (04:30 EEST).
+  return new Date(second + offsetMs(second) === localMs ? second : first);
 }
 
 /** Europe/Bucharest calendar date ('YYYY-MM-DD') of a UTC instant. */
