@@ -24,6 +24,7 @@
 
 ## PATTERN-002 · Isolated throwaway MySQL database per integration test file
 - **Status:** candidate
+- **Confirmed:** 2026-11-23
 - **Use when:** Adding a Vitest + MySQL integration test suite under `backend/tests/`.
 - **How:** Give each integration test file its own dedicated throwaway database name (`studride_test_<suite>`), create and migrate it in `beforeAll`, drop it and close the pool in `afterAll`, and skip cleanly when MySQL is unreachable locally while throwing loudly when `process.env.CI` is set.
 - **Example:** `backend/tests/auth.test.js` (`studride_test_auth`), `backend/tests/bookingAcceptance.test.js` (`studride_test_bookings`), `backend/tests/rides.test.js` (`studride_test_rides`)
@@ -34,6 +35,7 @@
 
 ## PATTERN-003 · Injectable fetchFn and nowFn for deterministic service and API tests
 - **Status:** candidate
+- **Confirmed:** 2026-11-23
 - **Use when:** Building backend services or Express routers that depend on wall-clock time or external HTTP APIs (such as Nominatim geocoding).
 - **How:** Accept `fetchFn = globalThis.fetch` and `nowFn = () => new Date()` in `createApp` and service factories so integration tests can inject mocks and fixed timestamps without global monkey-patching or live network calls.
 - **Example:** `backend/src/app.js`, `backend/src/services/geocodingService.js`, `backend/tests/rides.test.js`

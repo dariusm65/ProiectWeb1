@@ -244,6 +244,16 @@ export async function acceptBooking(pool, { rideId, bookingId, driverId, now = n
 
     hasMutatedTarget = true;
     await conn.query("UPDATE bookings SET status = 'confirmed' WHERE id = ?", [normalizedBookingId]);
+    await conn.query(
+      `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+       VALUES (?, 'booking_accepted', 'Rezervare confirmată de șofer', ?, ?)
+       ON DUPLICATE KEY UPDATE id = id`,
+      [
+        target.passenger_id,
+        `Rezervarea ta pentru cursa ${ride.origin_name} → ${ride.destination_name} a fost confirmată.`,
+        `booking_accepted:${normalizedBookingId}`,
+      ],
+    );
 
     const { toReject, toKeepPending } = findCompetingPendingBookingsToReject({
       stops,
@@ -283,7 +293,11 @@ export async function acceptBooking(pool, { rideId, bookingId, driverId, now = n
     if (err instanceof BookingDomainError && hasReconciledChanges && !hasMutatedTarget) {
       await conn.commit();
     } else {
-      await conn.rollback();
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
     }
     throw err;
   } finally {

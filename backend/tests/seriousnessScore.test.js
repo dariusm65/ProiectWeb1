@@ -5,6 +5,9 @@ import {
   computeSeriousnessScore,
   isPublishingBanned,
   isWithinLateCancelWindow,
+  isWithinPassengerLateCancelWindow,
+  calculatePassengerCancellationFee,
+  hasRecentCancellationBadge,
 } from '../src/domain/seriousnessScore.js';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -98,5 +101,80 @@ describe('isWithinLateCancelWindow', () => {
     expect(
       isWithinLateCancelWindow({ departureTime: new Date('2026-12-02T06:00:00Z'), now: lateNow }),
     ).toBe(true);
+  });
+});
+
+describe('isWithinPassengerLateCancelWindow', () => {
+  it('is true strictly when < 4 hours remain before departure (D-016)', () => {
+    // 3h59m before departure
+    expect(
+      isWithinPassengerLateCancelWindow({
+        departureTime: new Date(now.getTime() + (4 * 60 - 1) * 60 * 1000),
+        now,
+      }),
+    ).toBe(true);
+    // 1 minute before departure
+    expect(
+      isWithinPassengerLateCancelWindow({
+        departureTime: new Date(now.getTime() + 60 * 1000),
+        now,
+      }),
+    ).toBe(true);
+  });
+
+  it('is false when >= 4 hours remain or at/after departure', () => {
+    // Exactly 4 hours before departure -> not < 4h
+    expect(
+      isWithinPassengerLateCancelWindow({
+        departureTime: new Date(now.getTime() + 4 * 60 * 60 * 1000),
+        now,
+      }),
+    ).toBe(false);
+    // 5 hours before departure
+    expect(
+      isWithinPassengerLateCancelWindow({
+        departureTime: new Date(now.getTime() + 5 * 60 * 60 * 1000),
+        now,
+      }),
+    ).toBe(false);
+    // At or after departure
+    expect(isWithinPassengerLateCancelWindow({ departureTime: now, now })).toBe(false);
+    expect(
+      isWithinPassengerLateCancelWindow({
+        departureTime: new Date(now.getTime() - 60 * 1000),
+        now,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('calculatePassengerCancellationFee', () => {
+  it('calculates 50% of booked segment price with round-half-up, capped at 20 lei (D-016)', () => {
+    expect(calculatePassengerCancellationFee(0)).toBe(0);
+    expect(calculatePassengerCancellationFee(10)).toBe(5);
+    expect(calculatePassengerCancellationFee(15)).toBe(8); // 7.5 -> 8
+    expect(calculatePassengerCancellationFee(30)).toBe(15);
+    expect(calculatePassengerCancellationFee(40)).toBe(20);
+    expect(calculatePassengerCancellationFee(41)).toBe(20); // 20.5 -> capped at 20
+    expect(calculatePassengerCancellationFee(80)).toBe(20);
+  });
+
+  it('throws on negative or non-integer priceLei', () => {
+    expect(() => calculatePassengerCancellationFee(-2)).toThrow(RangeError);
+    expect(() => calculatePassengerCancellationFee(12.5)).toThrow(RangeError);
+  });
+});
+
+describe('hasRecentCancellationBadge', () => {
+  it('is true when a driver_late_cancel occurred within the last 30 days (D-016)', () => {
+    expect(hasRecentCancellationBadge([driverLate(1)], now)).toBe(true);
+    expect(hasRecentCancellationBadge([driverLate(29.9)], now)).toBe(true);
+  });
+
+  it('is false once 30 days have passed or for passenger infractions', () => {
+    expect(hasRecentCancellationBadge([driverLate(30)], now)).toBe(false);
+    expect(hasRecentCancellationBadge([driverLate(35)], now)).toBe(false);
+    expect(hasRecentCancellationBadge([passengerLate(1)], now)).toBe(false);
+    expect(hasRecentCancellationBadge([], now)).toBe(false);
   });
 });
