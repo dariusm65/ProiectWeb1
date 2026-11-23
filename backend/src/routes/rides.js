@@ -1,0 +1,136 @@
+// Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/:rideId
+// (D-003, D-005, D-010, D-014, D-017, D-018).
+import { Router } from 'express';
+import { z } from 'zod';
+import { validateBody, validateQuery, validateParams } from '../middleware/validate.js';
+import { requireAuth } from '../middleware/auth.js';
+import { numericParam } from './geocoding.js';
+import { dayOfWeekName } from '../domain/recurrence.js';
+import { publishRide, getRideDetails, searchRides } from '../services/rideService.js';
+import { materialiseForDate } from '../services/recurringRideService.js';
+
+export const MAX_STOPS = 20;
+
+/** 'YYYY-MM-DD' that is a real calendar date. */
+export const dateString = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => {
+    try {
+      dayOfWeekName(d);
+      return true;
+    } catch {
+      return false;
+    }
+  }, { message: 'Invalid calendar date' });
+
+const money = z
+  .number()
+  .min(0)
+  .max(100000)
+  .refine((v) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, { message: 'At most 2 decimal places' });
+
+/** Fields shared by a single ride and a recurring rule (everything except the schedule). */
+export const sharedRideFields = {
+  available_seats: z.number().int().min(1).max(8),
+  declared_trip_cost: money,
+  luggage_allowed: z.boolean().default(true),
+  pets_allowed: z.boolean().default(false),
+  smoking_allowed: z.boolean().default(false),
+  women_only: z.boolean().default(false),
+};
+
+/** Stop fields common to rides and rules; stop_order is assigned by the server (10, 20, 30...). */
+export const stopBaseFields = {
+  city_name: z.string().trim().min(1).max(100),
+  location_name: z.string().trim().min(1).max(255),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  distance_from_origin_km: z.number().int().min(0),
+};
+
+/** First stop at 0 km, last stop beyond 0 km, distances strictly increasing. */
+export function checkDistances(stops, ctx) {
+  stops.forEach((s, i) => {
+    if (i === 0 && s.distance_from_origin_km !== 0) {
+      ctx.addIssue({ code: 'custom', path: [i, 'distance_from_origin_km'], message: 'First stop must be at 0 km' });
+    }
+    if (i > 0 && s.distance_from_origin_km <= stops[i - 1].distance_from_origin_km) {
+      ctx.addIssue({ code: 'custom', path: [i, 'distance_from_origin_km'], message: 'Distances must be strictly increasing' });
+    }
+  });
+}
+
+const rideStop = z.object({
+  ...stopBaseFields,
+  estimated_arrival_time: z.iso.datetime({ offset: true }).transform((v) => new Date(v)),
+});
+
+const publishSchema = z.object({
+  ...sharedRideFields,
+  stops: z
+    .array(rideStop)
+    .min(2)
+    .max(MAX_STOPS)
+    .superRefine((stops, ctx) => {
+      checkDistances(stops, ctx);
+      stops.forEach((s, i) => {
+        if (i > 0 && s.estimated_arrival_time.getTime() <= stops[i - 1].estimated_arrival_time.getTime()) {
+          ctx.addIssue({ code: 'custom', path: [i, 'estimated_arrival_time'], message: 'Arrival times must be strictly increasing' });
+        }
+      });
+    }),
+});
+
+const optionalBool = z.enum(['true', 'false']).transform((v) => v === 'true').optional();
+
+const searchSchema = z.object({
+  originLat: numericParam(-90, 90),
+  originLng: numericParam(-180, 180),
+  destLat: numericParam(-90, 90),
+  destLng: numericParam(-180, 180),
+  date: dateString,
+  // D-017: default 1 km, maximum 5 km
+  radiusKm: z.string().trim().min(1).pipe(z.coerce.number().gt(0).max(5)).optional().default(1),
+  universityOnly: optionalBool,
+  womenOnly: optionalBool,
+  luggageAllowed: optionalBool,
+  petsAllowed: optionalBool,
+  smokingAllowed: optionalBool,
+});
+
+const rideIdParams = z.object({ rideId: z.coerce.number().int().positive() });
+
+export function createRidesRouter({ pool, jwtSecret, nowFn }) {
+  const router = Router();
+
+  router.post('/', requireAuth(pool, jwtSecret), validateBody(publishSchema), async (req, res, next) => {
+    try {
+      const now = nowFn();
+      const rideId = await publishRide(pool, req.user, req.body, now);
+      return res.status(201).json(await getRideDetails(pool, rideId, now));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.get('/', validateQuery(searchSchema), async (req, res, next) => {
+    try {
+      const now = nowFn();
+      await materialiseForDate(pool, req.query.date, now);
+      return res.status(200).json({ rides: await searchRides(pool, req.query, now) });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.get('/:rideId', validateParams(rideIdParams), async (req, res, next) => {
+    try {
+      return res.status(200).json(await getRideDetails(pool, req.params.rideId, nowFn()));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  return router;
+}

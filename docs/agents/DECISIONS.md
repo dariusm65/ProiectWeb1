@@ -26,6 +26,7 @@
 - D-017 · Configurable search radius with 1 km default
 - D-018 · Women-only ride preference and eligibility rule
 - D-019 · Single-seat booking constraint
+- D-020 · UTC storage with Europe/Bucharest wall-clock interpretation for recurring rules and search dates
 
 ---
 
@@ -238,4 +239,15 @@
 - **Rule:** Every booking request is strictly for 1 seat per student account. Multi-seat bookings (reserving multiple seats in a single booking request) are explicitly out of scope.
 - **Why:** Aligns with student commuter use cases where students maintain individual accounts and reputations, simplifies segment capacity math, and prevents account proxying.
 - **Evidence:** P18 scope refinement, 2026-11-19.
+- **Source:** user · confidence high
+
+---
+
+## D-020 · UTC storage with Europe/Bucharest wall-clock interpretation for recurring rules and search dates
+- **Status:** approved
+- **Date:** 2026-11-23
+- **Confirmed:** 2026-11-23
+- **Rule:** All MySQL `DATETIME` columns store UTC instants (`timezone: 'Z'` on the connection pool) and the REST API accepts/returns ISO-8601 timestamps with timezone offset. Recurring ride rule `departure_time` (`TIME`) and passenger search `date` (`YYYY-MM-DD`) are interpreted in the `Europe/Bucharest` timezone using native JS `Intl.DateTimeFormat` (DST-aware between UTC+2 and UTC+3, without extra third-party timezone dependencies). Driver late-cancellation day-of-departure checks (`D-016`) also evaluate calendar days in `Europe/Bucharest`.
+- **Why:** Prevents 2–3 hour drift and DST boundary bugs when materialising recurring ride instances or filtering rides by calendar date while keeping stored timestamps canonically in UTC.
+- **Evidence:** Slice 4A planning gate (Q-B1), 2026-11-23.
 - **Source:** user · confidence high

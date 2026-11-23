@@ -215,3 +215,30 @@ Parallel read-only review (Performance & SQL Specialist, Security & Invariant En
 4. **Security hardening:** Raised `JWT_SECRET` floor to `>= 32` UTF-8 bytes in `app.js`, defaulted `corsOrigin` to `false` (fail closed), enforced `<= 72` UTF-8 bytes on bcrypt passwords in Zod (`routes/auth.js`), added `permissions: { contents: read }` and passwordless `mysqladmin ping` healthcheck in `.github/workflows/ci.yml`.
 5. **Server lifecycle robustness:** Added `shuttingDown` guard, `try/catch` around `pool.end()`, `server.closeIdleConnections?.()`, `server.on('error', ...)` cleanup, and a loud startup warning if `ADMIN_PASSWORD`/`MODERATOR_PASSWORD` are unset in `server.js`.
 6. **Test & CI robustness:** Wrapped `migrateConn` in `try/finally` in `auth.test.js` and made `database.test.js`, `bookingAcceptance.test.js`, and `auth.test.js` fail loudly when `process.env.CI` is set and MySQL is unreachable.
+
+---
+
+## Session 2026-11-23 — Slice 4A: Geocoding Cache, Rides Publishing, Spatial Segment Search & Recurring Rides (`feat/rides-search-geocoding`)
+
+### What was planned & built
+1. **Ledger & Architecture updates (`D-020`, `C-001`, `PATTERN-002`, `PATTERN-003`):**
+   - Recorded `D-020` (UTC storage in MySQL `DATETIME` with `Europe/Bucharest` wall-clock interpretation via native `Intl` for recurring ride `departure_time`, search `date`, and `D-016` same-day cancellation checks) in `docs/agents/DECISIONS.md`.
+   - Recorded `C-001` (OpenStreetMap Nominatim usage policy: custom `User-Agent`, `<= 1` req/sec outbound throttling, MySQL cache persistence, zero throttling on cache hits or test mocks) in `docs/agents/CONTRACTS.md`.
+   - Recorded candidate patterns `PATTERN-002` (isolated throwaway MySQL DB per integration test file) and `PATTERN-003` (injectable `fetchFn` and `nowFn`) in `docs/agents/PATTERNS.md`, and refreshed `docs/agents/ARCHITECTURE.md`.
+2. **Pure Domain Modules (`D-006`, `D-016`, `D-017`, `D-020`):**
+   - `backend/src/domain/geo.js`: `haversineKm` and `boundingBox` (SQL prefilter on `idx_stops_coords` before exact Haversine evaluation).
+   - `backend/src/domain/recurrence.js`: `dayOfWeekName`, `ruleAppliesOn`, `bucharestLocalToUtc`, `bucharestDateOf`, `bucharestDayBounds`, and `buildInstanceTimes` (DST-aware `Europe/Bucharest` conversion using native `Intl.DateTimeFormat`).
+   - `backend/src/domain/seriousnessScore.js`: `computeSeriousnessScore` (event-sourced replay from 100% with `-5` / `-3` penalties, `[0, 100]` clamping, and `+1` recovery per full 7 clean days), `isPublishingBanned` (7-day `driver_late_cancel` ban), and `isWithinLateCancelWindow`.
+3. **Services & Express Routes (`D-003`, `D-005`, `D-006`, `D-009`, `D-010`, `D-014`, `D-016`, `D-017`, `D-018`):**
+   - `backend/src/errors.js`: `ApiError(statusCode, code, message)` for clean 4xx/502 error handling.
+   - `backend/src/services/geocodingService.js` & `backend/src/routes/geocoding.js`: `GET /api/geocoding/search` (`geocoding_cache` → `known_places` → Nominatim) and `GET /api/geocoding/reverse` (4-decimal rounded coords → `geocoding_cache` → Nominatim) with SHA-256 `query_hash` (`fwd:` / `rev:` namespace), injectable `fetchFn`, and outbound-only throttling (`C-001`).
+   - `backend/src/services/rideService.js` & `backend/src/routes/rides.js`: `POST /api/rides` (Zod validation, server-assigned `stop_order` 10, 20, 30..., `D-018` `women_only` guard, `D-016` 7-day publishing ban guard), `GET /api/rides/:rideId` (public ride details, ordered active stops, per-segment availability + `D-010` proportional prices, driver summary with live `D-016` seriousness score and `D-004` badge note, safe confirmed passengers list), and `GET /api/rides` (spatial segment search with default `1 km` / max `5 km` radius per `D-017`, filters, lazy per-ride reconciliation in sorted short transactions, `free_seats >= 1`, and `segment_price_lei`).
+   - `backend/src/services/recurringRideService.js` & `backend/src/routes/recurringRides.js`: `POST /api/recurring-rides`, `POST /api/recurring-rides/:ruleId/exceptions` (cancels concrete ride instance and all `pending`, `confirmed`, and `pending_reconfirmation` bookings, sends idempotent notifications, and records a `driver_late_cancel` infraction if seat-holding passengers exist within the same-day departure window), and on-demand materialisation (`INSERT IGNORE INTO rides` on `uq_rule_instance`, inserting `ride_stops` only when `affectedRows === 1`, skipping exception dates, suspended drivers, and 7-day-banned drivers).
+   - Wired routers in `backend/src/app.js` and documented all 6 endpoints and schemas in `backend/src/openapi.js`.
+4. **Tests (TDD):**
+   - `backend/tests/geo.test.js` (8 unit tests), `backend/tests/recurrence.test.js` (12 unit tests), `backend/tests/seriousnessScore.test.js` (13 unit tests), and `backend/tests/rides.test.js` (32 Supertest + MySQL integration tests on `studride_test_rides`).
+
+### Verification
+- TDD red run confirmed `geo.test.js`, `recurrence.test.js`, and `seriousnessScore.test.js` failed on missing modules (`8ea8635`).
+- Green run (`npm test --prefix backend`): **64 passed | 54 skipped (118)** across 10 test files (`8/8` `geo.test.js`, `12/12` `recurrence.test.js`, `13/13` `seriousnessScore.test.js`, `18/18` `domain.test.js`, `5/5` `universityDomains.test.js`, `2/2` `validate.test.js`, `6/6` static `database.test.js`; `54` MySQL integration tests skipped in sandbox due to `ECONNREFUSED`).
+- `python3 docs/agents/tools/ledger-lint.py --fix` and `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).
