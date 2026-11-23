@@ -533,6 +533,7 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
 
     const survivingOldOrdered = activeOldStops.filter((s) => survivingIndexById.has(s.id));
     const removedAfterSurvivingIdx = new Map(); // inputStops index (0..N-1) -> array of stop rows
+    let lastRemovedAnchorIdx = 0;
     for (const rem of keptRemovedStops) {
       let survFloorIdx = -1;
       let survCeilIdx = inputStops.length;
@@ -545,18 +546,23 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
         }
       }
 
-      // Within [max(0, survFloorIdx), survCeilIdx - 1], pick the largest active stop index whose
-      // distance_from_origin_km <= rem.distance_from_origin_km (clamped so even a removed origin at 0 km
-      // anchors at index 0 inside the first active segment [10, 20) rather than falling before 10).
-      const minIdx = Math.max(0, survFloorIdx);
-      const maxIdx = Math.max(minIdx, survCeilIdx - 1);
+      // Within [max(0, survFloorIdx, lastRemovedAnchorIdx), survCeilIdx - 1], find the nearest active stop
+      // in inputStops by distance_from_origin_km (clamped so a removed origin at 0 km anchors at index 0 inside [10, 20),
+      // while a removed stop replaced by a nearby new active stop at index 1 anchors at index 1 inside [20, 30)
+      // rather than colliding with index 0 and causing adjacent non-overlapping bookings to overlap).
+      const minIdx = Math.max(0, survFloorIdx, lastRemovedAnchorIdx);
+      const maxIdx = Math.min(inputStops.length - 1, Math.max(minIdx, survCeilIdx - 1));
       let anchorInputIdx = minIdx;
       const remKm = Number(rem.distance_from_origin_km);
-      for (let i = minIdx; i <= maxIdx && i < inputStops.length; i += 1) {
-        if (Number(inputStops[i].distance_from_origin_km) <= remKm) {
+      let bestDistDiff = Infinity;
+      for (let i = minIdx; i <= maxIdx; i += 1) {
+        const diff = Math.abs(Number(inputStops[i].distance_from_origin_km) - remKm);
+        if (diff <= bestDistDiff) {
+          bestDistDiff = diff;
           anchorInputIdx = i;
         }
       }
+      lastRemovedAnchorIdx = anchorInputIdx;
 
       if (!removedAfterSurvivingIdx.has(anchorInputIdx)) {
         removedAfterSurvivingIdx.set(anchorInputIdx, []);
