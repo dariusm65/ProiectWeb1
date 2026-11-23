@@ -521,7 +521,9 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
     });
 
     // Any existing stop (previously removed or newly removed) that is NOT in survivingIndexById and is referenced by a booking
-    // is placed into the gap right after the last surviving old stop whose old stop_order < its old stop_order.
+    // is anchored into the active stop intervals using its route position (surviving old stop order AND distance_from_origin_km),
+    // ensuring that [pickup.stop_order, dropoff.stop_order) continues to overlap active segments [10, 20), [20, 30)...
+    // even when leading stops (or all original stops) are soft-removed.
     const keptRemovedStops = allStops
       .filter((s) => !survivingIndexById.has(s.id) && referencedStopIds.has(s.id))
       .sort((a, b) => a.stop_order - b.stop_order || a.id - b.id);
@@ -529,18 +531,33 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
       (s) => !survivingIndexById.has(s.id) && !referencedStopIds.has(s.id),
     );
 
-    // Group keptRemovedStops by the surviving old stop they follow (-1 if before all surviving old stops)
     const survivingOldOrdered = activeOldStops.filter((s) => survivingIndexById.has(s.id));
-    const removedAfterSurvivingIdx = new Map(); // surviving inputStops index (-1..N-1) -> array of stop rows
+    const removedAfterSurvivingIdx = new Map(); // inputStops index (0..N-1) -> array of stop rows
     for (const rem of keptRemovedStops) {
-      let anchorInputIdx = -1;
+      let survFloorIdx = -1;
+      let survCeilIdx = inputStops.length;
       for (const surv of survivingOldOrdered) {
+        const idx = survivingIndexById.get(surv.id);
         if (surv.stop_order < rem.stop_order) {
-          anchorInputIdx = survivingIndexById.get(surv.id);
-        } else {
-          break;
+          survFloorIdx = idx;
+        } else if (surv.stop_order > rem.stop_order && survCeilIdx === inputStops.length) {
+          survCeilIdx = idx;
         }
       }
+
+      // Within [max(0, survFloorIdx), survCeilIdx - 1], pick the largest active stop index whose
+      // distance_from_origin_km <= rem.distance_from_origin_km (clamped so even a removed origin at 0 km
+      // anchors at index 0 inside the first active segment [10, 20) rather than falling before 10).
+      const minIdx = Math.max(0, survFloorIdx);
+      const maxIdx = Math.max(minIdx, survCeilIdx - 1);
+      let anchorInputIdx = minIdx;
+      const remKm = Number(rem.distance_from_origin_km);
+      for (let i = minIdx; i <= maxIdx && i < inputStops.length; i += 1) {
+        if (Number(inputStops[i].distance_from_origin_km) <= remKm) {
+          anchorInputIdx = i;
+        }
+      }
+
       if (!removedAfterSurvivingIdx.has(anchorInputIdx)) {
         removedAfterSurvivingIdx.set(anchorInputIdx, []);
       }
@@ -552,12 +569,6 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
     const finalActiveOrders = [];
     const finalRemovedOrders = new Map(); // stop.id -> positive integer stop_order
     let cursorOrder = 0;
-
-    const leadingRemoved = removedAfterSurvivingIdx.get(-1) || [];
-    for (const rem of leadingRemoved) {
-      cursorOrder += 1;
-      finalRemovedOrders.set(rem.id, cursorOrder);
-    }
 
     for (let i = 0; i < inputStops.length; i += 1) {
       const nextMultipleOf10 = (Math.floor(cursorOrder / 10) + 1) * 10;
@@ -638,22 +649,26 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
       [originName, destinationName, newDeparture, newArrival, rideId],
     );
 
-    // 5. Evaluate D-007 impact on existing confirmed bookings:
-    //    - Rule (1): For edited or deleted stops, all confirmed bookings whose pickup, drop-off, or
+    // 5. Evaluate D-007 impact on existing seat-holding bookings (confirmed + pending_reconfirmation):
+    //    - Rule (1): For edited or deleted stops, all bookings whose pickup, drop-off, or
     //      traversed segment includes that stop (pickup.old_order <= stop.old_order <= dropoff.old_order)
-    //      transition to pending_reconfirmation.
-    //    - Rule (2): For a newly added stop, only confirmed bookings whose drop-off stop is ordered
-    //      AFTER the new stop (dropoff.new_order > new_stop.new_order) transition to pending_reconfirmation.
+    //      transition to (or update) pending_reconfirmation.
+    //    - Rule (2): For a newly added stop, only bookings whose drop-off stop is ordered
+    //      AFTER the new stop (dropoff.new_order > new_stop.new_order) transition to (or update) pending_reconfirmation.
+    //    - Consecutive edit rule: If a booking is already in pending_reconfirmation and departure_time changed,
+    //      also re-evaluate its reconfirm_deadline so it is always clamped to the new schedule.
     //    - Rule (3): Locked price_lei on existing bookings never changes.
     const oldOrderById = new Map(allStops.map((s) => [s.id, s.stop_order]));
     const modifiedOrRemovedOldOrders = [
       ...newlyRemovedStops.map((s) => s.stop_order),
       ...editedOldStops.map((s) => s.stop_order),
     ];
+    const departureTimeChanged =
+      new Date(ride.departure_time).getTime() !== newDeparture.getTime();
 
     const affectedConfirmed = [];
     for (const b of bookings) {
-      if (b.status !== 'confirmed') continue;
+      if (b.status !== 'confirmed' && b.status !== 'pending_reconfirmation') continue;
       const pOldOrder = oldOrderById.get(b.pickup_stop_id);
       const dOldOrder = oldOrderById.get(b.dropoff_stop_id);
       const dNewOrder = newStopOrderByOldId.get(b.dropoff_stop_id);
@@ -664,8 +679,10 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
       const hitAddedBeforeDropoff = newlyAddedFinalOrders.some(
         (addedOrd) => dNewOrder > addedOrd,
       );
+      const hitScheduleChangeWhilePendingReconfirm =
+        b.status === 'pending_reconfirmation' && departureTimeChanged;
 
-      if (hitEditedOrRemoved || hitAddedBeforeDropoff) {
+      if (hitEditedOrRemoved || hitAddedBeforeDropoff || hitScheduleChangeWhilePendingReconfirm) {
         affectedConfirmed.push(b);
       }
     }
@@ -673,6 +690,7 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
     if (affectedConfirmed.length > 0) {
       const deadline = computeReconfirmDeadline({ modifiedAt: now, departureTime: newDeparture });
       const deadlineIso = deadline.toISOString();
+      const nowIso = now.toISOString();
       const affectedIds = affectedConfirmed.map((b) => b.id);
       await conn.query(
         "UPDATE bookings SET status = 'pending_reconfirmation', reconfirm_deadline = ? WHERE id IN (?)",
@@ -683,7 +701,7 @@ export async function editRideStops(pool, user, rideId, { stops: inputStops }, n
         'stop_edit_reconfirm_required',
         'Modificare traseu/orar — reconfirmare necesară',
         `Șoferul a modificat opririle cursei ${originName} → ${destinationName}. Te rugăm să reconfirmi rezervarea până la ${deadlineIso}.`,
-        `stop_edit_reconfirm:${b.id}:${deadlineIso}`,
+        `stop_edit_reconfirm:${b.id}:${nowIso}:${deadlineIso}`,
       ]);
       await conn.query(
         `INSERT INTO notifications (user_id, type, title, message, idempotency_key)

@@ -436,6 +436,14 @@ export async function reconfirmBooking(pool, user, bookingId, now) {
       );
     }
 
+    const [[prevReconf]] = await conn.query(
+      "SELECT COUNT(*) AS n FROM notifications WHERE type = 'booking_reconfirmed' AND idempotency_key LIKE ?",
+      [`booking_reconfirmed:${bookingId}%`],
+    );
+    const reconfKey = prevReconf.n === 0
+      ? `booking_reconfirmed:${bookingId}`
+      : `booking_reconfirmed:${bookingId}:${prevReconf.n + 1}`;
+
     hasMutatedTarget = true;
     await conn.query(
       "UPDATE bookings SET status = 'confirmed', reconfirm_deadline = NULL WHERE id = ?",
@@ -448,7 +456,7 @@ export async function reconfirmBooking(pool, user, bookingId, now) {
       [
         ride.driver_id,
         `${user.full_name} a reconfirmat rezervarea pentru cursa ${ride.origin_name} → ${ride.destination_name}.`,
-        `booking_reconfirmed:${bookingId}`,
+        reconfKey,
       ],
     );
 

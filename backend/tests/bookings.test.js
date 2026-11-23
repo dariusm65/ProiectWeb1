@@ -442,6 +442,101 @@ describe.skipIf(!admin)('integration: bookings lifecycle, stop edits & cancellat
       const detailsAfterLapse = await request(app).get(`/api/rides/${rideId}`);
       expect(detailsAfterLapse.body.segments.map((s) => s.free_seats)).toEqual([1, 1]);
     });
+
+    it('D-007 multi-edit & leading soft-removed stops: consecutive stop edits update reconfirm_deadline on existing pending_reconfirmation bookings, deliver notifications across repeated edit/reconfirm cycles, and preserve seat capacity when leading stops are soft-removed', async () => {
+      const driver = await createUser();
+      const pCycle = await createUser();
+      const pLeading = await createUser();
+      const created = await publish(driver, '2026-12-01', { available_seats: 2 });
+      const [cluj, turda, alba, sibiu] = created.stops;
+      const rideId = created.ride.id;
+
+      // pCycle books Turda -> Sibiu; pLeading books Cluj -> Turda (the leading segment)
+      const bCycle = (await request(app).post(`/api/rides/${rideId}/bookings`).set(auth(pCycle)).send({ pickup_stop_id: turda.id, dropoff_stop_id: sibiu.id })).body.booking;
+      const bLeading = (await request(app).post(`/api/rides/${rideId}/bookings`).set(auth(pLeading)).send({ pickup_stop_id: cluj.id, dropoff_stop_id: turda.id })).body.booking;
+      await request(app).post(`/api/bookings/${bCycle.id}/accept`).set(auth(driver));
+      await request(app).post(`/api/bookings/${bLeading.id}/accept`).set(auth(driver));
+
+      // Edit #1 at 11:00Z (5h before 16:00Z departure -> deadline = min(17:00Z, 14:00Z) = 14:00Z):
+      // Driver edits Alba Iulia location -> puts bCycle into pending_reconfirmation
+      currentNow = new Date('2026-12-01T11:00:00Z');
+      const edit1 = await request(app)
+        .patch(`/api/rides/${rideId}/stops`)
+        .set(auth(driver))
+        .send({
+          stops: created.stops.map((s) => ({
+            id: s.id,
+            city_name: s.city_name,
+            location_name: s.id === alba.id ? 'Alba Autogară' : s.location_name,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            distance_from_origin_km: s.distance_from_origin_km,
+            estimated_arrival_time: s.estimated_arrival_time,
+          })),
+        });
+      expect(edit1.status).toBe(200);
+
+      // pCycle reconfirms Edit #1 at 11:10Z
+      currentNow = new Date('2026-12-01T11:10:00Z');
+      expect((await request(app).post(`/api/bookings/${bCycle.id}/reconfirm`).set(auth(pCycle))).status).toBe(200);
+
+      // Edit #2 at 11:30Z (still in the 14:00Z deadline clamp window for 16:00Z departure):
+      // Driver edits Alba Iulia again -> bCycle transitions to pending_reconfirmation a 2nd time
+      // and must receive a 2nd notification even though reconfirm_deadline ties at 14:00Z!
+      currentNow = new Date('2026-12-01T11:30:00Z');
+      const edit2 = await request(app)
+        .patch(`/api/rides/${rideId}/stops`)
+        .set(auth(driver))
+        .send({
+          stops: created.stops.map((s) => ({
+            id: s.id,
+            city_name: s.city_name,
+            location_name: s.id === alba.id ? 'Alba Centru' : s.location_name,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            distance_from_origin_km: s.distance_from_origin_km,
+            estimated_arrival_time: s.estimated_arrival_time,
+          })),
+        });
+      expect(edit2.status).toBe(200);
+
+      const [reconfNotifsAfterEdit2] = await pool.query(
+        "SELECT * FROM notifications WHERE user_id = ? AND type = 'stop_edit_reconfirm_required'",
+        [pCycle.id],
+      );
+      expect(reconfNotifsAfterEdit2).toHaveLength(2);
+
+      // Edit #3 at 11:45Z BEFORE pCycle reconfirms Edit #2:
+      // Driver moves departure earlier from 16:00Z to 13:00Z (<= 2h away: 1h15m out -> deadline = min(now+30m=12:15Z, 13:00Z) = 12:15Z)
+      // AND replaces both Cluj (0 km) and Turda (32 km) with new stops NewCluj (0 km) and NewTurda (40 km).
+      currentNow = new Date('2026-12-01T11:45:00Z');
+      const newBase = new Date('2026-12-01T13:00:00Z').getTime();
+      const edit3 = await request(app)
+        .patch(`/api/rides/${rideId}/stops`)
+        .set(auth(driver))
+        .send({
+          stops: [
+            { city_name: 'Cluj-Napoca', location_name: 'Cluj Aeroport', latitude: 46.78, longitude: 23.68, distance_from_origin_km: 0, estimated_arrival_time: new Date(newBase).toISOString() },
+            { city_name: 'Turda', location_name: 'Turda Autostradă', latitude: 46.55, longitude: 23.8, distance_from_origin_km: 40, estimated_arrival_time: new Date(newBase + 35 * 60 * 1000).toISOString() },
+            { id: alba.id, city_name: alba.city_name, location_name: 'Alba Centru', latitude: alba.latitude, longitude: alba.longitude, distance_from_origin_km: 100, estimated_arrival_time: new Date(newBase + 90 * 60 * 1000).toISOString() },
+            { id: sibiu.id, city_name: sibiu.city_name, location_name: sibiu.location_name, latitude: sibiu.latitude, longitude: sibiu.longitude, distance_from_origin_km: 160, estimated_arrival_time: new Date(newBase + 150 * 60 * 1000).toISOString() },
+          ],
+        });
+      expect(edit3.status).toBe(200);
+
+      // 1. Existing pending_reconfirmation booking bCycle had its reconfirm_deadline updated from 14:00Z to 12:15Z (before new 13:00Z departure)
+      const listAfterEdit3 = (await request(app).get(`/api/rides/${rideId}/bookings`).set(auth(driver))).body.bookings;
+      const bCycleAfter3 = listAfterEdit3.find((b) => b.id === bCycle.id);
+      expect(bCycleAfter3.status).toBe('pending_reconfirmation');
+      expect(new Date(bCycleAfter3.reconfirm_deadline).toISOString()).toBe('2026-12-01T12:15:00.000Z');
+
+      // 2. Leading booking bLeading (Cluj 0 km -> Turda 32 km, both soft-removed before surviving Alba)
+      //    is in pending_reconfirmation AND still reserves 1 seat on the first active segment [NewCluj(0km), NewTurda(40km))
+      const bLeadingAfter3 = listAfterEdit3.find((b) => b.id === bLeading.id);
+      expect(bLeadingAfter3.status).toBe('pending_reconfirmation');
+      expect(edit3.body.segments[0].occupied_seats).toBe(1);
+      expect(edit3.body.segments[0].free_seats).toBe(1);
+    });
   });
 
   describe('3. Passenger & driver cancellations and D-016 seriousness infractions', () => {

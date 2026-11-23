@@ -293,7 +293,11 @@ export async function acceptBooking(pool, { rideId, bookingId, driverId, now = n
     if (err instanceof BookingDomainError && hasReconciledChanges && !hasMutatedTarget) {
       await conn.commit();
     } else {
-      await conn.rollback();
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
     }
     throw err;
   } finally {
