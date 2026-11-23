@@ -7,11 +7,10 @@
 
 ## Overview
 **StudRide (P18 — Student Carpooling with Segment Matching)** is a full-stack web application for ULBS Web Technologies coursework (`D-001`, `D-002`, `D-003`).
-Currently implemented: containerized MySQL 8 database (`docker-compose.yml`), `mysql2` connection pool (`backend/src/db.js`), versioned raw SQL migration runner (`backend/database/migrate.js`), 15-table InnoDB schema (`001_initial_schema.sql`), idempotent seed scripts (`seed.js`, 36 real survey places with Nominatim coordinates + runtime-hashed system accounts), pure domain modules (`segmentAvailability.js`, `segmentPricing.js`, `universityDomains.js`, `geo.js`, `recurrence.js`, `seriousnessScore.js`), transactional services (`bookingAcceptanceService.js`, `bookingService.js`, `geocodingService.js`, `rideService.js`, `recurringRideService.js`, `chatService.js`, `notificationService.js`, `reviewService.js`, `moderationService.js`), Express 5 REST API with JWT + live-DB RBAC (`auth.js`, `geocoding.js`, `rides.js`, `recurringRides.js`, `bookings.js`, `notifications.js`, `users.js`, `reports.js`, `admin.js`, OpenAPI 3.0 at `/api/openapi.json` & `/api/docs`), GitHub Actions CI (`.github/workflows/ci.yml`), and Vitest unit + Supertest/MySQL integration suites (`backend/tests/`).
-Planned next: React + Vite SPA (`frontend/`).
+Currently implemented: containerized MySQL 8 database (`docker-compose.yml`), `mysql2` connection pool (`backend/src/db.js`), versioned raw SQL migration runner (`backend/database/migrate.js`), 15-table InnoDB schema (`001_initial_schema.sql`), idempotent seed scripts (`seed.js`, 36 real survey places with Nominatim coordinates + runtime-hashed system accounts), pure domain modules (`segmentAvailability.js`, `segmentPricing.js`, `universityDomains.js`, `geo.js`, `recurrence.js`, `seriousnessScore.js`), transactional services (`bookingAcceptanceService.js`, `bookingService.js`, `geocodingService.js`, `rideService.js`, `recurringRideService.js`, `chatService.js`, `notificationService.js`, `reviewService.js`, `moderationService.js`), Express 5 REST API with JWT + live-DB RBAC (`auth.js`, `geocoding.js`, `rides.js`, `recurringRides.js`, `bookings.js`, `notifications.js`, `users.js`, `reports.js`, `admin.js`, OpenAPI 3.0 at `/api/openapi.json` & `/api/docs`), React 19 + Vite SPA (`frontend/` implementing `DS-001`–`DS-006` and `DS-010` with light/dark theme tokens, JWT `AuthContext`, debounced geocoding autocomplete, spatial ride search, stop timeline & segment pricing, public profile reviews, and single/recurring ride publishing), GitHub Actions CI (`.github/workflows/ci.yml`), and Vitest unit/component + Supertest/MySQL integration suites (`backend/tests/`, `frontend/tests/`).
 
 ```text
-[ React + Vite SPA (planned) ]
+[ React + Vite SPA (frontend/src/) ]
         │  HTTPS / JSON REST + JWT (D-002, D-004)
         ▼
 [ Express REST API + OpenAPI (backend/src/) ] ──► [ Nominatim ]
@@ -31,8 +30,9 @@ Planned next: React + Vite SPA (`frontend/`).
 | Backend Services | `backend/src/services/` | Transactional booking lifecycle, acceptance & lazy reconciliation (`D-003`, `D-005`, `D-007`, `D-010`, `D-016`, `D-018`, `D-019`), MySQL-cached Nominatim geocoding (`D-009`, `C-001`), ride publishing/details/spatial search/stop editing/cancellations, recurring ride rules/exceptions/on-demand materialisation (`D-006`), ride chat & notifications polling (`D-011`), post-arrival mutual star ratings (`D-008`), and moderation reports + transactional suspension cascade (`D-013`, `D-016`) | `domain/`, MySQL 8, Nominatim |
 | Express API & OpenAPI | `backend/src/app.js`, `server.js`, `openapi.js`, `middleware/`, `routes/` | Express 5 REST routes (`/api/health`, `/api/auth`, `/api/geocoding`, `/api/rides`, `/api/recurring-rides`, `/api/bookings`, `/api/notifications`, `/api/users`, `/api/reports`, `/api/admin`), Zod validation (`D-014`), JWT + live-DB RBAC (`D-013`), Swagger UI (`/api/docs`) | Services, MySQL 8 |
 | Backend Test Suite | `backend/tests/` | Vitest unit tests + Supertest/MySQL integration tests on isolated throwaway DBs (`studride_test*`) | `src/`, `database/`, MySQL 8 |
-| Frontend SPA *(planned)* | `frontend/` | React + Vite SPA implementing `DS-001`–`DS-010` with Leaflet maps | Backend REST API |
-| Docs & Design System | `docs/agents/`, `docs/design/`, `docs/plans/` | Knowledge ledger (`D-001`–`D-020`, `C-001`, `PATTERN-001`–`PATTERN-003`), `DESIGN.md`, `registry.yaml`, `DS-001`–`DS-004` HTML mocks | Developer & Agent |
+| Frontend SPA | `frontend/src/` | React 19 + Vite SPA implementing `DS-001`–`DS-006` and `DS-010` (`tokens.css`, `api/client.js`, `AuthContext`, `ThemeContext`, `LandingSearchPage`, `AuthPage`, `SearchResultsPage`, `RideDetailsPage`, `PublicProfilePage`, `PublishRidePage`) | Backend REST API |
+| Frontend Test Suite | `frontend/tests/` | Vitest + Testing Library unit and component suites (`apiAndAuth.test.jsx`, `AuthPage.test.jsx`, `RideSearchAndDetails.test.jsx`, `PublishRidePage.test.jsx`) | `frontend/src/` |
+| Docs & Design System | `docs/agents/`, `docs/design/`, `docs/plans/` | Knowledge ledger (`D-001`–`D-020`, `C-001`, `PATTERN-001`–`PATTERN-003`), `DESIGN.md`, `registry.yaml`, `DS-001`–`DS-006` & `DS-010` HTML mocks | Developer & Agent |
 
 ## Data flow
 1. Startup / test harness runs `migrate.js` to apply pending SQL migrations into MySQL 8 (`schema_migrations`), then `seed.js` to idempotently populate `known_places` and system accounts.
@@ -56,7 +56,8 @@ Planned next: React + Vite SPA (`frontend/`).
 ## Build, deploy, runtime
 - Database: `docker compose up -d` (MySQL 8 on `127.0.0.1:3306`)
 - Migrations & seed: `cd backend && npm run migrate && npm run seed`
-- Tests: `cd backend && npm test` (Vitest)
+- Backend tests: `npm test --prefix backend` (Vitest)
+- Frontend tests & build: `npm test --prefix frontend && npm run build --prefix frontend`
 - Ledger lint: `python3 docs/agents/tools/ledger-lint.py`
 
 ## Boundaries

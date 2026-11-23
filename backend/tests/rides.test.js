@@ -613,6 +613,36 @@ describe.skipIf(!admin)('integration: geocoding, rides, search & recurring rides
       expect(await ids({ smokingAllowed: 'false' })).toEqual([a.ride.id]);
       expect((await search({ petsAllowed: 'maybe' })).status).toBe(400);
     });
+
+    it('enriches search cards with driver dual reputation (rating + seriousness), stops, declared_trip_cost, and price_lei without exposing PII', async () => {
+      const driver = await createUser({ domain: 'ulbsibiu.ro', name: 'Elena Driver' });
+      const created = await publish(driver);
+      const reviewer = await createUser();
+      await pool.query(
+        'INSERT INTO reviews (ride_id, reviewer_id, reviewed_user_id, rating_stars) VALUES (?, ?, ?, 5)',
+        [created.ride.id, reviewer.id, driver.id],
+      );
+      await addInfraction(driver.id, 'driver_late_cancel', 10); // 100 - 5 + 1 = 96
+
+      const res = await search();
+      expect(res.status).toBe(200);
+      expect(res.body.rides).toHaveLength(1);
+      const hit = res.body.rides[0];
+      expect(hit.declared_trip_cost).toBe(120);
+      expect(hit.price_lei).toBe(32);
+      expect(hit.segment_price_lei).toBe(32);
+      expect(hit.stops.map((s) => s.city_name)).toEqual(['Cluj-Napoca', 'Turda', 'Alba Iulia', 'Sibiu']);
+      expect(hit.driver).toMatchObject({
+        id: driver.id,
+        full_name: 'Elena Driver',
+        has_university_badge: true,
+        rating_average: 5,
+        rating_count: 1,
+        seriousness_score: 96,
+        has_recent_cancellation_badge: true,
+      });
+      expect(JSON.stringify(hit)).not.toMatch(/@example\.com/);
+    });
   });
 
   // ---------- recurring rides (D-006, D-016, D-018, D-020) ----------

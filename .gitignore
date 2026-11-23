@@ -6,8 +6,8 @@
 
 # Dependencies & build outputs
 node_modules/
-/dist/
-/build/
+dist/
+build/
 
 # Operating system and IDE metadata
 .DS_Store
