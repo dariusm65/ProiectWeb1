@@ -1216,6 +1216,7 @@ export const openapiSpec = {
               },
             },
           },
+          400: { description: 'Invalid notificationId' },
           401: { description: 'Unauthorized' },
           403: { description: 'Not the notification owner' },
           404: { description: 'Notification not found' },
@@ -1388,7 +1389,7 @@ export const openapiSpec = {
               schema: {
                 type: 'object',
                 properties: {
-                  reason: { type: 'string', maxLength: 255, nullable: true },
+                  reason: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
                 },
               },
             },
@@ -1410,7 +1411,7 @@ export const openapiSpec = {
               },
             },
           },
-          400: { description: 'Self-suspension not allowed' },
+          400: { description: 'Self-suspension not allowed or invalid userId/reason' },
           401: { description: 'Unauthorized' },
           403: { description: 'Insufficient role permissions or hierarchy' },
           404: { description: 'User not found' },
@@ -1452,7 +1453,7 @@ export const openapiSpec = {
               schema: {
                 type: 'object',
                 properties: {
-                  reason: { type: 'string', maxLength: 255, nullable: true },
+                  reason: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
                 },
               },
             },
@@ -1474,10 +1475,11 @@ export const openapiSpec = {
               },
             },
           },
+          400: { description: 'Invalid rideId or reason' },
           401: { description: 'Unauthorized' },
           403: { description: 'Requires moderator or admin role' },
           404: { description: 'Ride not found' },
-          409: { description: 'Ride is not active' },
+          409: { description: 'Ride is not active or has already departed' },
         },
       },
     },

@@ -88,6 +88,9 @@ export function canModerateTargetUser({ actor, target }) {
   if (!actor || !target) {
     throw new ApiError(400, 'INVALID_INPUT', 'Actor and target are required');
   }
+  if (actor.role !== 'moderator' && actor.role !== 'admin') {
+    throw new ApiError(403, 'FORBIDDEN', 'Only moderators and admins may perform moderation actions');
+  }
   if (actor.id === target.id) {
     throw new ApiError(400, 'SELF_MODERATION_NOT_ALLOWED', 'Self-moderation is not allowed');
   }
@@ -111,7 +114,8 @@ export function canModerateTargetUser({ actor, target }) {
 /**
  * POST /api/reports (authenticated user):
  * Validates target inputs (Guardrail 2), verifies referenced entities exist (404 if missing),
- * and persists the report in `pending` status.
+ * blocks direct and indirect self-reporting (reporting own ride or own chat message),
+ * verifies `message.ride_id === ride_id` when both are provided, and persists the report in `pending` status.
  */
 export async function createReport(
   pool,
@@ -133,15 +137,28 @@ export async function createReport(
     }
   }
   if (ride_id != null) {
-    const [rRows] = await pool.query('SELECT id FROM rides WHERE id = ?', [ride_id]);
+    const [rRows] = await pool.query('SELECT id, driver_id FROM rides WHERE id = ?', [ride_id]);
     if (rRows.length === 0) {
       throw new ApiError(404, 'RIDE_NOT_FOUND', 'Reported ride not found');
     }
+    if (rRows[0].driver_id === user.id && reported_user_id == null && message_id == null) {
+      throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own ride is not allowed');
+    }
   }
   if (message_id != null) {
-    const [mRows] = await pool.query('SELECT id FROM chat_messages WHERE id = ?', [message_id]);
+    const [mRows] = await pool.query('SELECT id, ride_id, sender_id FROM chat_messages WHERE id = ?', [message_id]);
     if (mRows.length === 0) {
       throw new ApiError(404, 'MESSAGE_NOT_FOUND', 'Reported chat message not found');
+    }
+    if (mRows[0].sender_id === user.id) {
+      throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own chat message is not allowed');
+    }
+    if (ride_id != null && mRows[0].ride_id !== ride_id) {
+      throw new ApiError(
+        400,
+        'REPORT_TARGET_MISMATCH',
+        'Reported chat message does not belong to the specified ride_id',
+      );
     }
   }
 
@@ -287,6 +304,7 @@ export async function suspendUser(pool, actor, targetUserId, { reason = null } =
     const target = targetRows[0];
 
     canModerateTargetUser({ actor, target });
+    const wasAlreadySuspended = Boolean(target.is_suspended);
 
     await conn.query('UPDATE users SET is_suspended = TRUE WHERE id = ?', [targetUserId]);
 
@@ -394,17 +412,19 @@ export async function suspendUser(pool, actor, targetUserId, { reason = null } =
       }
     }
 
-    const reasonSuffix = reason ? ` Motiv: ${reason}` : '';
-    await conn.query(
-      `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
-       VALUES (?, 'account_suspended', 'Cont suspendat de moderator', ?, ?)
-       ON DUPLICATE KEY UPDATE id = id`,
-      [
-        targetUserId,
-        `Contul tău a fost suspendat, iar cursele și rezervările viitoare au fost anulate.${reasonSuffix}`,
-        `account_suspended:${targetUserId}:${nowIso}`,
-      ],
-    );
+    if (!wasAlreadySuspended) {
+      const reasonSuffix = reason ? ` Motiv: ${reason}` : '';
+      await conn.query(
+        `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+         VALUES (?, 'account_suspended', 'Cont suspendat de moderator', ?, ?)
+         ON DUPLICATE KEY UPDATE id = id`,
+        [
+          targetUserId,
+          `Contul tău a fost suspendat, iar cursele și rezervările viitoare au fost anulate.${reasonSuffix}`,
+          `account_suspended:${targetUserId}:${nowIso}`,
+        ],
+      );
+    }
 
     await conn.commit();
     return {
@@ -436,14 +456,17 @@ export async function unsuspendUser(pool, actor, targetUserId, now) {
   const target = targetRows[0];
 
   canModerateTargetUser({ actor, target });
+  const wasSuspended = Boolean(target.is_suspended);
 
   await pool.query('UPDATE users SET is_suspended = FALSE WHERE id = ?', [targetUserId]);
-  await pool.query(
-    `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
-     VALUES (?, 'account_unsuspended', 'Cont reactivat', 'Contul tău StudRide a fost reactivat.', ?)
-     ON DUPLICATE KEY UPDATE id = id`,
-    [targetUserId, `account_unsuspended:${targetUserId}:${now.toISOString()}`],
-  );
+  if (wasSuspended) {
+    await pool.query(
+      `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+       VALUES (?, 'account_unsuspended', 'Cont reactivat', 'Contul tău StudRide a fost reactivat.', ?)
+       ON DUPLICATE KEY UPDATE id = id`,
+      [targetUserId, `account_unsuspended:${targetUserId}:${now.toISOString()}`],
+    );
+  }
 
   return {
     user: await getModerationUserById(pool, targetUserId, now),
@@ -452,11 +475,15 @@ export async function unsuspendUser(pool, actor, targetUserId, now) {
 
 /**
  * POST /api/admin/rides/:rideId/cancel (moderator / admin, CONTEXT.md, D-013, D-016):
- * Moderators/admins can cancel an active ride without recording a `driver_late_cancel` infraction.
- * Runs `reconcileRideBookings` first inside the `FOR UPDATE` transaction (Guardrail 1).
+ * Moderators/admins can cancel an active future ride without recording a `driver_late_cancel` infraction.
+ * Runs `reconcileRideBookings` first inside the `FOR UPDATE` transaction (Guardrail 1) and commits
+ * reconciled expirations/lapses before rethrowing if a domain guard fails.
  */
 export async function moderateCancelRide(pool, _actor, rideId, { reason = null } = {}, now) {
   const conn = await pool.getConnection();
+  let hasReconciledChanges = false;
+  let hasMutatedTarget = false;
+
   try {
     await conn.beginTransaction();
 
@@ -470,16 +497,21 @@ export async function moderateCancelRide(pool, _actor, rideId, { reason = null }
     bookings.sort((a, b) => a.id - b.id);
 
     // Guardrail 1: reconcile lazy expirations/lapses before cancelling
-    await reconcileRideBookings(conn, { rideId, ride, bookings, now });
+    const { expiredIds, lapsedIds } = await reconcileRideBookings(conn, { rideId, ride, bookings, now });
+    hasReconciledChanges = expiredIds.length > 0 || lapsedIds.length > 0;
 
     if (ride.status !== 'active') {
       throw new ApiError(409, 'RIDE_NOT_ACTIVE', `Ride is not active (status: ${ride.status})`);
+    }
+    if (new Date(ride.departure_time).getTime() <= now.getTime()) {
+      throw new ApiError(409, 'RIDE_ALREADY_DEPARTED', 'Cannot cancel a ride that has already departed');
     }
 
     const activeBookings = bookings.filter((b) =>
       ['pending', 'confirmed', 'pending_reconfirmation'].includes(b.status),
     );
 
+    hasMutatedTarget = true;
     await conn.query("UPDATE rides SET status = 'cancelled' WHERE id = ?", [rideId]);
     if (activeBookings.length > 0) {
       await conn.query(
@@ -522,10 +554,14 @@ export async function moderateCancelRide(pool, _actor, rideId, { reason = null }
       infraction_recorded: false,
     };
   } catch (err) {
-    try {
-      await conn.rollback();
-    } catch {
-      // preserve original error
+    if (err instanceof ApiError && hasReconciledChanges && !hasMutatedTarget) {
+      await conn.commit();
+    } else {
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
     }
     throw err;
   } finally {

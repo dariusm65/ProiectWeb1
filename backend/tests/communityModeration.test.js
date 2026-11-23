@@ -135,7 +135,14 @@ describe('unit: Slice 5 pure domain and authorization helpers (D-008, D-011, D-0
     ).toBe(true);
   });
 
-  it('canModerateTargetUser blocks self-moderation and enforces role hierarchy (moderator -> user only; admin -> user or moderator) (D-013)', () => {
+  it('canModerateTargetUser blocks non-moderator actors, self-moderation, and enforces role hierarchy (moderator -> user only; admin -> user or moderator) (D-013)', () => {
+    expect(() =>
+      canModerateTargetUser({
+        actor: { id: 10, role: 'user' },
+        target: { id: 11, role: 'user' },
+      }),
+    ).toThrow(/FORBIDDEN|moderator/i);
+
     expect(() =>
       canModerateTargetUser({
         actor: { id: 1, role: 'admin' },
@@ -720,6 +727,31 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
       .set(auth(otherPax))
       .send({ reported_user_id: otherPax.id, reason: 'Self report' })
       .expect(400);
+    // Indirect self-report: driver reporting their own ride with reported_user_id omitted -> 400 SELF_REPORT_NOT_ALLOWED
+    await request(app)
+      .post('/api/reports')
+      .set(auth(targetUser))
+      .send({ ride_id: targetDrivenRide.id, reason: 'Self ride report' })
+      .expect(400);
+    // Indirect self-report & cross-ride message mismatch: post a chat message on targetDrivenRide
+    const chatMsgRes = await request(app)
+      .post(`/api/rides/${targetDrivenRide.id}/messages`)
+      .set(auth(otherPax))
+      .send({ message_text: 'Mesaj pe cursa lui Tudor' });
+    expect(chatMsgRes.status).toBe(201);
+    const chatMsgId = chatMsgRes.body.message.id;
+    // Sender reporting their own chat message -> 400 SELF_REPORT_NOT_ALLOWED
+    await request(app)
+      .post('/api/reports')
+      .set(auth(otherPax))
+      .send({ message_id: chatMsgId, reason: 'Self message report' })
+      .expect(400);
+    // Mismatched ride_id and message_id -> 400 REPORT_TARGET_MISMATCH
+    await request(app)
+      .post('/api/reports')
+      .set(auth(targetUser))
+      .send({ ride_id: otherDrivenRide.id, message_id: chatMsgId, reason: 'Mismatched ride and message' })
+      .expect(400);
     await request(app)
       .post('/api/reports')
       .set(auth(otherPax))
@@ -777,6 +809,19 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
     expect(suspendRes.body.cancelled_rides).toBe(1);
     expect(suspendRes.body.cancelled_passenger_bookings).toBe(1);
 
+    // Repeat suspendUser on already-suspended account is idempotent and does not duplicate account_suspended notification
+    currentNow = new Date('2026-12-04T10:05:00Z');
+    const repeatSuspendRes = await request(app)
+      .post(`/api/admin/users/${targetUser.id}/suspend`)
+      .set(auth(modUser))
+      .send({ reason: 'Incalcare regulament' });
+    expect(repeatSuspendRes.status).toBe(200);
+    const [suspendedNotifs] = await pool.query(
+      "SELECT * FROM notifications WHERE user_id = ? AND type = 'account_suspended'",
+      [targetUser.id],
+    );
+    expect(suspendedNotifs).toHaveLength(1);
+
     // 1. Suspended user's existing JWT is immediately blocked by requireAuth live DB check (403 ACCOUNT_SUSPENDED)
     const meBlocked = await request(app).get('/api/auth/me').set(auth(targetUser));
     expect(meBlocked.status).toBe(403);
@@ -830,5 +875,27 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
     const statsRes = await request(app).get('/api/admin/stats').set(auth(adminUser));
     expect(statsRes.status).toBe(200);
     expect(statsRes.body.stats.total_users).toBeGreaterThanOrEqual(5);
+
+    // Moderator cannot retroactively cancel a ride that has already departed (409 RIDE_ALREADY_DEPARTED)
+    // and lazy expirations on that departed ride are still committed before returning 409
+    const pendingPaxOnOther = await createUser({ name: 'Pending Late' });
+    currentNow = new Date('2026-12-04T11:00:00Z'); // 1h before otherDrivenRide departure (12:00Z)
+    const bPendLate = await request(app)
+      .post(`/api/rides/${otherDrivenRide.id}/bookings`)
+      .set(auth(pendingPaxOnOther))
+      .send({ pickup_stop_id: oStops[0].id, dropoff_stop_id: oStops[2].id });
+    expect(bPendLate.status).toBe(201);
+
+    currentNow = new Date('2026-12-04T13:00:00Z'); // after 12:00Z departure
+    const modCancelPast = await request(app)
+      .post(`/api/admin/rides/${otherDrivenRide.id}/cancel`)
+      .set(auth(modUser))
+      .send({ reason: 'Too late to cancel' });
+    expect(modCancelPast.status).toBe(409);
+    expect(modCancelPast.body.error).toBe('RIDE_ALREADY_DEPARTED');
+    const [[reconciledBooking]] = await pool.query('SELECT status FROM bookings WHERE id = ?', [
+      bPendLate.body.booking.id,
+    ]);
+    expect(reconciledBooking.status).toBe('expired');
   });
 });
