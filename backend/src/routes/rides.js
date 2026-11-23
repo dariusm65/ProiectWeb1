@@ -1,12 +1,21 @@
-// Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/:rideId
-// (D-003, D-005, D-010, D-014, D-017, D-018).
+// Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/:rideId,
+// POST /api/rides/:rideId/bookings, GET /api/rides/:rideId/bookings,
+// PATCH/PUT /api/rides/:rideId/stops, POST /api/rides/:rideId/cancel
+// (D-003, D-005, D-007, D-010, D-011, D-014, D-016, D-017, D-018, D-019).
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody, validateQuery, validateParams } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { numericParam } from './geocoding.js';
 import { dayOfWeekName } from '../domain/recurrence.js';
-import { publishRide, getRideDetails, searchRides } from '../services/rideService.js';
+import {
+  publishRide,
+  getRideDetails,
+  searchRides,
+  editRideStops,
+  cancelRide,
+} from '../services/rideService.js';
+import { createBooking, listRideBookings } from '../services/bookingService.js';
 import { materialiseForDate } from '../services/recurringRideService.js';
 
 export const MAX_STOPS = 20;
@@ -101,10 +110,37 @@ const searchSchema = z.object({
 
 const rideIdParams = z.object({ rideId: z.coerce.number().int().positive() });
 
+const createBookingSchema = z.object({
+  pickup_stop_id: z.number().int().positive(),
+  dropoff_stop_id: z.number().int().positive(),
+});
+
+const editableStop = z.object({
+  id: z.number().int().positive().optional(),
+  ...stopBaseFields,
+  estimated_arrival_time: z.iso.datetime({ offset: true }).transform((v) => new Date(v)),
+});
+
+const editStopsSchema = z.object({
+  stops: z
+    .array(editableStop)
+    .min(2)
+    .max(MAX_STOPS)
+    .superRefine((stops, ctx) => {
+      checkDistances(stops, ctx);
+      stops.forEach((s, i) => {
+        if (i > 0 && s.estimated_arrival_time.getTime() <= stops[i - 1].estimated_arrival_time.getTime()) {
+          ctx.addIssue({ code: 'custom', path: [i, 'estimated_arrival_time'], message: 'Arrival times must be strictly increasing' });
+        }
+      });
+    }),
+});
+
 export function createRidesRouter({ pool, jwtSecret, nowFn }) {
   const router = Router();
+  const auth = requireAuth(pool, jwtSecret);
 
-  router.post('/', requireAuth(pool, jwtSecret), validateBody(publishSchema), async (req, res, next) => {
+  router.post('/', auth, validateBody(publishSchema), async (req, res, next) => {
     try {
       const now = nowFn();
       const rideId = await publishRide(pool, req.user, req.body, now);
@@ -127,6 +163,55 @@ export function createRidesRouter({ pool, jwtSecret, nowFn }) {
   router.get('/:rideId', validateParams(rideIdParams), async (req, res, next) => {
     try {
       return res.status(200).json(await getRideDetails(pool, req.params.rideId, nowFn()));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post(
+    '/:rideId/bookings',
+    auth,
+    validateParams(rideIdParams),
+    validateBody(createBookingSchema),
+    async (req, res, next) => {
+      try {
+        const booking = await createBooking(pool, req.user, req.params.rideId, req.body, nowFn());
+        return res.status(201).json({ booking });
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
+
+  router.get('/:rideId/bookings', auth, validateParams(rideIdParams), async (req, res, next) => {
+    try {
+      const bookings = await listRideBookings(pool, req.user, req.params.rideId, nowFn());
+      return res.status(200).json({ bookings });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  const handleEditStops = [
+    auth,
+    validateParams(rideIdParams),
+    validateBody(editStopsSchema),
+    async (req, res, next) => {
+      try {
+        const details = await editRideStops(pool, req.user, req.params.rideId, req.body, nowFn());
+        return res.status(200).json(details);
+      } catch (err) {
+        return next(err);
+      }
+    },
+  ];
+  router.patch('/:rideId/stops', ...handleEditStops);
+  router.put('/:rideId/stops', ...handleEditStops);
+
+  router.post('/:rideId/cancel', auth, validateParams(rideIdParams), async (req, res, next) => {
+    try {
+      const result = await cancelRide(pool, req.user, req.params.rideId, nowFn());
+      return res.status(200).json(result);
     } catch (err) {
       return next(err);
     }

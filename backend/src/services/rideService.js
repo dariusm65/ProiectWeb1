@@ -1,13 +1,21 @@
-// Ride publishing, ride details and spatial segment search (D-003, D-005, D-010, D-016, D-017, D-018, D-020).
+// Ride publishing, ride details, spatial segment search, driver stop editing (D-007),
+// and driver ride cancellation (D-003, D-005, D-007, D-010, D-011, D-016, D-017, D-018, D-020).
 // Raw parameterised SQL via mysql2; seat maths and pricing come from the pure domain modules.
 import { ApiError } from '../errors.js';
 import { UNIVERSITY_BADGE_NOTE } from '../domain/universityDomains.js';
 import { haversineKm, boundingBox } from '../domain/geo.js';
 import { bucharestDayBounds } from '../domain/recurrence.js';
-import { computeSeriousnessScore, isPublishingBanned } from '../domain/seriousnessScore.js';
+import {
+  computeSeriousnessScore,
+  isPublishingBanned,
+  isWithinLateCancelWindow,
+  hasRecentCancellationBadge,
+} from '../domain/seriousnessScore.js';
 import { computeSegmentAvailability, getAvailableSeatsForRange } from '../domain/segmentAvailability.js';
-import { calculateSegmentPrice } from '../domain/segmentPricing.js';
+import { calculateSegmentPrice, computeReconfirmDeadline } from '../domain/segmentPricing.js';
 import { reconcileRideBookings } from './bookingAcceptanceService.js';
+
+const DRIVER_LATE_CANCEL_PENALTY = 5; // D-016
 
 const badge = (domain) => ({
   has_university_badge: Boolean(domain),
@@ -67,7 +75,7 @@ export async function assertCanPublish(pool, user, { women_only: womenOnly }, no
  * own short transaction, in ascending ride_id order, and the connection is always released.
  * Rides without pending / pending_reconfirmation bookings have nothing to reconcile and are skipped.
  */
-async function reconcileRidesLazily(pool, rideIds, now) {
+export async function reconcileRidesLazily(pool, rideIds, now) {
   if (rideIds.length === 0) return;
   const [rows] = await pool.query(
     `SELECT DISTINCT ride_id FROM bookings
@@ -180,6 +188,7 @@ async function driverSummary(pool, driverId, now) {
     rating_average: rating.n > 0 ? Math.round(Number(rating.avg_stars) * 10) / 10 : null,
     rating_count: rating.n,
     seriousness_score: computeSeriousnessScore(infractions, now),
+    has_recent_cancellation_badge: hasRecentCancellationBadge(infractions, now),
   };
 }
 
@@ -306,10 +315,24 @@ export async function searchRides(pool, params, now) {
   await reconcileRidesLazily(pool, matches.map((m) => m.ride.id).sort((a, b) => a - b), now);
 
   const matchedIds = matches.map((m) => m.ride.id);
+  const driverIds = [...new Set(matches.map((m) => m.ride.driver_id))];
   const [allStops] = await pool.query('SELECT * FROM ride_stops WHERE ride_id IN (?) ORDER BY ride_id, stop_order', [matchedIds]);
   const [allBookings] = await pool.query(
     'SELECT ride_id, id, pickup_stop_id, dropoff_stop_id, status FROM bookings WHERE ride_id IN (?)',
     [matchedIds],
+  );
+  const [driverInfractions] = await pool.query(
+    `SELECT user_id, infraction_type, penalty_percentage_points, occurred_at
+     FROM user_infractions WHERE user_id IN (?) AND infraction_type = 'driver_late_cancel'`,
+    [driverIds],
+  );
+  const recentCancelDrivers = new Set(
+    driverIds.filter((id) =>
+      hasRecentCancellationBadge(
+        driverInfractions.filter((i) => i.user_id === id),
+        now,
+      ),
+    ),
   );
 
   const results = [];
@@ -353,6 +376,7 @@ export async function searchRides(pool, params, now) {
         id: ride.driver_id,
         full_name: ride.driver_name,
         ...badge(ride.driver_domain),
+        has_recent_cancellation_badge: recentCancelDrivers.has(ride.driver_id),
       },
       pickup_stop: formatStop(pickup),
       dropoff_stop: formatStop(dropoff),
@@ -369,4 +393,459 @@ export async function searchRides(pool, params, now) {
     });
   }
   return results;
+}
+
+function stopChanged(oldStop, inputStop) {
+  return (
+    oldStop.city_name !== inputStop.city_name ||
+    oldStop.location_name !== inputStop.location_name ||
+    Math.abs(Number(oldStop.latitude) - Number(inputStop.latitude)) > 1e-6 ||
+    Math.abs(Number(oldStop.longitude) - Number(inputStop.longitude)) > 1e-6 ||
+    Number(oldStop.distance_from_origin_km) !== Number(inputStop.distance_from_origin_km) ||
+    new Date(oldStop.estimated_arrival_time).getTime() !== new Date(inputStop.estimated_arrival_time).getTime()
+  );
+}
+
+/**
+ * PATCH / PUT /api/rides/:rideId/stops (driver only, D-007, D-010, D-011):
+ * Transactionally edits stops on an active future ride, preserving positive monotonic stop_order
+ * on soft-removed stops so pending_reconfirmation bookings continue to hold capacity, keeping
+ * existing bookings' price_lei immutable, transitioning affected confirmed bookings to
+ * pending_reconfirmation with computeReconfirmDeadline, and auto-rejecting pending bookings whose
+ * pickup or dropoff stop was removed.
+ */
+export async function editRideStops(pool, user, rideId, { stops: inputStops }, now) {
+  const newDeparture = inputStops[0].estimated_arrival_time;
+  const newArrival = inputStops[inputStops.length - 1].estimated_arrival_time;
+  if (newDeparture.getTime() <= now.getTime()) {
+    throw new ApiError(400, 'DEPARTURE_IN_PAST', 'Departure time must be in the future');
+  }
+
+  const conn = await pool.getConnection();
+  let hasReconciledChanges = false;
+  let hasMutatedTarget = false;
+
+  try {
+    await conn.beginTransaction();
+
+    // Canonical lock order: rides -> ride_stops -> bookings
+    const [rideRows] = await conn.query('SELECT * FROM rides WHERE id = ? FOR UPDATE', [rideId]);
+    if (rideRows.length === 0) {
+      throw new ApiError(404, 'RIDE_NOT_FOUND', 'Ride not found');
+    }
+    const ride = rideRows[0];
+
+    if (ride.driver_id !== user.id) {
+      throw new ApiError(403, 'FORBIDDEN', 'Only the ride driver can edit stops');
+    }
+
+    const [allStops] = await conn.query(
+      'SELECT * FROM ride_stops WHERE ride_id = ? ORDER BY stop_order ASC FOR UPDATE',
+      [rideId],
+    );
+    const [bookings] = await conn.query(
+      'SELECT * FROM bookings WHERE ride_id = ? FOR UPDATE',
+      [rideId],
+    );
+    bookings.sort((a, b) => a.id - b.id);
+
+    const { expiredIds, lapsedIds } = await reconcileRideBookings(conn, {
+      rideId,
+      ride,
+      bookings,
+      now,
+    });
+    hasReconciledChanges = expiredIds.length > 0 || lapsedIds.length > 0;
+
+    if (ride.status !== 'active') {
+      throw new ApiError(409, 'RIDE_NOT_ACTIVE', `Ride is not active (status: ${ride.status})`);
+    }
+    if (new Date(ride.departure_time).getTime() <= now.getTime()) {
+      throw new ApiError(400, 'DEPARTURE_IN_PAST', 'Cannot edit stops on a ride that has already departed');
+    }
+
+    const activeOldStops = allStops.filter((s) => s.removed_at == null).sort((a, b) => a.stop_order - b.stop_order);
+    const activeOldById = new Map(activeOldStops.map((s) => [s.id, s]));
+
+    // Validate submitted stop IDs belong to active stops on this ride, have no duplicates, and maintain relative order
+    const seenIds = new Set();
+    let lastOldOrder = -Infinity;
+    for (const s of inputStops) {
+      if (s.id !== undefined && s.id !== null) {
+        if (seenIds.has(s.id)) {
+          throw new ApiError(400, 'DUPLICATE_STOP_ID', `Duplicate stop id ${s.id}`);
+        }
+        const existing = activeOldById.get(s.id);
+        if (!existing) {
+          throw new ApiError(400, 'INVALID_STOP_ID', `Stop ${s.id} is not an active stop on this ride`);
+        }
+        if (existing.stop_order <= lastOldOrder) {
+          throw new ApiError(400, 'INVALID_STOP_ORDER', 'Existing stops cannot be reordered out of sequence');
+        }
+        lastOldOrder = existing.stop_order;
+        seenIds.add(s.id);
+      }
+    }
+
+    // Identify removed stops, edited stops, and newly added stops
+    const newlyRemovedStops = activeOldStops.filter((s) => !seenIds.has(s.id));
+    const newlyRemovedIds = new Set(newlyRemovedStops.map((s) => s.id));
+    const editedOldStops = [];
+    const addedPositions = []; // new active stop_order (10, 20, ...) for each newly added stop
+
+    inputStops.forEach((s, idx) => {
+      const assignedActiveOrder = (idx + 1) * 10;
+      if (s.id != null) {
+        const old = activeOldById.get(s.id);
+        if (stopChanged(old, s)) {
+          editedOldStops.push(old);
+        }
+      } else {
+        addedPositions.push(assignedActiveOrder);
+      }
+    });
+
+    // Build a merged monotonic timeline of ALL stops (new active stops + previously soft-removed + newly soft-removed)
+    // so every stop in ride_stops receives a strictly increasing positive stop_order, with active stops on multiples of 10.
+    // Specifically, we anchor each existing stop to its old stop_order and interleave new stops by their position in inputStops.
+    const referencedStopIds = new Set();
+    for (const b of bookings) {
+      referencedStopIds.add(b.pickup_stop_id);
+      referencedStopIds.add(b.dropoff_stop_id);
+    }
+
+    // Map each surviving active stop id -> its new index in inputStops (0..N-1)
+    const survivingIndexById = new Map();
+    inputStops.forEach((s, idx) => {
+      if (s.id != null) survivingIndexById.set(s.id, idx);
+    });
+
+    // Any existing stop (previously removed or newly removed) that is NOT in survivingIndexById and is referenced by a booking
+    // is placed into the gap right after the last surviving old stop whose old stop_order < its old stop_order.
+    const keptRemovedStops = allStops
+      .filter((s) => !survivingIndexById.has(s.id) && referencedStopIds.has(s.id))
+      .sort((a, b) => a.stop_order - b.stop_order || a.id - b.id);
+    const unreferencedRemovedStops = allStops.filter(
+      (s) => !survivingIndexById.has(s.id) && !referencedStopIds.has(s.id),
+    );
+
+    // Group keptRemovedStops by the surviving old stop they follow (-1 if before all surviving old stops)
+    const survivingOldOrdered = activeOldStops.filter((s) => survivingIndexById.has(s.id));
+    const removedAfterSurvivingIdx = new Map(); // surviving inputStops index (-1..N-1) -> array of stop rows
+    for (const rem of keptRemovedStops) {
+      let anchorInputIdx = -1;
+      for (const surv of survivingOldOrdered) {
+        if (surv.stop_order < rem.stop_order) {
+          anchorInputIdx = survivingIndexById.get(surv.id);
+        } else {
+          break;
+        }
+      }
+      if (!removedAfterSurvivingIdx.has(anchorInputIdx)) {
+        removedAfterSurvivingIdx.set(anchorInputIdx, []);
+      }
+      removedAfterSurvivingIdx.get(anchorInputIdx).push(rem);
+    }
+
+    // Compute final positive stop_order for every active stop (multiples of 10, widened if >9 removed stops sit in one gap)
+    // so active stops are always multiples of 10 and every soft-removed stop has a unique positive integer strictly between its neighbors.
+    const finalActiveOrders = [];
+    const finalRemovedOrders = new Map(); // stop.id -> positive integer stop_order
+    let cursorOrder = 0;
+
+    const leadingRemoved = removedAfterSurvivingIdx.get(-1) || [];
+    for (const rem of leadingRemoved) {
+      cursorOrder += 1;
+      finalRemovedOrders.set(rem.id, cursorOrder);
+    }
+
+    for (let i = 0; i < inputStops.length; i += 1) {
+      const nextMultipleOf10 = (Math.floor(cursorOrder / 10) + 1) * 10;
+      cursorOrder = nextMultipleOf10;
+      finalActiveOrders.push(cursorOrder);
+
+      const trailingRemoved = removedAfterSurvivingIdx.get(i) || [];
+      for (const rem of trailingRemoved) {
+        cursorOrder += 1;
+        finalRemovedOrders.set(rem.id, cursorOrder);
+      }
+    }
+
+    hasMutatedTarget = true;
+
+    // 1. Delete unreferenced removed stops and temporarily move all remaining existing stops to negative stop_order (-id)
+    //    to avoid uq_ride_stops_order collisions during re-numbering.
+    if (unreferencedRemovedStops.length > 0) {
+      await conn.query(
+        'DELETE FROM ride_stops WHERE id IN (?)',
+        [unreferencedRemovedStops.map((s) => s.id)],
+      );
+    }
+    await conn.query('UPDATE ride_stops SET stop_order = -id WHERE ride_id = ?', [rideId]);
+
+    // 2. Soft-remove newly removed stops that are referenced by bookings and assign their final positive monotonic stop_order
+    for (const rem of keptRemovedStops) {
+      const removedAtVal = rem.removed_at ?? now;
+      await conn.query(
+        'UPDATE ride_stops SET stop_order = ?, removed_at = ? WHERE id = ?',
+        [finalRemovedOrders.get(rem.id), removedAtVal, rem.id],
+      );
+    }
+
+    // 3. Update existing surviving active stops or insert newly added stops at their final positive multiple-of-10 stop_order
+    const newStopOrderByOldId = new Map();
+    for (const rem of keptRemovedStops) {
+      newStopOrderByOldId.set(rem.id, finalRemovedOrders.get(rem.id));
+    }
+    const newlyAddedFinalOrders = [];
+
+    for (let i = 0; i < inputStops.length; i += 1) {
+      const s = inputStops[i];
+      const finalOrder = finalActiveOrders[i];
+      if (s.id != null) {
+        await conn.query(
+          `UPDATE ride_stops
+           SET stop_order = ?, city_name = ?, location_name = ?, latitude = ?, longitude = ?,
+               distance_from_origin_km = ?, estimated_arrival_time = ?, removed_at = NULL
+           WHERE id = ?`,
+          [
+            finalOrder, s.city_name, s.location_name, s.latitude, s.longitude,
+            s.distance_from_origin_km, s.estimated_arrival_time, s.id,
+          ],
+        );
+        newStopOrderByOldId.set(s.id, finalOrder);
+      } else {
+        await conn.query(
+          `INSERT INTO ride_stops (ride_id, stop_order, city_name, location_name, latitude, longitude,
+             distance_from_origin_km, estimated_arrival_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            rideId, finalOrder, s.city_name, s.location_name, s.latitude, s.longitude,
+            s.distance_from_origin_km, s.estimated_arrival_time,
+          ],
+        );
+        newlyAddedFinalOrders.push(finalOrder);
+      }
+    }
+
+    // 4. Update ride header (origin, destination, departure_time, estimated_arrival_time)
+    const originName = inputStops[0].city_name;
+    const destinationName = inputStops[inputStops.length - 1].city_name;
+    await conn.query(
+      `UPDATE rides
+       SET origin_name = ?, destination_name = ?, departure_time = ?, estimated_arrival_time = ?
+       WHERE id = ?`,
+      [originName, destinationName, newDeparture, newArrival, rideId],
+    );
+
+    // 5. Evaluate D-007 impact on existing confirmed bookings:
+    //    - Rule (1): For edited or deleted stops, all confirmed bookings whose pickup, drop-off, or
+    //      traversed segment includes that stop (pickup.old_order <= stop.old_order <= dropoff.old_order)
+    //      transition to pending_reconfirmation.
+    //    - Rule (2): For a newly added stop, only confirmed bookings whose drop-off stop is ordered
+    //      AFTER the new stop (dropoff.new_order > new_stop.new_order) transition to pending_reconfirmation.
+    //    - Rule (3): Locked price_lei on existing bookings never changes.
+    const oldOrderById = new Map(allStops.map((s) => [s.id, s.stop_order]));
+    const modifiedOrRemovedOldOrders = [
+      ...newlyRemovedStops.map((s) => s.stop_order),
+      ...editedOldStops.map((s) => s.stop_order),
+    ];
+
+    const affectedConfirmed = [];
+    for (const b of bookings) {
+      if (b.status !== 'confirmed') continue;
+      const pOldOrder = oldOrderById.get(b.pickup_stop_id);
+      const dOldOrder = oldOrderById.get(b.dropoff_stop_id);
+      const dNewOrder = newStopOrderByOldId.get(b.dropoff_stop_id);
+
+      const hitEditedOrRemoved = modifiedOrRemovedOldOrders.some(
+        (ord) => pOldOrder <= ord && ord <= dOldOrder,
+      );
+      const hitAddedBeforeDropoff = newlyAddedFinalOrders.some(
+        (addedOrd) => dNewOrder > addedOrd,
+      );
+
+      if (hitEditedOrRemoved || hitAddedBeforeDropoff) {
+        affectedConfirmed.push(b);
+      }
+    }
+
+    if (affectedConfirmed.length > 0) {
+      const deadline = computeReconfirmDeadline({ modifiedAt: now, departureTime: newDeparture });
+      const deadlineIso = deadline.toISOString();
+      const affectedIds = affectedConfirmed.map((b) => b.id);
+      await conn.query(
+        "UPDATE bookings SET status = 'pending_reconfirmation', reconfirm_deadline = ? WHERE id IN (?)",
+        [deadline, affectedIds],
+      );
+      const notifRows = affectedConfirmed.map((b) => [
+        b.passenger_id,
+        'stop_edit_reconfirm_required',
+        'Modificare traseu/orar — reconfirmare necesară',
+        `Șoferul a modificat opririle cursei ${originName} → ${destinationName}. Te rugăm să reconfirmi rezervarea până la ${deadlineIso}.`,
+        `stop_edit_reconfirm:${b.id}:${deadlineIso}`,
+      ]);
+      await conn.query(
+        `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+         VALUES ?
+         ON DUPLICATE KEY UPDATE id = id`,
+        [notifRows],
+      );
+    }
+
+    // 6. Guardrail 2: Auto-reject any pending bookings whose pickup or dropoff stop was removed,
+    //    notifying those passengers idempotently (acceptBooking also blocks STOP_REMOVED).
+    const pendingWithRemovedStop = bookings.filter(
+      (b) =>
+        b.status === 'pending' &&
+        (newlyRemovedIds.has(b.pickup_stop_id) || newlyRemovedIds.has(b.dropoff_stop_id)),
+    );
+    if (pendingWithRemovedStop.length > 0) {
+      await conn.query(
+        "UPDATE bookings SET status = 'rejected' WHERE id IN (?)",
+        [pendingWithRemovedStop.map((b) => b.id)],
+      );
+      await conn.query(
+        `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+         VALUES ?
+         ON DUPLICATE KEY UPDATE id = id`,
+        [
+          pendingWithRemovedStop.map((b) => [
+            b.passenger_id,
+            'booking_rejected_stop_removed',
+            'Cerere respinsă — oprire eliminată',
+            `Oprirea selectată pentru cursa ${originName} → ${destinationName} a fost eliminată de șofer.`,
+            `booking_rejected_stop_removed:${b.id}`,
+          ]),
+        ],
+      );
+    }
+
+    await conn.commit();
+    return await getRideDetails(pool, rideId, now);
+  } catch (err) {
+    if (err instanceof ApiError && hasReconciledChanges && !hasMutatedTarget) {
+      await conn.commit();
+    } else {
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * POST /api/rides/:rideId/cancel (driver only, D-016, D-011, D-020):
+ * Cancels an active future ride inside a FOR UPDATE transaction (after reconcileRideBookings),
+ * cancels all non-terminal bookings (pending, confirmed, pending_reconfirmation), notifies all
+ * affected passengers idempotently, and records a driver_late_cancel (-5 pp) infraction when
+ * seat-holding passengers exist on the Europe/Bucharest departure day.
+ */
+export async function cancelRide(pool, user, rideId, now) {
+  const conn = await pool.getConnection();
+  let hasReconciledChanges = false;
+  let hasMutatedTarget = false;
+
+  try {
+    await conn.beginTransaction();
+
+    const [rideRows] = await conn.query('SELECT * FROM rides WHERE id = ? FOR UPDATE', [rideId]);
+    if (rideRows.length === 0) {
+      throw new ApiError(404, 'RIDE_NOT_FOUND', 'Ride not found');
+    }
+    const ride = rideRows[0];
+
+    if (ride.driver_id !== user.id) {
+      throw new ApiError(403, 'FORBIDDEN', 'Only the ride driver can cancel this ride');
+    }
+
+    const [allBookings] = await conn.query(
+      'SELECT * FROM bookings WHERE ride_id = ? FOR UPDATE',
+      [rideId],
+    );
+    allBookings.sort((a, b) => a.id - b.id);
+
+    const { expiredIds, lapsedIds } = await reconcileRideBookings(conn, {
+      rideId,
+      ride,
+      bookings: allBookings,
+      now,
+    });
+    hasReconciledChanges = expiredIds.length > 0 || lapsedIds.length > 0;
+
+    if (ride.status !== 'active') {
+      throw new ApiError(409, 'RIDE_NOT_ACTIVE', `Ride is not active (status: ${ride.status})`);
+    }
+    if (new Date(ride.departure_time).getTime() <= now.getTime()) {
+      throw new ApiError(400, 'DEPARTURE_IN_PAST', 'Cannot cancel a ride that has already departed');
+    }
+
+    const activeBookings = allBookings.filter((b) =>
+      ['pending', 'confirmed', 'pending_reconfirmation'].includes(b.status),
+    );
+
+    hasMutatedTarget = true;
+    await conn.query("UPDATE rides SET status = 'cancelled' WHERE id = ?", [rideId]);
+
+    if (activeBookings.length > 0) {
+      await conn.query(
+        `UPDATE bookings
+         SET status = 'cancelled', reconfirm_deadline = NULL
+         WHERE ride_id = ? AND status IN ('pending', 'confirmed', 'pending_reconfirmation')`,
+        [rideId],
+      );
+      await conn.query(
+        `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+         VALUES ?
+         ON DUPLICATE KEY UPDATE id = id`,
+        [
+          activeBookings.map((b) => [
+            b.passenger_id,
+            'ride_cancelled',
+            'Cursă anulată de șofer',
+            `Cursa ${ride.origin_name} → ${ride.destination_name} a fost anulată de șofer. Rezervarea ta a fost anulată.`,
+            `ride_cancelled:${rideId}:${b.id}`,
+          ]),
+        ],
+      );
+    }
+
+    const holdsSeats = activeBookings.some(
+      (b) => b.status === 'confirmed' || b.status === 'pending_reconfirmation',
+    );
+    let infractionRecorded = false;
+    if (holdsSeats && isWithinLateCancelWindow({ departureTime: ride.departure_time, now })) {
+      await conn.query(
+        `INSERT INTO user_infractions (user_id, ride_id, infraction_type, penalty_percentage_points, occurred_at)
+         VALUES (?, ?, 'driver_late_cancel', ?, ?)`,
+        [user.id, ride.id, DRIVER_LATE_CANCEL_PENALTY, now],
+      );
+      infractionRecorded = true;
+    }
+
+    await conn.commit();
+    return {
+      cancelled_ride_id: ride.id,
+      cancelled_bookings: activeBookings.length,
+      infraction_recorded: infractionRecorded,
+    };
+  } catch (err) {
+    if (err instanceof ApiError && hasReconciledChanges && !hasMutatedTarget) {
+      await conn.commit();
+    } else {
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
 }

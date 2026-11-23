@@ -249,3 +249,31 @@ Parallel read-only review (Performance & SQL Specialist, Security & Invariant En
 2. **Lazy reconciliation before `addException` cancellation (`backend/src/services/recurringRideService.js`):** Invoked `reconcileRideBookings(conn, { rideId: ride.id, ride, now })` inside the `addException` transaction before inspecting/cancelling bookings so an overdue `pending_reconfirmation` (`reconfirm_deadline <= now` per `D-007`) lapses to `expired` first and never falsely triggers a `driver_late_cancel` infraction (`D-016`) (plus integration regression test in `rides.test.js`).
 3. **OpenAPI `RecurringRule` & `RuleStop` schemas (`backend/src/openapi.js`):** Added the 6 `RideOptions` fields (`available_seats`, `declared_trip_cost`, `luggage_allowed`, `pets_allowed`, `smoking_allowed`, `women_only`) to `RecurringRule.properties.rule` and added `RuleStop` (with `stop_order`) for `RecurringRule.properties.stops`.
 4. **Europe/Bucharest spring-forward DST gap (`backend/src/domain/recurrence.js`):** Updated `bucharestLocalToUtc` so non-existent spring-forward wall-clock times (e.g. `03:30` on the last Sunday of March) resolve forward (`04:30` EEST / `01:30Z`) rather than stepping backward (`02:30` EET / `00:30Z`) (plus unit test in `recurrence.test.js`).
+
+---
+
+## Session 2026-11-23 (Part 2) — Slice 4B: Bookings Lifecycle, Driver Stop Editing (`D-007`), and Cancellations / Infractions (`D-016`) (`feat/bookings-stop-edits-cancellations`)
+
+### What was planned & built
+1. **Ledger & Architecture updates (`PATTERN-002`, `PATTERN-003`):**
+   - Marked `PATTERN-002` and `PATTERN-003` as `Confirmed: 2026-11-23` in `docs/agents/PATTERNS.md`.
+   - Updated `docs/agents/ARCHITECTURE.md` with `bookingService.js`, `routes/bookings.js`, and the new ride booking/stop-edit/cancel endpoints.
+2. **Pure Domain Helpers (`backend/src/domain/seriousnessScore.js`, `D-016`):**
+   - `isWithinPassengerLateCancelWindow`: strictly `< 4 hours` before departure (`0 < departureTime - now < 4h`).
+   - `calculatePassengerCancellationFee`: 50% of booked segment `price_lei` with exact round-half-up, capped at `20` lei.
+   - `hasRecentCancellationBadge`: `true` if a `driver_late_cancel` infraction occurred within the last 30 days (`"Anulare recentă"` badge).
+3. **Transactional Booking Lifecycle (`backend/src/services/bookingService.js`, `bookingAcceptanceService.js`, `routes/bookings.js`, `routes/rides.js`):**
+   - `POST /api/rides/:rideId/bookings`: locks `rides` -> `ride_stops` -> `bookings` (`FOR UPDATE`), runs `reconcileRideBookings`, enforces active future ride, blocks driver self-booking (`403 SELF_BOOKING_NOT_ALLOWED`), enforces `D-018` `women_only` (`403 WOMEN_ONLY_NOT_ALLOWED`), validates active ordered pickup/dropoff stops (`pickup.stop_order < dropoff.stop_order`), prevents duplicate non-terminal booking on the same ride (`409 DUPLICATE_ACTIVE_BOOKING`, `D-019`), verifies `>= 1` free seat (`D-005`) and `D-010` trip cost cap, locks `price_lei`, sets computed `expires_at = ride.departure_time` (`D-003`), and inserts idempotent driver notification `booking_requested:${bookingId}` (`D-011`).
+   - `POST /api/bookings/:bookingId/accept`: wires `acceptBooking` (`SELECT FOR UPDATE` + lazy reconciliation + `D-003` selective competing auto-rejection) and adds idempotent passenger notification `booking_accepted:${bookingId}`.
+   - `POST /api/bookings/:bookingId/reject`: rejects a `pending` booking inside a `FOR UPDATE` transaction after lazy reconciliation and sends idempotent notification `booking_rejected:${bookingId}`.
+   - `GET /api/bookings/me` and `GET /api/rides/:rideId/bookings`: run `reconcileRidesLazily` first and return enriched booking payloads.
+4. **Driver Stop / Schedule Editing & Passenger Reconfirmation (`backend/src/services/rideService.js`, `bookingService.js`, `D-007`, `D-010`, `D-011`):**
+   - `PATCH / PUT /api/rides/:rideId/stops`: edits, inserts, and soft-removes stops inside a `FOR UPDATE` transaction after `reconcileRideBookings`. Preserves positive monotonic `stop_order` on soft-removed stops (`removed_at IS NOT NULL`) between active multiples-of-10 stops so `pending_reconfirmation` bookings referencing removed stops continue to reserve segment capacity in `segmentAvailability.js`. Keeps existing bookings' locked `price_lei` immutable (`D-007`, `D-010`), transitions affected `confirmed` bookings to `pending_reconfirmation` with `computeReconfirmDeadline` and idempotent notifications, and auto-rejects `pending` bookings referencing removed stops.
+   - `POST /api/bookings/:bookingId/reconfirm`: blocks reconfirmation with `409 STOP_REMOVED` if the booking's own pickup or dropoff stop was soft-removed, lazily lapses overdue bookings (`409 BOOKING_NOT_PENDING_RECONFIRMATION`), and restores on-time bookings to `confirmed` with idempotent driver notification `booking_reconfirmed:${bookingId}`.
+5. **Cancellations, Seriousness Infractions & 30-Day Badge (`D-016`, `D-011`, `D-020`):**
+   - `POST /api/bookings/:bookingId/cancel`: cancels a passenger's non-terminal booking; records `passenger_late_cancel` (`-3` pp) and `cancellation_fee_lei` (`50%` capped at `20` lei) only when cancelling a `confirmed` booking `< 4h` before departure (`pending` and `pending_reconfirmation` are exempt).
+   - `POST /api/rides/:rideId/cancel`: cancels an active future ride and all non-terminal bookings after `reconcileRideBookings`, notifies affected passengers idempotently, and records `driver_late_cancel` (`-5` pp) when seat-holding passengers exist on the `Europe/Bucharest` departure day.
+   - Exposed `has_recent_cancellation_badge` on driver summaries in `GET /api/rides/:rideId` and `GET /api/rides`, and documented all 9 new endpoints and schemas in `backend/src/openapi.js`.
+6. **Tests (TDD):**
+   - `backend/tests/seriousnessScore.test.js` (6 new unit tests, 19 total).
+   - `backend/tests/bookings.test.js` (8 Supertest + MySQL integration tests on dedicated throwaway DB `studride_test_bookings_api`).

@@ -9,6 +9,7 @@ import { createAuthRouter } from './routes/auth.js';
 import { createGeocodingRouter } from './routes/geocoding.js';
 import { createRidesRouter } from './routes/rides.js';
 import { createRecurringRidesRouter } from './routes/recurringRides.js';
+import { createBookingsRouter } from './routes/bookings.js';
 import { createGeocodingService } from './services/geocodingService.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
@@ -56,6 +57,7 @@ export function createApp({
   app.use('/api/geocoding', createGeocodingRouter({ geocoding }));
   app.use('/api/rides', createRidesRouter({ pool, jwtSecret, nowFn }));
   app.use('/api/recurring-rides', createRecurringRidesRouter({ pool, jwtSecret, nowFn }));
+  app.use('/api/bookings', createBookingsRouter({ pool, jwtSecret, nowFn }));
 
   if (typeof mountExtraRoutes === 'function') {
     mountExtraRoutes(app);

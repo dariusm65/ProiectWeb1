@@ -1,8 +1,14 @@
 // Pure D-016 helpers: seriousness score replayed from infraction events, the 7-day publishing
-// ban, and the driver late-cancel window. Nothing here is stored; everything is computed on read.
+// ban, the 30-day "Anulare recentă" badge, and driver/passenger late-cancel windows & fee math.
+// Nothing here is stored; everything is computed on read.
 import { bucharestDateOf } from './recurrence.js';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const WEEK_MS = 7 * DAY_MS;
+const BADGE_WINDOW_MS = 30 * DAY_MS;
+const PASSENGER_LATE_CANCEL_WINDOW_MS = 4 * HOUR_MS;
+const MAX_PASSENGER_CANCELLATION_FEE_LEI = 20;
 
 const clamp = (n) => Math.max(0, Math.min(100, n));
 const time = (v) => new Date(v).getTime();
@@ -31,9 +37,19 @@ export function computeSeriousnessScore(infractions, now = new Date()) {
 
 /** A driver_late_cancel within the last 7 days blocks publishing new rides (D-016). */
 export function isPublishingBanned(infractions, now = new Date()) {
-  const since = time(now) - WEEK_MS;
+  const nowMs = time(now);
+  const since = nowMs - WEEK_MS;
   return infractions.some(
-    (i) => i.infraction_type === 'driver_late_cancel' && time(i.occurred_at) > since,
+    (i) => i.infraction_type === 'driver_late_cancel' && time(i.occurred_at) > since && time(i.occurred_at) <= nowMs,
+  );
+}
+
+/** A driver_late_cancel within the last 30 days activates the "Anulare recentă" badge (D-016). */
+export function hasRecentCancellationBadge(infractions, now = new Date()) {
+  const nowMs = time(now);
+  const since = nowMs - BADGE_WINDOW_MS;
+  return infractions.some(
+    (i) => i.infraction_type === 'driver_late_cancel' && time(i.occurred_at) > since && time(i.occurred_at) <= nowMs,
   );
 }
 
@@ -43,4 +59,24 @@ export function isPublishingBanned(infractions, now = new Date()) {
  */
 export function isWithinLateCancelWindow({ departureTime, now }) {
   return time(departureTime) > time(now) && bucharestDateOf(departureTime) === bucharestDateOf(now);
+}
+
+/**
+ * D-016 late-cancel window for passengers: < 4 hours before departure (and before departure).
+ */
+export function isWithinPassengerLateCancelWindow({ departureTime, now }) {
+  const diff = time(departureTime) - time(now);
+  return diff > 0 && diff < PASSENGER_LATE_CANCEL_WINDOW_MS;
+}
+
+/**
+ * D-016 passenger late-cancellation fee: 50% of the booked segment price (round-half-up),
+ * capped at 20 lei.
+ */
+export function calculatePassengerCancellationFee(priceLei) {
+  if (!Number.isInteger(priceLei) || priceLei < 0) {
+    throw new RangeError(`priceLei must be a non-negative integer (got ${priceLei})`);
+  }
+  const halfRoundedUp = Math.floor((priceLei + 1) / 2);
+  return Math.min(MAX_PASSENGER_CANCELLATION_FEE_LEI, halfRoundedUp);
 }
