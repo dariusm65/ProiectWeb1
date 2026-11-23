@@ -1,7 +1,9 @@
 // Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/:rideId,
 // POST /api/rides/:rideId/bookings, GET /api/rides/:rideId/bookings,
-// PATCH/PUT /api/rides/:rideId/stops, POST /api/rides/:rideId/cancel
-// (D-003, D-005, D-007, D-010, D-011, D-014, D-016, D-017, D-018, D-019).
+// PATCH/PUT /api/rides/:rideId/stops, POST /api/rides/:rideId/cancel,
+// GET /api/rides/:rideId/messages, POST /api/rides/:rideId/messages,
+// POST /api/rides/:rideId/reviews
+// (D-003, D-005, D-007, D-008, D-010, D-011, D-013, D-014, D-016, D-017, D-018, D-019).
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody, validateQuery, validateParams } from '../middleware/validate.js';
@@ -17,6 +19,8 @@ import {
 } from '../services/rideService.js';
 import { createBooking, listRideBookings } from '../services/bookingService.js';
 import { materialiseForDate } from '../services/recurringRideService.js';
+import { listRideMessages, postRideMessage } from '../services/chatService.js';
+import { createRideReview } from '../services/reviewService.js';
 
 export const MAX_STOPS = 20;
 
@@ -113,6 +117,16 @@ const rideIdParams = z.object({ rideId: z.coerce.number().int().positive() });
 const createBookingSchema = z.object({
   pickup_stop_id: z.number().int().positive(),
   dropoff_stop_id: z.number().int().positive(),
+});
+
+const postChatMessageSchema = z.object({
+  message_text: z.string().trim().min(1).max(2000),
+});
+
+const createReviewSchema = z.object({
+  reviewed_user_id: z.number().int().positive(),
+  rating_stars: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).nullable().optional(),
 });
 
 const editableStop = z.object({
@@ -216,6 +230,45 @@ export function createRidesRouter({ pool, jwtSecret, nowFn }) {
       return next(err);
     }
   });
+
+  router.get('/:rideId/messages', auth, validateParams(rideIdParams), async (req, res, next) => {
+    try {
+      const messages = await listRideMessages(pool, req.user, req.params.rideId, nowFn());
+      return res.status(200).json({ messages });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post(
+    '/:rideId/messages',
+    auth,
+    validateParams(rideIdParams),
+    validateBody(postChatMessageSchema),
+    async (req, res, next) => {
+      try {
+        const message = await postRideMessage(pool, req.user, req.params.rideId, req.body, nowFn());
+        return res.status(201).json({ message });
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
+
+  router.post(
+    '/:rideId/reviews',
+    auth,
+    validateParams(rideIdParams),
+    validateBody(createReviewSchema),
+    async (req, res, next) => {
+      try {
+        const review = await createRideReview(pool, req.user, req.params.rideId, req.body, nowFn());
+        return res.status(201).json({ review });
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
 
   return router;
 }

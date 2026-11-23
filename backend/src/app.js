@@ -10,6 +10,10 @@ import { createGeocodingRouter } from './routes/geocoding.js';
 import { createRidesRouter } from './routes/rides.js';
 import { createRecurringRidesRouter } from './routes/recurringRides.js';
 import { createBookingsRouter } from './routes/bookings.js';
+import { createNotificationsRouter } from './routes/notifications.js';
+import { createUsersRouter } from './routes/users.js';
+import { createReportsRouter } from './routes/reports.js';
+import { createAdminRouter } from './routes/admin.js';
 import { createGeocodingService } from './services/geocodingService.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
@@ -58,6 +62,10 @@ export function createApp({
   app.use('/api/rides', createRidesRouter({ pool, jwtSecret, nowFn }));
   app.use('/api/recurring-rides', createRecurringRidesRouter({ pool, jwtSecret, nowFn }));
   app.use('/api/bookings', createBookingsRouter({ pool, jwtSecret, nowFn }));
+  app.use('/api/notifications', createNotificationsRouter({ pool, jwtSecret, nowFn }));
+  app.use('/api/users', createUsersRouter({ pool, nowFn }));
+  app.use('/api/reports', createReportsRouter({ pool, jwtSecret, nowFn }));
+  app.use('/api/admin', createAdminRouter({ pool, jwtSecret, nowFn }));
 
   if (typeof mountExtraRoutes === 'function') {
     mountExtraRoutes(app);
