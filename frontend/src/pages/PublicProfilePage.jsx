@@ -63,13 +63,18 @@ export function PublicProfilePage() {
   if (error || !profile) {
     return (
       <div className="main-layout">
-        <div className="status-banner error" role="alert">
-          <div>
-            <strong>Eroare:</strong> {error || 'Utilizatorul nu a fost găsit.'}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)' }}>
+            Profilul public nu este disponibil
+          </h1>
+          <div className="status-banner error" role="alert">
+            <div>
+              <strong>Eroare:</strong> {error || 'Utilizatorul nu a fost găsit.'}
+            </div>
+            <Link to="/rides" className="btn">
+              Înapoi la curse
+            </Link>
           </div>
-          <Link to="/rides" className="btn">
-            Înapoi la curse
-          </Link>
         </div>
       </div>
     );

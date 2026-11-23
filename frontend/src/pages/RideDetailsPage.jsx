@@ -71,13 +71,18 @@ export function RideDetailsPage() {
   if (error || !details) {
     return (
       <div className="main-layout">
-        <div className="status-banner error" role="alert">
-          <div>
-            <strong>Eroare:</strong> {error || 'Cursa nu a fost găsită.'}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)' }}>
+            Detaliile cursei nu sunt disponibile
+          </h1>
+          <div className="status-banner error" role="alert">
+            <div>
+              <strong>Eroare:</strong> {error || 'Cursa nu a fost găsită.'}
+            </div>
+            <Link to="/rides" className="btn">
+              Înapoi la căutare
+            </Link>
           </div>
-          <Link to="/rides" className="btn">
-            Înapoi la căutare
-          </Link>
         </div>
       </div>
     );

@@ -1,7 +1,14 @@
 // Centralized REST API client for StudRide (D-002, D-004, D-013, D-014).
-// Injects Authorization: Bearer <token> from localStorage and normalizes error payloads into ApiError.
+// Injects Authorization: Bearer <token> from localStorage, normalizes error payloads into ApiError,
+// and notifies AuthContext when a protected call receives 401 UNAUTHORIZED or 403 ACCOUNT_SUSPENDED.
 
 export const TOKEN_STORAGE_KEY = 'studride_jwt';
+
+let authFailureListener = null;
+
+export function setAuthFailureListener(listener) {
+  authFailureListener = typeof listener === 'function' ? listener : null;
+}
 
 export class ApiError extends Error {
   constructor(statusCode, code, message, details = null) {
@@ -72,12 +79,27 @@ export async function apiRequest(
   }
 
   if (!response.ok) {
-    throw new ApiError(
+    const apiErr = new ApiError(
       response.status,
       data?.error || 'API_ERROR',
       data?.message || `Eroare HTTP ${response.status}`,
       data?.details || null,
     );
+
+    const isLoginEndpoint = path === '/api/auth/login' || path === '/api/auth/register';
+    if (
+      !isLoginEndpoint &&
+      activeToken &&
+      (apiErr.statusCode === 401 ||
+        (apiErr.statusCode === 403 && apiErr.code === 'ACCOUNT_SUSPENDED'))
+    ) {
+      setStoredToken(null);
+      if (authFailureListener) {
+        authFailureListener(apiErr);
+      }
+    }
+
+    throw apiErr;
   }
 
   return data;

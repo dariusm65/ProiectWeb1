@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ridesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -10,7 +10,11 @@ import {
 } from '../components/Badges.jsx';
 import { GeocodeAutocomplete } from '../components/GeocodeAutocomplete.jsx';
 import { RouteMap } from '../components/RouteMap.jsx';
-import { formatBucharestTime, KNOWN_SURVEY_PLACES } from '../domain/bucharestTime.js';
+import {
+  formatBucharestTime,
+  KNOWN_SURVEY_PLACES,
+  resolveKnownSurveyPlace,
+} from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 export function SearchResultsPage() {
@@ -24,31 +28,34 @@ export function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [originText, setOriginText] = useState(
-    searchParams.get('originLabel') || 'Cluj-Napoca (Campus Hașdeu)',
+    searchParams.get('originLabel') || 'Sibiu (Gara Mare Sibiu)',
   );
   const [destText, setDestText] = useState(
-    searchParams.get('destLabel') || 'Sibiu (Gara Mare Sibiu)',
+    searchParams.get('destLabel') || 'Cluj-Napoca (Campus Hașdeu)',
   );
   const [originCoords, setOriginCoords] = useState({
-    lat: Number(searchParams.get('originLat') || KNOWN_SURVEY_PLACES[0].latitude),
-    lng: Number(searchParams.get('originLng') || KNOWN_SURVEY_PLACES[0].longitude),
+    lat: Number(searchParams.get('originLat') || KNOWN_SURVEY_PLACES[4].latitude),
+    lng: Number(searchParams.get('originLng') || KNOWN_SURVEY_PLACES[4].longitude),
   });
   const [destCoords, setDestCoords] = useState({
-    lat: Number(searchParams.get('destLat') || KNOWN_SURVEY_PLACES[4].latitude),
-    lng: Number(searchParams.get('destLng') || KNOWN_SURVEY_PLACES[4].longitude),
+    lat: Number(searchParams.get('destLat') || KNOWN_SURVEY_PLACES[0].latitude),
+    lng: Number(searchParams.get('destLng') || KNOWN_SURVEY_PLACES[0].longitude),
   });
-  const [date, setDate] = useState(searchParams.get('date') || '2026-12-04');
+  const [date, setDate] = useState(searchParams.get('date') || '');
   const [radiusKm, setRadiusKm] = useState(Number(searchParams.get('radiusKm') || 1));
   const [womenOnly, setWomenOnly] = useState(searchParams.get('womenOnly') === 'true');
   const [universityOnly, setUniversityOnly] = useState(searchParams.get('universityOnly') === 'true');
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const [rides, setRides] = useState([]);
   const [selectedRideId, setSelectedRideId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const runSearch = useCallback(
-    async (overrideRadius = radiusKm) => {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function executeSearch() {
       setLoading(true);
       setError('');
       try {
@@ -57,28 +64,74 @@ export function SearchResultsPage() {
           originLng: originCoords.lng,
           destLat: destCoords.lat,
           destLng: destCoords.lng,
-          date,
-          radiusKm: overrideRadius,
+          radiusKm,
         };
+        if (date) query.date = date;
         if (womenOnly) query.womenOnly = 'true';
         if (universityOnly) query.universityOnly = 'true';
 
-        const data = await ridesApi.search(query, { fetchFn });
+        const data = await ridesApi.search(query, {
+          signal: controller.signal,
+          fetchFn,
+        });
+        if (controller.signal.aborted) return;
         const list = Array.isArray(data?.rides) ? data.rides : [];
         setRides(list);
         setSelectedRideId(list.length > 0 ? list[0].ride_id : null);
       } catch (err) {
+        if (controller.signal.aborted || err?.name === 'AbortError') return;
         setError(err.message || 'Eroare la căutarea segmentelor disponibile.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
-    },
-    [originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng, date, radiusKm, womenOnly, universityOnly, fetchFn],
-  );
+    }
 
-  useEffect(() => {
-    runSearch();
-  }, [runSearch]);
+    executeSearch();
+    return () => {
+      controller.abort();
+    };
+  }, [
+    originCoords.lat,
+    originCoords.lng,
+    destCoords.lat,
+    destCoords.lng,
+    date,
+    radiusKm,
+    womenOnly,
+    universityOnly,
+    reloadNonce,
+    fetchFn,
+  ]);
+
+  const handleManualSearchClick = () => {
+    const matchedOrigin = resolveKnownSurveyPlace(originText);
+    const matchedDest = resolveKnownSurveyPlace(destText);
+    const nextOrigin = matchedOrigin
+      ? { lat: matchedOrigin.latitude, lng: matchedOrigin.longitude }
+      : originCoords;
+    const nextDest = matchedDest
+      ? { lat: matchedDest.latitude, lng: matchedDest.longitude }
+      : destCoords;
+
+    setOriginCoords(nextOrigin);
+    setDestCoords(nextDest);
+
+    const nextParams = {
+      originLat: String(nextOrigin.lat),
+      originLng: String(nextOrigin.lng),
+      destLat: String(nextDest.lat),
+      destLng: String(nextDest.lng),
+      originLabel: originText,
+      destLabel: destText,
+      radiusKm: String(radiusKm),
+    };
+    if (date) nextParams.date = date;
+    if (womenOnly) nextParams.womenOnly = 'true';
+    if (universityOnly) nextParams.universityOnly = 'true';
+    setSearchParams(nextParams);
+  };
 
   const selectedRide = rides.find((r) => r.ride_id === selectedRideId) || rides[0] || null;
   const totalDistKm =
@@ -116,7 +169,7 @@ export function SearchResultsPage() {
               onSelectPlace={(p) => setDestCoords({ lat: p.latitude, lng: p.longitude })}
             />
             <div className="field">
-              <label htmlFor="search-date">Data plecării</label>
+              <label htmlFor="search-date">Data plecării (opțional)</label>
               <input
                 id="search-date"
                 type="date"
@@ -128,17 +181,7 @@ export function SearchResultsPage() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => {
-                setSearchParams({
-                  originLat: String(originCoords.lat),
-                  originLng: String(originCoords.lng),
-                  destLat: String(destCoords.lat),
-                  destLng: String(destCoords.lng),
-                  date,
-                  radiusKm: String(radiusKm),
-                });
-                runSearch(radiusKm);
-              }}
+              onClick={handleManualSearchClick}
             >
               Caută curse
             </button>
@@ -157,11 +200,9 @@ export function SearchResultsPage() {
                 <button
                   key={r.val}
                   type="button"
+                  aria-pressed={radiusKm === r.val}
                   className={radiusKm === r.val ? 'chip-btn active' : 'chip-btn'}
-                  onClick={() => {
-                    setRadiusKm(r.val);
-                    runSearch(r.val);
-                  }}
+                  onClick={() => setRadiusKm(r.val)}
                 >
                   {r.label}
                 </button>
@@ -210,7 +251,11 @@ export function SearchResultsPage() {
               <div>
                 <strong>Eroare la căutarea segmentelor:</strong> {error}
               </div>
-              <button type="button" className="btn" onClick={() => runSearch(radiusKm)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setReloadNonce((n) => n + 1)}
+              >
                 Reîncearcă
               </button>
             </div>
@@ -222,27 +267,21 @@ export function SearchResultsPage() {
                 Nicio cursă găsită pe acest segment
               </h2>
               <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', maxWidth: '46ch' }}>
-                Nu există șoferi disponibili pe {date} în raza de {radiusKm} km. Încearcă să extinzi raza de căutare la
-                3 km sau 5 km pentru a include opririle apropiate.
+                Nu există șoferi disponibili {date ? `pe ${date}` : 'în perioada următoare'} în raza de {radiusKm} km.
+                Încearcă să extinzi raza de căutare la 3 km sau 5 km pentru a include opririle apropiate.
               </p>
               <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: '0.5rem' }}>
                 <button
                   type="button"
                   className="btn"
-                  onClick={() => {
-                    setRadiusKm(3);
-                    runSearch(3);
-                  }}
+                  onClick={() => setRadiusKm(3)}
                 >
                   Extinde la 3 km
                 </button>
                 <button
                   type="button"
                   className="btn btn-primary"
-                  onClick={() => {
-                    setRadiusKm(5);
-                    runSearch(5);
-                  }}
+                  onClick={() => setRadiusKm(5)}
                 >
                   Extinde la 5 km
                 </button>

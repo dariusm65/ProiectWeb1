@@ -606,7 +606,7 @@ export const openapiSpec = {
           { name: 'originLng', in: 'query', required: true, schema: { type: 'number' } },
           { name: 'destLat', in: 'query', required: true, schema: { type: 'number' } },
           { name: 'destLng', in: 'query', required: true, schema: { type: 'number' } },
-          { name: 'date', in: 'query', required: true, schema: { type: 'string', format: 'date' }, description: 'Europe/Bucharest calendar date (D-020)' },
+          { name: 'date', in: 'query', required: false, schema: { type: 'string', format: 'date' }, description: 'Optional Europe/Bucharest calendar date (D-020); when omitted, searches all upcoming active rides' },
           { name: 'radiusKm', in: 'query', schema: { type: 'number', default: 1, maximum: 5, exclusiveMinimum: 0 }, description: 'D-017: default 1 km, max 5 km' },
           { name: 'universityOnly', in: 'query', schema: { type: 'boolean' }, description: 'Only domain-validated university drivers (D-004)' },
           { name: 'womenOnly', in: 'query', schema: { type: 'boolean' } },

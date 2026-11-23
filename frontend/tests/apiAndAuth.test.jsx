@@ -2,18 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { apiRequest, ApiError, TOKEN_STORAGE_KEY } from '../src/api/client.js';
+import { apiRequest, ApiError, ridesApi, TOKEN_STORAGE_KEY } from '../src/api/client.js';
 import { AuthProvider, useAuth } from '../src/context/AuthContext.jsx';
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext.jsx';
+import { buildIsoTimestampFromDateAndTime } from '../src/domain/bucharestTime.js';
 
 function AuthConsumer() {
-  const { user, status, authError, logout } = useAuth();
+  const { user, status, authError, fetchFn, logout } = useAuth();
+  const triggerProtectedCall = async () => {
+    try {
+      await ridesApi.publish({ available_seats: 2, declared_trip_cost: 50, stops: [] }, { fetchFn });
+    } catch {
+      // handled via global authFailureListener
+    }
+  };
   return (
     <div>
       <span data-testid="auth-status">{status}</span>
       <span data-testid="auth-user">{user ? user.email : 'guest'}</span>
       {authError && <span data-testid="auth-error">{authError.code}:{authError.message}</span>}
       <button type="button" onClick={logout}>Logout</button>
+      <button type="button" onClick={triggerProtectedCall}>ProtectedCall</button>
     </div>
   );
 }
@@ -127,5 +136,61 @@ describe('frontend API client, AuthContext & ThemeContext', () => {
     expect(screen.getByTestId('theme-val')).toHaveTextContent('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(window.localStorage.getItem('studride_theme')).toBe('dark');
+  });
+
+  it('clears studride_jwt and resets AuthContext user when a mid-session protected API call receives 401 or 403 ACCOUNT_SUSPENDED', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, 'active-jwt');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user: {
+            id: 7,
+            email: 'ioana@ulbsibiu.ro',
+            full_name: 'Ioana Popescu',
+            has_university_badge: true,
+            gender: 'female',
+            role: 'user',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          error: 'ACCOUNT_SUSPENDED',
+          message: 'Account is suspended',
+        }),
+      });
+
+    render(
+      <AuthProvider fetchFn={fetchMock}>
+        <AuthConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('authenticated');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'ProtectedCall' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-status')).toHaveTextContent('unauthenticated');
+    });
+    expect(window.localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
+    expect(screen.getByTestId('auth-error')).toHaveTextContent('ACCOUNT_SUSPENDED');
+  });
+
+  it('buildIsoTimestampFromDateAndTime computes DST-aware Europe/Bucharest offsets (+02:00 winter EET vs +03:00 summer EEST) and throws on invalid input (D-020)', () => {
+    // Winter (December = EET, UTC+2): 16:30 Bucharest -> 14:30Z
+    expect(buildIsoTimestampFromDateAndTime('2026-12-04', '16:30', 0)).toBe('2026-12-04T14:30:00.000Z');
+    // Summer (July = EEST, UTC+3): 16:30 Bucharest -> 13:30Z
+    expect(buildIsoTimestampFromDateAndTime('2026-07-15', '16:30', 0)).toBe('2026-07-15T13:30:00.000Z');
+    // Invalid date throws RangeError instead of silently fabricating Date.now()
+    expect(() => buildIsoTimestampFromDateAndTime('invalid-date', '16:30', 0)).toThrow(RangeError);
   });
 });

@@ -17,6 +17,20 @@ export function GeocodeAutocomplete({
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const lastSelectedRef = useRef(value);
+  const containerRef = useRef(null);
+  const listboxId = `${id}-listbox`;
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
 
   useEffect(() => {
     const query = String(value || '').trim();
@@ -40,6 +54,7 @@ export function GeocodeAutocomplete({
           signal: controller.signal,
           fetchFn,
         });
+        if (controller.signal.aborted) return;
         const merged = [...localMatches];
         if (remote && Number.isFinite(remote.lat) && Number.isFinite(remote.lng)) {
           const primaryCity = String(remote.display_name || query).split(',')[0].trim();
@@ -53,9 +68,12 @@ export function GeocodeAutocomplete({
         }
         setSuggestions(merged);
       } catch {
+        if (controller.signal.aborted) return;
         setSuggestions(localMatches);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }, debounceMs);
 
@@ -76,17 +94,28 @@ export function GeocodeAutocomplete({
     setSuggestions([]);
   };
 
+  const isExpanded = Boolean(open && suggestions.length > 0);
+
   return (
-    <div className="field">
+    <div className="field" ref={containerRef}>
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
         type="text"
         className="input"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={isExpanded}
+        aria-controls={listboxId}
         value={value}
         placeholder={placeholder}
         autoComplete="off"
         onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
         onChange={(e) => {
           setOpen(true);
           onChange(e.target.value);
@@ -97,10 +126,19 @@ export function GeocodeAutocomplete({
           Se caută localitatea...
         </span>
       )}
-      {open && suggestions.length > 0 && (
-        <ul className="autocomplete-menu" role="listbox" aria-label={`Sugestii pentru ${label}`}>
+      {isExpanded && (
+        <ul
+          id={listboxId}
+          className="autocomplete-menu"
+          role="listbox"
+          aria-label={`Sugestii pentru ${label}`}
+        >
           {suggestions.map((place, idx) => (
-            <li key={`${place.city_name}-${place.latitude}-${idx}`}>
+            <li
+              key={`${place.city_name}-${place.latitude}-${idx}`}
+              role="option"
+              aria-selected={false}
+            >
               <button
                 type="button"
                 className="autocomplete-option"

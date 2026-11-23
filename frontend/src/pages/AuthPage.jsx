@@ -25,13 +25,13 @@ export function AuthPage() {
   // Register state
   const [fullName, setFullName] = useState('Ioana Popescu');
   const [regEmail, setRegEmail] = useState('ioana.popescu@ulbsibiu.ro');
-  const [regPassword, setRegPassword] = useState('ParolaSigura123');
+  const [regPassword, setRegPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('female');
 
   // Login state
   const [loginEmail, setLoginEmail] = useState('ioana.popescu@ulbsibiu.ro');
-  const [loginPassword, setLoginPassword] = useState('ParolaSigura123');
+  const [loginPassword, setLoginPassword] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');

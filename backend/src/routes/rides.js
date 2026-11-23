@@ -97,12 +97,19 @@ const publishSchema = z.object({
 
 const optionalBool = z.enum(['true', 'false']).transform((v) => v === 'true').optional();
 
+const optionalDateString = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v === '' ? undefined : v))
+  .pipe(dateString.optional());
+
 const searchSchema = z.object({
   originLat: numericParam(-90, 90),
   originLng: numericParam(-180, 180),
   destLat: numericParam(-90, 90),
   destLng: numericParam(-180, 180),
-  date: dateString,
+  date: optionalDateString,
   // D-017: default 1 km, maximum 5 km
   radiusKm: z.string().trim().min(1).pipe(z.coerce.number().gt(0).max(5)).optional().default(1),
   universityOnly: optionalBool,
@@ -167,7 +174,9 @@ export function createRidesRouter({ pool, jwtSecret, nowFn }) {
   router.get('/', validateQuery(searchSchema), async (req, res, next) => {
     try {
       const now = nowFn();
-      await materialiseForDate(pool, req.query.date, now);
+      if (req.query.date) {
+        await materialiseForDate(pool, req.query.date, now);
+      }
       return res.status(200).json({ rides: await searchRides(pool, req.query, now) });
     } catch (err) {
       return next(err);

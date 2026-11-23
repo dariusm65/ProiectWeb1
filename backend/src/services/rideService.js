@@ -263,10 +263,14 @@ export async function searchRides(pool, params, now) {
   const { originLat, originLng, destLat, destLng, date, radiusKm } = params;
   const origin = { lat: originLat, lng: originLng };
   const dest = { lat: destLat, lng: destLng };
-  const { start, end } = bucharestDayBounds(date);
 
-  const conditions = ["r.status = 'active'", 'r.departure_time >= ?', 'r.departure_time < ?', 'r.departure_time > ?'];
-  const args = [start, end, now];
+  const conditions = ["r.status = 'active'", 'r.departure_time > ?'];
+  const args = [now];
+  if (date) {
+    const { start, end } = bucharestDayBounds(date);
+    conditions.push('r.departure_time >= ?', 'r.departure_time < ?');
+    args.push(start, end);
+  }
   if (params.universityOnly) conditions.push('u.university_domain IS NOT NULL');
   for (const [param, column] of [
     ['womenOnly', 'women_only'],
@@ -347,10 +351,23 @@ export async function searchRides(pool, params, now) {
     }
   }
 
+  const allStopsByRide = new Map(matchedIds.map((id) => [id, []]));
+  for (const s of allStops) {
+    if (allStopsByRide.has(s.ride_id)) {
+      allStopsByRide.get(s.ride_id).push(s);
+    }
+  }
+  const allBookingsByRide = new Map(matchedIds.map((id) => [id, []]));
+  for (const b of allBookings) {
+    if (allBookingsByRide.has(b.ride_id)) {
+      allBookingsByRide.get(b.ride_id).push(b);
+    }
+  }
+
   const results = [];
   for (const { ride, pairs } of matches) {
-    const stops = allStops.filter((s) => s.ride_id === ride.id);
-    const bookings = allBookings.filter((b) => b.ride_id === ride.id);
+    const stops = allStopsByRide.get(ride.id) || [];
+    const bookings = allBookingsByRide.get(ride.id) || [];
     let chosen = null;
     for (const candidate of pairs) {
       const freeSeats = getAvailableSeatsForRange({

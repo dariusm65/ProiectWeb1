@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GeocodeAutocomplete } from '../components/GeocodeAutocomplete.jsx';
-import { KNOWN_SURVEY_PLACES } from '../domain/bucharestTime.js';
+import { KNOWN_SURVEY_PLACES, resolveKnownSurveyPlace } from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 const POPULAR_CORRIDORS = [
@@ -14,15 +14,15 @@ const POPULAR_CORRIDORS = [
     price: '38 lei / segment',
   },
   {
-    origin: KNOWN_SURVEY_PLACES[7], // Bacău
-    dest: KNOWN_SURVEY_PLACES[11], // București
+    origin: KNOWN_SURVEY_PLACES[8], // Bacău
+    dest: KNOWN_SURVEY_PLACES[12], // București
     route: 'Bacău → București',
     stops: 'Opriri: Adjud · Mărășești · Focșani · Buzău · Ploiești',
     meta: '298 km · 4h 50m',
     price: '65 lei / segment',
   },
   {
-    origin: KNOWN_SURVEY_PLACES[5], // Timișoara
+    origin: KNOWN_SURVEY_PLACES[6], // Timișoara
     dest: KNOWN_SURVEY_PLACES[4], // Sibiu
     route: 'Timișoara → Sibiu',
     stops: 'Opriri: Lugoj · Deva · Sebeș',
@@ -39,11 +39,11 @@ export function LandingSearchPage() {
   });
 
   const navigate = useNavigate();
-  const [originText, setOriginText] = useState('Cluj-Napoca (Campus Hașdeu)');
-  const [originPlace, setOriginPlace] = useState(KNOWN_SURVEY_PLACES[0]);
-  const [destText, setDestText] = useState('Sibiu (Gara Mare Sibiu)');
-  const [destPlace, setDestPlace] = useState(KNOWN_SURVEY_PLACES[4]);
-  const [date, setDate] = useState('2026-12-04');
+  const [originText, setOriginText] = useState('Sibiu (Gara Mare Sibiu)');
+  const [originPlace, setOriginPlace] = useState(KNOWN_SURVEY_PLACES[4]);
+  const [destText, setDestText] = useState('Cluj-Napoca (Campus Hașdeu)');
+  const [destPlace, setDestPlace] = useState(KNOWN_SURVEY_PLACES[0]);
+  const [date, setDate] = useState('');
   const [radiusKm, setRadiusKm] = useState(1);
   const [womenOnly, setWomenOnly] = useState(false);
   const [universityOnly, setUniversityOnly] = useState(false);
@@ -51,23 +51,27 @@ export function LandingSearchPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!originText.trim() || !destText.trim() || !date) {
+    if (!originText.trim() || !destText.trim()) {
       setErrorMsg(
-        'Selectează atât localitatea de plecare, cât și destinația și data pentru a potrivi segmentele disponibile.',
+        'Selectează atât localitatea de plecare, cât și destinația pentru a potrivi segmentele disponibile.',
       );
       return;
     }
     setErrorMsg('');
+
+    const resolvedOrigin = resolveKnownSurveyPlace(originText) || originPlace;
+    const resolvedDest = resolveKnownSurveyPlace(destText) || destPlace;
+
     const params = new URLSearchParams({
-      originLat: String(originPlace.latitude),
-      originLng: String(originPlace.longitude),
-      destLat: String(destPlace.latitude),
-      destLng: String(destPlace.longitude),
-      originLabel: originText,
-      destLabel: destText,
-      date,
+      originLat: String(resolvedOrigin.latitude),
+      originLng: String(resolvedOrigin.longitude),
+      destLat: String(resolvedDest.latitude),
+      destLng: String(resolvedDest.longitude),
+      originLabel: originText.trim(),
+      destLabel: destText.trim(),
       radiusKm: String(radiusKm),
     });
+    if (date) params.set('date', date);
     if (womenOnly) params.set('womenOnly', 'true');
     if (universityOnly) params.set('universityOnly', 'true');
     navigate(`/rides?${params.toString()}`);
@@ -200,7 +204,7 @@ export function LandingSearchPage() {
               onSelectPlace={setDestPlace}
             />
             <div className="field">
-              <label htmlFor="date-input">Data plecării</label>
+              <label htmlFor="date-input">Data plecării (opțional)</label>
               <input
                 id="date-input"
                 className="input"
@@ -227,6 +231,7 @@ export function LandingSearchPage() {
                 <button
                   key={r.val}
                   type="button"
+                  aria-pressed={radiusKm === r.val}
                   className={radiusKm === r.val ? 'chip-btn active' : 'chip-btn'}
                   onClick={() => setRadiusKm(r.val)}
                 >

@@ -159,6 +159,12 @@ export function PublishRidePage() {
 
   const handleGeocodeStop = async (index) => {
     const s = stops[index];
+    const matchedKnown = KNOWN_SURVEY_PLACES.find(
+      (p) => p.city_name.toLowerCase() === String(s.city_name || '').trim().toLowerCase(),
+    );
+    if (matchedKnown && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)) {
+      return;
+    }
     const q = `${s.city_name} ${s.location_name}`.trim();
     if (q.length < 2) return;
     try {
@@ -391,7 +397,7 @@ export function PublishRidePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-sm)' }}>
                     <div className="field">
-                      <label htmlFor="rec-time">Ora plecării (Europe/Bucharest)</label>
+                      <label htmlFor="rec-time">Ora plecării (ora României)</label>
                       <input
                         id="rec-time"
                         type="time"
@@ -401,7 +407,7 @@ export function PublishRidePage() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="rec-start">Valabil de la (start_date)</label>
+                      <label htmlFor="rec-start">Valabil de la</label>
                       <input
                         id="rec-start"
                         type="date"
@@ -411,7 +417,7 @@ export function PublishRidePage() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="rec-end">Până la (end_date opțional)</label>
+                      <label htmlFor="rec-end">Până la (opțional)</label>
                       <input
                         id="rec-end"
                         type="date"
@@ -427,6 +433,7 @@ export function PublishRidePage() {
                       <button
                         key={day.id}
                         type="button"
+                        aria-pressed={daysOfWeek.includes(day.id)}
                         className={daysOfWeek.includes(day.id) ? 'chip-btn active' : 'chip-btn'}
                         onClick={() => toggleWeekday(day.id)}
                       >
@@ -649,7 +656,7 @@ export function PublishRidePage() {
             >
               Previzualizare plafon cost
             </h2>
-            <span className="badge badge-uni">Additivitate exactă</span>
+            <span className="badge badge-uni">Aditivitate exactă</span>
           </div>
 
           <div className="fuel-row">

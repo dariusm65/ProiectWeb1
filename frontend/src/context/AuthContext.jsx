@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { authApi, getStoredToken, setStoredToken } from '../api/client.js';
+import { authApi, getStoredToken, setAuthFailureListener, setStoredToken } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
@@ -8,6 +8,23 @@ export function AuthProvider({ children, fetchFn = globalThis.fetch }) {
   const [token, setToken] = useState(() => getStoredToken());
   const [status, setStatus] = useState(() => (getStoredToken() ? 'loading' : 'unauthenticated'));
   const [authError, setAuthError] = useState(null);
+
+  useEffect(() => {
+    setAuthFailureListener((err) => {
+      setStoredToken(null);
+      setToken(null);
+      setUser(null);
+      setStatus('unauthenticated');
+      if (err?.statusCode === 403 && err?.code === 'ACCOUNT_SUSPENDED') {
+        setAuthError(err);
+      } else if (err?.statusCode === 401) {
+        setAuthError(err);
+      }
+    });
+    return () => {
+      setAuthFailureListener(null);
+    };
+  }, []);
 
   const hydrateMe = useCallback(
     async (activeToken) => {

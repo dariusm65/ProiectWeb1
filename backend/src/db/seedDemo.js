@@ -1,5 +1,6 @@
 // Idempotent demo data seed for local browsing/QA (`npm run seed:demo --prefix backend`).
 // Kept strictly separate from `backend/database/seed.js` so schema/integration tests remain untouched.
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
@@ -7,7 +8,8 @@ import { dbConfig } from '../db.js';
 import { matchUniversityDomain } from '../domain/universityDomains.js';
 import { bucharestLocalToUtc } from '../domain/recurrence.js';
 
-const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD || 'StudRideDemo123!';
+const DEMO_PASSWORD =
+  process.env.DEMO_USER_PASSWORD || crypto.randomBytes(16).toString('base64url');
 
 const DEMO_USERS = [
   {
