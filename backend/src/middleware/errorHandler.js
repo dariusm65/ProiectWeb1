@@ -1,4 +1,5 @@
 // Centralized 404 and JSON error handler (never leaks stack traces or raw SQL).
+import { ApiError } from '../errors.js';
 
 export function notFoundHandler(req, res) {
   return res.status(404).json({
@@ -20,6 +21,13 @@ export function errorHandler(err, req, res, next) {
     return res.status(409).json({
       error: 'CONFLICT',
       message: 'Resource already exists',
+    });
+  }
+
+  if (err instanceof ApiError && Number.isInteger(err.statusCode) && err.statusCode >= 400 && err.statusCode < 600) {
+    return res.status(err.statusCode).json({
+      error: err.code || 'API_ERROR',
+      message: err.message,
     });
   }
 

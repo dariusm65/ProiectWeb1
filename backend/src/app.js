@@ -6,6 +6,10 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { openapiSpec } from './openapi.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createGeocodingRouter } from './routes/geocoding.js';
+import { createRidesRouter } from './routes/rides.js';
+import { createRecurringRidesRouter } from './routes/recurringRides.js';
+import { createGeocodingService } from './services/geocodingService.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 export function createApp({
@@ -14,6 +18,9 @@ export function createApp({
   corsOrigin = process.env.CORS_ORIGIN || false,
   extraUniversityDomains = process.env.EXTRA_UNIVERSITY_DOMAINS,
   mountExtraRoutes = null,
+  fetchFn = globalThis.fetch, // injected in tests so Nominatim is never called live (D-009)
+  geocodingThrottleMs = 1100, // C-001: <= 1 outbound Nominatim request per second
+  nowFn = () => new Date(), // injectable clock for deterministic ban / late-cancel / search tests
 } = {}) {
   if (!pool) {
     throw new Error('createApp requires a MySQL pool instance');
@@ -44,6 +51,11 @@ export function createApp({
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
   app.use('/api/auth', createAuthRouter({ pool, jwtSecret, extraUniversityDomains }));
+
+  const geocoding = createGeocodingService({ pool, fetchFn, throttleMs: geocodingThrottleMs });
+  app.use('/api/geocoding', createGeocodingRouter({ geocoding }));
+  app.use('/api/rides', createRidesRouter({ pool, jwtSecret, nowFn }));
+  app.use('/api/recurring-rides', createRecurringRidesRouter({ pool, jwtSecret, nowFn }));
 
   if (typeof mountExtraRoutes === 'function') {
     mountExtraRoutes(app);
