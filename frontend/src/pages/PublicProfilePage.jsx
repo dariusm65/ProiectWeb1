@@ -113,12 +113,6 @@ export function PublicProfilePage() {
             </div>
           </div>
         </div>
-
-        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-          Transparență &amp; confidențialitate: Badge-ul universitar indică exclusiv potrivirea domeniului de
-          email la înregistrare (nu identitate verificată). Adresa de email, numărul de telefon și genul nu sunt
-          niciodată expuse public.
-        </p>
       </section>
 
       <section className="card" aria-labelledby="reviews-section-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>

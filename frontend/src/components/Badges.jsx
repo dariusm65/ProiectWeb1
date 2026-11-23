@@ -1,11 +1,17 @@
 import React from 'react';
-import { UNIVERSITY_BADGE_LABEL_RO, UNIVERSITY_BADGE_NOTE } from '../domain/universityDomains.js';
 
-export function UniversityBadge({ hasBadge, note }) {
+const UNIVERSITY_BADGE_TOOLTIP_RO =
+  'Validat pe baza domeniului de email universitar — nu implică verificarea identității';
+
+export function UniversityBadge({ hasBadge }) {
   if (!hasBadge) return null;
   return (
-    <span className="badge badge-uni" title={note || UNIVERSITY_BADGE_NOTE}>
-      ✓ {UNIVERSITY_BADGE_LABEL_RO}
+    <span
+      className="badge badge-uni"
+      title={UNIVERSITY_BADGE_TOOLTIP_RO}
+      aria-label={`Email universitar — ${UNIVERSITY_BADGE_TOOLTIP_RO}`}
+    >
+      ✓ Email universitar
     </span>
   );
 }

@@ -115,7 +115,12 @@ describe('SearchResultsPage (DS-004), RideDetailsPage (DS-005) & PublicProfilePa
       expect(screen.getByText('Ioana P.')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Validat pe domeniu/i)).toBeInTheDocument();
+    const uniBadge = screen.getByText(/Email universitar/i);
+    expect(uniBadge).toBeInTheDocument();
+    expect(uniBadge).toHaveAttribute(
+      'title',
+      'Validat pe baza domeniului de email universitar — nu implică verificarea identității',
+    );
     expect(screen.getByText(/Anulare recentă/i)).toBeInTheDocument();
     expect(screen.getByText(/95% seriozitate/i)).toBeInTheDocument();
     expect(screen.getByText(/★ 4\.9/i)).toBeInTheDocument();
