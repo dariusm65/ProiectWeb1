@@ -149,9 +149,7 @@ export function RideDetailsPage() {
       return;
     }
     if (isWomenOnlyBlocked) {
-      setBookingError(
-        'Această cursă este destinată exclusiv pasagerelor cu genul Femeie.',
-      );
+      setBookingError('Această cursă este destinată exclusiv femeilor.');
       return;
     }
     if (!pickupStop || !dropoffStop || pickupStop.stop_order >= dropoffStop.stop_order) {
@@ -180,7 +178,7 @@ export function RideDetailsPage() {
       if (err?.code === 'DUPLICATE_ACTIVE_BOOKING') {
         setBookingError('Ai deja o rezervare activă sau în așteptare pentru această cursă.');
       } else if (err?.code === 'WOMEN_ONLY_NOT_ALLOWED') {
-        setBookingError('Această cursă este destinată exclusiv pasagerelor cu genul Femeie.');
+        setBookingError('Această cursă este destinată exclusiv femeilor.');
       } else if (err?.code === 'NO_SEATS_AVAILABLE') {
         setBookingError('Locurile pe acest segment s-au ocupat între timp.');
       } else if (err?.code === 'TRIP_COST_CAP_EXCEEDED') {
@@ -224,7 +222,10 @@ export function RideDetailsPage() {
           <p className="tabular" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
             {formatBucharestDate(ride.departure_time)} · Plecare {formatBucharestTime(ride.departure_time)} · Sosire
             estimată {formatBucharestTime(ride.estimated_arrival_time)} · {totalDistKm} km total · Cost declarat:{' '}
-            <strong>{ride.declared_trip_cost} lei</strong>
+            <strong>{ride.declared_trip_cost} lei</strong> ·{' '}
+            {ride.luggage_allowed ? 'Bagaj acceptat' : 'Fără bagaj'} ·{' '}
+            {ride.pets_allowed ? 'Animale acceptate' : 'Fără animale'} ·{' '}
+            {ride.smoking_allowed ? 'Fumat permis' : 'Fără fumat'}
           </p>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)' }}>
@@ -429,7 +430,7 @@ export function RideDetailsPage() {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={submittingBooking || isSegmentFull || isRideInactive}
+              disabled={submittingBooking || isSegmentFull || isRideInactive || isWomenOnlyBlocked}
               onClick={handleBookingSubmit}
             >
               {submittingBooking
@@ -442,10 +443,10 @@ export function RideDetailsPage() {
             </button>
           )}
 
-          {isWomenOnlyBlocked && (
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-error)' }}>
-              Notă: Această cursă este marcată Women-only și poate fi rezervată exclusiv de conturile cu genul auto-declarat Femeie.
-            </p>
+          {!bookingError && isWomenOnlyBlocked && (
+            <div className="status-banner warning" role="status">
+              <span>Această cursă este destinată exclusiv femeilor.</span>
+            </div>
           )}
 
           {bookingError && (

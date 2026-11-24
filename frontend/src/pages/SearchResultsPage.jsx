@@ -400,9 +400,9 @@ export function SearchResultsPage() {
                       </strong>
                     </span>
                     <span>
-                      {ride.luggage_allowed ? 'Bagaj OK' : 'Fără bagaj'} ·{' '}
+                      {ride.luggage_allowed ? 'Bagaj acceptat' : 'Fără bagaj'} ·{' '}
                       {ride.smoking_allowed ? 'Fumat permis' : 'Fără fumat'} ·{' '}
-                      {ride.pets_allowed ? 'Animale OK' : 'Fără animale'}
+                      {ride.pets_allowed ? 'Animale acceptate' : 'Fără animale'}
                     </span>
                   </div>
                 </div>

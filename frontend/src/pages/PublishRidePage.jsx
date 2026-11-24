@@ -601,7 +601,7 @@ export function PublishRidePage() {
                     checked={luggageAllowed}
                     onChange={(e) => setLuggageAllowed(e.target.checked)}
                   />
-                  <span>Bagaj permis</span>
+                  <span>Bagaj acceptat</span>
                 </label>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
                   <input
@@ -609,7 +609,7 @@ export function PublishRidePage() {
                     checked={petsAllowed}
                     onChange={(e) => setPetsAllowed(e.target.checked)}
                   />
-                  <span>Animale de companie permise</span>
+                  <span>Animale acceptate</span>
                 </label>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
                   <input
@@ -631,7 +631,7 @@ export function PublishRidePage() {
               </div>
               {!canPublishWomenOnly && (
                 <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                  Notă: Opțiunea „Women-only” este activă exclusiv pentru șoferii cu genul auto-declarat „Femeie”.
+                  Opțiunea Women-only este disponibilă doar pentru femei.
                 </p>
               )}
             </section>

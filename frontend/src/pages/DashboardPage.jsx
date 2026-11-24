@@ -797,7 +797,10 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                           {formatBucharestDate(ride.departure_time)} · Plecare{' '}
                           {formatBucharestTime(ride.departure_time)} · Sosire{' '}
                           {formatBucharestTime(ride.estimated_arrival_time)} · {ride.available_seats} locuri pasageri · Cost declarat:{' '}
-                          <strong>{ride.declared_trip_cost} lei</strong>
+                          <strong>{ride.declared_trip_cost} lei</strong> ·{' '}
+                          {ride.luggage_allowed ? 'Bagaj acceptat' : 'Fără bagaj'} ·{' '}
+                          {ride.pets_allowed ? 'Animale acceptate' : 'Fără animale'} ·{' '}
+                          {ride.smoking_allowed ? 'Fumat permis' : 'Fără fumat'}
                         </p>
                       </div>
 

@@ -19,7 +19,7 @@ export function UniversityBadge({ hasBadge }) {
 export function WomenOnlyBadge({ womenOnly }) {
   if (!womenOnly) return null;
   return (
-    <span className="badge badge-women" title="Eligibil exclusiv pentru conturi cu genul Femeie">
+    <span className="badge badge-women" title="Cursă destinată exclusiv femeilor">
       Women-only
     </span>
   );

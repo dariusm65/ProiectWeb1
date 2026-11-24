@@ -123,8 +123,7 @@ export function AuthPage() {
           </li>
           <li className="policy-item">
             <strong>Opțiune privată pentru curse Women-only</strong>
-            Genul auto-declarat rămâne privat și este folosit exclusiv pentru eligibilitatea curselor „Women-only”
-            (doar conturile cu <strong>Femeie</strong> pot publica sau rezerva).
+            Opțiunea Women-only este disponibilă doar pentru femei.
           </li>
           <li className="policy-item">
             <strong>Reputație dublă din prima zi</strong>
@@ -296,8 +295,7 @@ export function AuthPage() {
                 ))}
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Folosit strict pentru eligibilitatea curselor „Women-only” (doar conturile cu „Femeie” pot publica sau
-                rezerva curse Women-only). Auto-declarat și neverificat.
+                Opțiunea Women-only este disponibilă doar pentru femei.
               </p>
             </fieldset>
 

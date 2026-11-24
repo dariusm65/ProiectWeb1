@@ -81,13 +81,12 @@ export function LandingSearchPage() {
     <>
       <section className="hero-section" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <span className="hero-kicker">România · Curse interurbane pe segmente</span>
+          <span className="hero-kicker">CARPOOLING STUDENȚESC · ROMÂNIA</span>
           <h1 className="hero-headline" id="hero-title">
-            Drumul spre casă, <em>împărțit corect</em> între studenți.
+            Același drum, <em>mai ușor</em> cu StudRide.
           </h1>
           <p className="hero-subcopy">
-            Rezervă exact segmentul de care ai nevoie — cu opriri intermediare clare, cost de combustibil
-            împărțit transparent și reputație dublă bazată pe seriozitate.
+            Găsești rapid un loc spre casă sau spre facultate, cu opriri clare pe rută, preț corect și șoferi evaluați de comunitate.
           </p>
           <div className="hero-metrics">
             <div className="metric-item">

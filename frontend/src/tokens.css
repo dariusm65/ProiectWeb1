@@ -471,6 +471,7 @@ body {
 .hero-headline em {
   font-style: italic;
   color: var(--color-primary-wordmark);
+  padding-right: 0.08em;
 }
 
 .hero-subcopy {
