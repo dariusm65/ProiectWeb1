@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudRide · Panoul Curselor Mele &amp; Notificări</title>
+  <meta name="description" content="Gestionează rezervările tale pe segmente, reconfirmările de traseu, cursele publicate ca șofer și notificările din aplicația StudRide.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -187,6 +188,7 @@
       border: none;
       border-radius: 6px;
       padding: 0.55rem 0.75rem;
+      min-height: 44px;
       font-family: var(--font-sans);
       font-size: var(--font-size-sm);
       font-weight: 600;
@@ -207,6 +209,7 @@
       font-size: var(--font-size-sm);
       font-weight: 600;
       padding: 0.5rem 0.95rem;
+      min-height: 44px;
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
       background: var(--color-surface);
@@ -262,8 +265,8 @@
       <a href="DS-002-landing-search.html" class="brand-link">
         <svg width="38" height="38" viewBox="0 0 44 44" fill="none" aria-hidden="true">
           <rect width="44" height="44" rx="10" fill="var(--color-primary)"/>
-          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="#FCF9F4"/>
-          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="#FCF9F4"/>
+          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="var(--color-primary-contrast)"/>
+          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="var(--color-primary-contrast)"/>
         </svg>
         <div>
           <span class="brand-title">Stud<span class="ride">Ride</span></span>
@@ -290,13 +293,13 @@
       </div>
 
       <div class="tabs" role="tablist" aria-label="Secțiuni panou">
-        <button type="button" class="tab-btn" role="tab" aria-selected="true">Rezervările mele ca pasager (3)</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false">Cursele publicate ca șofer (2)</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false">Notificări (3 necitite)</button>
+        <button id="mock-tab-pax" type="button" class="tab-btn" role="tab" aria-selected="true" aria-controls="mock-panel-pax">Rezervările mele ca pasager (3)</button>
+        <button id="mock-tab-drv" type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="mock-panel-drv" tabindex="-1">Cursele publicate ca șofer (2)</button>
+        <button id="mock-tab-notifs" type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="mock-panel-notifs" tabindex="-1">Notificări (3 necitite)</button>
       </div>
     </section>
 
-    <section class="card" aria-labelledby="pax-bookings-heading">
+    <section id="mock-panel-pax" role="tabpanel" aria-labelledby="mock-tab-pax" class="card">
       <h2 id="pax-bookings-heading">Rezervările mele ca pasager</h2>
 
       <article class="item-row">
@@ -343,7 +346,7 @@
       </article>
     </section>
 
-    <section class="card" aria-labelledby="driver-rides-heading">
+    <section id="mock-panel-drv" role="tabpanel" aria-labelledby="mock-tab-drv" class="card">
       <h2 id="driver-rides-heading">Cursele publicate ca șofer</h2>
       <article class="item-row">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -379,7 +382,7 @@
       </article>
     </section>
 
-    <section class="card" aria-labelledby="notifs-heading">
+    <section id="mock-panel-notifs" role="tabpanel" aria-labelledby="mock-tab-notifs" class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <h2 id="notifs-heading">Notificări în aplicație</h2>
         <button type="button" class="btn">Marchează toate ca citite</button>

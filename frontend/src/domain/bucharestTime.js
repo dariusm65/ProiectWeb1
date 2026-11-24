@@ -93,6 +93,17 @@ export function formatBucharestDate(isoString) {
 }
 
 /**
+ * Format an ISO timestamp as a 'YYYY-MM-DD' calendar date in Europe/Bucharest wall-clock time (D-020).
+ */
+export function formatBucharestIsoDate(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = localParts(d.getTime());
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/**
  * Convert a Europe/Bucharest date string ('YYYY-MM-DD') and time string ('HH:MM')
  * plus optional minute offset into an ISO-8601 UTC timestamp string ('...Z') for POST /api/rides.
  * Throws RangeError if dateStr or timeStr is invalid (never fabricates Date.now() + 1h).

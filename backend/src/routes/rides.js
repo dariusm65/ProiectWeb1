@@ -1,6 +1,6 @@
-// Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/:rideId,
+// Ride routes: POST /api/rides, GET /api/rides (search), GET /api/rides/me, GET /api/rides/:rideId,
 // POST /api/rides/:rideId/bookings, GET /api/rides/:rideId/bookings,
-// PATCH/PUT /api/rides/:rideId/stops, POST /api/rides/:rideId/cancel,
+// PATCH/PUT /api/rides/:rideId/stops, POST /api/rides/:rideId/cancel, POST /api/rides/:rideId/complete,
 // GET /api/rides/:rideId/messages, POST /api/rides/:rideId/messages,
 // POST /api/rides/:rideId/reviews
 // (D-003, D-005, D-007, D-008, D-010, D-011, D-013, D-014, D-016, D-017, D-018, D-019).

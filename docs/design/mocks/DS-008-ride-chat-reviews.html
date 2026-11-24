@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StudRide · Chatul Cursei, Reconfirmare &amp; Evaluare Mutuală</title>
+  <meta name="description" content="Grup de comunicare pentru șoferul și pasagerii confirmați ai cursei StudRide, cu reconfirmare rapidă și evaluare mutuală după sosire.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -187,6 +188,7 @@
       font-size: var(--font-size-sm);
       font-weight: 600;
       padding: 0.55rem 1.05rem;
+      min-height: 44px;
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
       background: var(--color-surface);
@@ -260,7 +262,7 @@
         <button type="button" class="btn">★ 2</button>
         <button type="button" class="btn">★ 1</button>
       </div>
-      <textarea class="input" rows="3" placeholder="Comentariu opțional (de exemplu: punctualitate, comunicare pe traseu)..."></textarea>
+      <textarea class="input" rows="3" aria-label="Comentariu opțional" placeholder="Comentariu opțional (de exemplu: punctualitate, comunicare pe traseu)..."></textarea>
       <button type="button" class="btn btn-primary">Trimite evaluarea</button>
     </aside>
   </main>

@@ -7,9 +7,11 @@ import { TOKEN_STORAGE_KEY } from '../src/api/client.js';
 import { AuthProvider } from '../src/context/AuthContext.jsx';
 import { ThemeProvider } from '../src/context/ThemeContext.jsx';
 import { Navbar } from '../src/components/Navbar.jsx';
+import { ReviewModal } from '../src/components/ReviewModal.jsx';
 import { RideDetailsPage } from '../src/pages/RideDetailsPage.jsx';
 import { DashboardPage } from '../src/pages/DashboardPage.jsx';
 import { RideChatPage } from '../src/pages/RideChatPage.jsx';
+import { formatBucharestIsoDate } from '../src/domain/bucharestTime.js';
 
 const INTERNAL_ID_REGEX = /\b(D-\d{3}|DS-\d{3}|C-\d{3}|Q-\d{3}|PATTERN-|Slice \d)\b/;
 
@@ -668,5 +670,155 @@ describe('Bookings, Passenger & Driver Dashboard, Ride Chat, Notifications & Mut
       expect(screen.getByText('Ne vedem la ora 16:00 fix!')).toBeInTheDocument();
     });
     expect(container.textContent).not.toMatch(INTERNAL_ID_REGEX);
+  });
+
+  it('covers 3-specialist review fixes: Bucharest date extraction, notification-only filter fetch, ReviewModal re-render persistence & focus restoration, and RideChatPage stop-removed guard', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, 'pax-jwt');
+
+    // 1. formatBucharestIsoDate converts 23:30 UTC (01:30 next day in Bucharest EET) to next calendar day (MEDIUM-2)
+    expect(formatBucharestIsoDate('2026-12-04T23:30:00.000Z')).toBe('2026-12-05');
+
+    // 2. ReviewModal preserves typed comment across parent re-renders with new inline onClose reference and restores focus on close (HIGH-4, LOW-1)
+    function ModalHost() {
+      const [open, setOpen] = React.useState(false);
+      const [tick, setTick] = React.useState(0);
+      return (
+        <div>
+          <button type="button" onClick={() => setOpen(true)}>
+            Deschide evaluare
+          </button>
+          <button type="button" onClick={() => setTick((t) => t + 1)}>
+            Re-render părinte ({tick})
+          </button>
+          <ReviewModal
+            isOpen={open}
+            onClose={() => setOpen(false)}
+            rideId={42}
+            reviewedUserId={9}
+            reviewedUserName="Dana Driver"
+            roleLabel="șoferul"
+          />
+        </div>
+      );
+    }
+
+    const baseFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        user: {
+          id: 21,
+          email: 'paula@stud.ubbcluj.ro',
+          full_name: 'Paula Pasager',
+          gender: 'female',
+          has_university_badge: true,
+          role: 'user',
+        },
+        bookings: [
+          {
+            id: 777,
+            ride_id: 42,
+            passenger_id: 21,
+            pickup_stop_id: 2,
+            dropoff_stop_id: 3,
+            pickup_stop_name: 'Centru Turda',
+            dropoff_stop_name: 'Gara Sibiu',
+            pickup_stop_removed: true,
+            dropoff_stop_removed: false,
+            price_lei: 32,
+            status: 'pending_reconfirmation',
+            reconfirm_deadline: '2026-12-04T12:00:00.000Z',
+          },
+        ],
+        rides: [],
+        rules: [],
+        notifications: [],
+        unread_count: 0,
+        ride: SAMPLE_RIDE_DETAILS.ride,
+        stops: SAMPLE_RIDE_DETAILS.stops,
+        segments: SAMPLE_RIDE_DETAILS.segments,
+        driver: SAMPLE_RIDE_DETAILS.driver,
+        messages: [],
+      }),
+    });
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <AuthProvider fetchFn={baseFetch}>
+            <ModalHost />
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const openBtn = screen.getByRole('button', { name: 'Deschide evaluare' });
+    await user.click(openBtn);
+    const commentField = screen.getByLabelText(/Comentariu opțional/i);
+    await user.type(commentField, 'Comentariu păstrat la re-render');
+
+    // Trigger parent re-render while modal is open -> comment must not be wiped
+    await user.click(screen.getByRole('button', { name: /Re-render părinte/i }));
+    expect(screen.getByLabelText(/Comentariu opțional/i)).toHaveValue('Comentariu păstrat la re-render');
+
+    // Close modal via Escape -> focus returns to trigger or modal closes cleanly
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    unmount();
+
+    // 3. DashboardPage toggling unreadOnlyFilter fetches ONLY /api/notifications?unreadOnly=true (HIGH-1) and updates <h1> on tab switch (MEDIUM-6)
+    baseFetch.mockClear();
+    const { unmount: unmountDash } = render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <ThemeProvider>
+          <AuthProvider fetchFn={baseFetch}>
+            <Routes>
+              <Route path="/dashboard" element={<DashboardPage defaultTab="passenger" />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Notificări/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('tab', { name: /Notificări/i }));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Notificările mele');
+
+    const bookingsCallsBefore = baseFetch.mock.calls.filter(([u]) => u === '/api/bookings/me').length;
+    await user.click(screen.getByRole('button', { name: /Doar necitite/i }));
+
+    await waitFor(() => {
+      expect(
+        baseFetch.mock.calls.some(([u]) => u === '/api/notifications?unreadOnly=true'),
+      ).toBe(true);
+    });
+    const bookingsCallsAfter = baseFetch.mock.calls.filter(([u]) => u === '/api/bookings/me').length;
+    expect(bookingsCallsAfter).toBe(bookingsCallsBefore);
+    unmountDash();
+
+    // 4. RideChatPage disables "Reconfirmă locul" and offers "Anulează gratuit" when pickup_stop_removed is true (MEDIUM-1)
+    render(
+      <MemoryRouter initialEntries={['/rides/42/chat']}>
+        <ThemeProvider>
+          <AuthProvider fetchFn={baseFetch}>
+            <Routes>
+              <Route path="/rides/:rideId/chat" element={<RideChatPage />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Oprirea ta de urcare sau coborâre a fost eliminată de șofer/i),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Reconfirmă locul/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Anulează gratuit/i })).toBeInTheDocument();
   });
 });

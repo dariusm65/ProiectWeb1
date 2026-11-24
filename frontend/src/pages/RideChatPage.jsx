@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { bookingsApi, chatApi, emitNotificationsRefresh, ridesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -21,6 +21,8 @@ export function RideChatPage() {
   const [actionFeedback, setActionFeedback] = useState('');
   const [reviewTarget, setReviewTarget] = useState(null);
 
+  const activeControllerRef = useRef(null);
+
   useDocumentMeta({
     title: details?.ride
       ? `StudRide · Chat Cursă ${details.ride.origin_name} → ${details.ride.destination_name}`
@@ -30,11 +32,18 @@ export function RideChatPage() {
   });
 
   const loadChatData = useCallback(
-    async (signal, isInitial = false) => {
+    async (isInitial = false) => {
       if (!user) {
         setLoading(false);
         return;
       }
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeControllerRef.current = controller;
+      const { signal } = controller;
+
       if (isInitial) {
         setLoading(true);
       }
@@ -44,7 +53,7 @@ export function RideChatPage() {
           chatApi.listMessages(rideId, { fetchFn, signal }),
           bookingsApi.listMine({ fetchFn, signal }).catch(() => ({ bookings: [] })),
         ]);
-        if (signal?.aborted) return;
+        if (signal.aborted) return;
 
         setDetails(rideRes);
         setMessages(Array.isArray(msgRes?.messages) ? msgRes.messages : []);
@@ -56,7 +65,7 @@ export function RideChatPage() {
         setMyBookingOnRide(matchingBooking || null);
         setAccessError('');
       } catch (err) {
-        if (signal?.aborted || err?.name === 'AbortError') return;
+        if (signal.aborted || err?.name === 'AbortError') return;
         if (err?.statusCode === 403) {
           setAccessError(
             'Accesul la chatul cursei este permis exclusiv șoferului și pasagerilor cu rezervare confirmată sau în curs de reconfirmare.',
@@ -65,7 +74,7 @@ export function RideChatPage() {
           setAccessError(err?.message || 'Chatul cursei nu a putut fi încărcat.');
         }
       } finally {
-        if (!signal?.aborted) {
+        if (!signal.aborted) {
           setLoading(false);
         }
       }
@@ -73,21 +82,45 @@ export function RideChatPage() {
     [rideId, user, fetchFn],
   );
 
+  // Lightweight 8s polling fetches ONLY messages (aborting any previous in-flight request)
+  const pollMessagesOnly = useCallback(async () => {
+    if (!user) return;
+    if (activeControllerRef.current) {
+      activeControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+    const { signal } = controller;
+
+    try {
+      const msgRes = await chatApi.listMessages(rideId, { fetchFn, signal });
+      if (signal.aborted) return;
+      setMessages(Array.isArray(msgRes?.messages) ? msgRes.messages : []);
+      setAccessError('');
+    } catch (err) {
+      if (signal.aborted || err?.name === 'AbortError') return;
+      if (err?.statusCode === 403) {
+        setAccessError(
+          'Accesul la chatul cursei este permis exclusiv șoferului și pasagerilor cu rezervare confirmată sau în curs de reconfirmare.',
+        );
+      }
+    }
+  }, [rideId, user, fetchFn]);
+
   useEffect(() => {
-    let activeController = new AbortController();
-    loadChatData(activeController.signal, true);
+    loadChatData(true);
 
     const intervalId = window.setInterval(() => {
-      activeController.abort();
-      activeController = new AbortController();
-      loadChatData(activeController.signal, false);
+      pollMessagesOnly();
     }, 8000);
 
     return () => {
       window.clearInterval(intervalId);
-      activeController.abort();
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
     };
-  }, [loadChatData]);
+  }, [loadChatData, pollMessagesOnly]);
 
   if (!user) {
     return (
@@ -110,7 +143,7 @@ export function RideChatPage() {
   if (loading) {
     return (
       <div className="dashboard-shell">
-        <section className="card">
+        <section className="card" role="status" aria-live="polite">
           <h1>Se încarcă chatul cursei...</h1>
         </section>
       </div>
@@ -152,6 +185,9 @@ export function RideChatPage() {
     !isRideCancelled &&
     myBookingOnRide?.status === 'confirmed' &&
     (ride?.status === 'completed' || hasArrived);
+  const stopWasRemoved = Boolean(
+    myBookingOnRide?.pickup_stop_removed || myBookingOnRide?.dropoff_stop_removed,
+  );
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -185,9 +221,21 @@ export function RideChatPage() {
       await bookingsApi.reconfirm(myBookingOnRide.id, { fetchFn });
       setActionFeedback('Rezervarea ta a fost reconfirmată cu succes!');
       emitNotificationsRefresh();
-      await loadChatData(undefined, false);
+      await loadChatData(false);
     } catch (err) {
       setActionFeedback(err?.message || 'Reconfirmarea a eșuat.');
+    }
+  };
+
+  const handleQuickCancel = async () => {
+    if (!myBookingOnRide) return;
+    setActionFeedback('');
+    try {
+      await bookingsApi.cancel(myBookingOnRide.id, { fetchFn });
+      emitNotificationsRefresh();
+      await loadChatData(false);
+    } catch (err) {
+      setActionFeedback(err?.message || 'Anularea rezervării a eșuat.');
     }
   };
 
@@ -213,7 +261,7 @@ export function RideChatPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => loadChatData(undefined, false)}
+              onClick={() => pollMessagesOnly()}
             >
               Actualizează mesajele
             </button>
@@ -258,14 +306,29 @@ export function RideChatPage() {
                   .
                 </span>
               )}
+              {stopWasRemoved && (
+                <div style={{ color: 'var(--color-error)', marginTop: '0.25rem' }}>
+                  Oprirea ta de urcare sau coborâre a fost eliminată de șofer. Te rugăm să anulezi rezervarea gratuit.
+                </div>
+              )}
             </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleQuickReconfirm}
-            >
-              Reconfirmă locul ({myBookingOnRide.price_lei} lei)
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={stopWasRemoved}
+                onClick={handleQuickReconfirm}
+              >
+                Reconfirmă locul ({myBookingOnRide.price_lei} lei)
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleQuickCancel}
+              >
+                Anulează gratuit
+              </button>
+            </div>
           </div>
         )}
 
@@ -291,10 +354,7 @@ export function RideChatPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontSize: 'var(--font-size-xs)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <strong>{msg.sender?.full_name}</strong>
-                      <UniversityBadge
-                        hasBadge={msg.sender?.has_university_badge}
-                        note={msg.sender?.university_badge_note}
-                      />
+                      <UniversityBadge hasBadge={msg.sender?.has_university_badge} />
                     </div>
                     <span className="tabular" style={{ color: 'var(--color-text-muted)' }}>
                       {formatBucharestDate(msg.created_at)} {formatBucharestTime(msg.created_at)}
@@ -316,7 +376,7 @@ export function RideChatPage() {
         ) : (
           <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '220px' }}>
-              <label htmlFor="chat-message-input" className="field-label" style={{ display: 'none' }}>
+              <label htmlFor="chat-message-input" className="sr-only">
                 Mesaj pentru participanții la cursă
               </label>
               <input
@@ -325,7 +385,6 @@ export function RideChatPage() {
                 className="input"
                 maxLength={2000}
                 placeholder="Scrie un mesaj pentru participanții la cursă..."
-                aria-label="Mesaj pentru participanții la cursă"
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
               />

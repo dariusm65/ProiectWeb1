@@ -920,19 +920,15 @@ export async function cancelRide(pool, user, rideId, now) {
  * stops and non-PII bookings with IN (?) + Map grouping (zero N+1 SQL queries).
  */
 export async function listMyDrivenRides(pool, user, now) {
-  const [initialRides] = await pool.query(
-    'SELECT id FROM rides WHERE driver_id = ? ORDER BY departure_time DESC, id DESC',
-    [user.id],
-  );
-  if (initialRides.length === 0) return [];
-
-  const rideIds = initialRides.map((r) => r.id);
-  await reconcileRidesLazily(pool, rideIds, now);
-
   const [rides] = await pool.query(
     'SELECT * FROM rides WHERE driver_id = ? ORDER BY departure_time DESC, id DESC',
     [user.id],
   );
+  if (rides.length === 0) return [];
+
+  const rideIds = rides.map((r) => r.id);
+  await reconcileRidesLazily(pool, rideIds, now);
+
   const [allStops] = await pool.query(
     'SELECT * FROM ride_stops WHERE ride_id IN (?) ORDER BY ride_id ASC, stop_order ASC',
     [rideIds],

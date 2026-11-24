@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { reviewsApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -19,23 +19,73 @@ export function ReviewModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedReview, setSubmittedReview] = useState(null);
 
+  const onCloseRef = useRef(onClose);
+  const modalCardRef = useRef(null);
+  const closeBtnRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
   useEffect(() => {
-    if (!isOpen) return undefined;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Reset form state ONLY when target ride/user or open state changes (never when parent re-renders inline onClose)
+  useEffect(() => {
+    if (!isOpen) return;
     setRatingStars(5);
     setComment('');
     setErrorMsg('');
     setSubmittedReview(null);
+  }, [isOpen, rideId, reviewedUserId]);
+
+  // Focus management, Tab focus trapping, Escape key close, and focus restoration
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    previousFocusRef.current = document.activeElement;
+    if (closeBtnRef.current) {
+      closeBtnRef.current.focus();
+    }
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        e.preventDefault();
+        if (typeof onCloseRef.current === 'function') {
+          onCloseRef.current();
+        }
+        return;
+      }
+
+      if (e.key === 'Tab' && modalCardRef.current) {
+        const focusable = Array.from(
+          modalCardRef.current.querySelectorAll(
+            'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+          ),
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      if (
+        previousFocusRef.current &&
+        typeof previousFocusRef.current.focus === 'function' &&
+        document.contains(previousFocusRef.current)
+      ) {
+        previousFocusRef.current.focus();
+      }
     };
-  }, [isOpen, rideId, reviewedUserId, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -83,7 +133,7 @@ export function ReviewModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-card">
+      <div className="modal-card" ref={modalCardRef}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-sm)' }}>
           <h2
             id="review-modal-title"
@@ -92,6 +142,7 @@ export function ReviewModal({
             Evaluează {roleLabel}: {reviewedUserName}
           </h2>
           <button
+            ref={closeBtnRef}
             type="button"
             className="btn"
             aria-label="Închide fereastra de evaluare"

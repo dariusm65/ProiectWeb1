@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { emitNotificationsRefresh, ridesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -26,6 +26,7 @@ export function RideDetailsPage() {
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [createdBooking, setCreatedBooking] = useState(null);
+  const activeControllerRef = useRef(null);
 
   useDocumentMeta({
     title: details
@@ -36,24 +37,31 @@ export function RideDetailsPage() {
   });
 
   const loadDetails = useCallback(
-    async (signal, preserveStops = false) => {
+    async (preserveStops = false) => {
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeControllerRef.current = controller;
+      const { signal } = controller;
+
       if (!preserveStops) {
         setLoading(true);
       }
       setError('');
       try {
         const data = await ridesApi.getDetails(rideId, { fetchFn, signal });
-        if (signal?.aborted) return;
+        if (signal.aborted) return;
         setDetails(data);
         if (!preserveStops && data?.stops?.length >= 2) {
           setPickupStopId(data.stops[0].id);
           setDropoffStopId(data.stops[data.stops.length - 1].id);
         }
       } catch (err) {
-        if (signal?.aborted || err?.name === 'AbortError') return;
+        if (signal.aborted || err?.name === 'AbortError') return;
         setError(err.message || 'Cursa nu a putut fi încărcată.');
       } finally {
-        if (!signal?.aborted) {
+        if (!signal.aborted) {
           setLoading(false);
         }
       }
@@ -62,10 +70,11 @@ export function RideDetailsPage() {
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    loadDetails(controller.signal, false);
+    loadDetails(false);
     return () => {
-      controller.abort();
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
     };
   }, [loadDetails]);
 
@@ -173,7 +182,7 @@ export function RideDetailsPage() {
       );
       setCreatedBooking(res.booking);
       emitNotificationsRefresh();
-      await loadDetails(undefined, true);
+      await loadDetails(true);
     } catch (err) {
       if (err?.code === 'DUPLICATE_ACTIVE_BOOKING') {
         setBookingError('Ai deja o rezervare activă sau în așteptare pentru această cursă.');
@@ -319,7 +328,7 @@ export function RideDetailsPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                     <strong>{p.full_name}</strong>
-                    <UniversityBadge hasBadge={p.has_university_badge} note={p.university_badge_note} />
+                    <UniversityBadge hasBadge={p.has_university_badge} />
                   </div>
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                     {p.pickup_stop_name} → {p.dropoff_stop_name}
@@ -338,7 +347,7 @@ export function RideDetailsPage() {
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <strong style={{ fontSize: 'var(--font-size-base)' }}>{driver?.full_name}</strong>
-            <UniversityBadge hasBadge={driver?.has_university_badge} note={driver?.university_badge_note} />
+            <UniversityBadge hasBadge={driver?.has_university_badge} />
             <RecentCancellationBadge hasRecentCancellation={driver?.has_recent_cancellation_badge} />
           </div>
           <ReputationRow

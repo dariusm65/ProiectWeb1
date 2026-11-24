@@ -134,7 +134,23 @@ export function AuthPage() {
       </section>
 
       <section className="auth-card" aria-label="Formular autentificare și înregistrare">
-        <div className="tabs" role="tablist" aria-label="Tip acces cont">
+        <div
+          className="tabs"
+          role="tablist"
+          aria-label="Tip acces cont"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              e.preventDefault();
+              const nextTab = activeTab === 'register' ? 'login' : 'register';
+              setActiveTab(nextTab);
+              setFormError('');
+              const nextEl = document.getElementById(
+                nextTab === 'register' ? 'tab-register' : 'tab-login',
+              );
+              nextEl?.focus();
+            }
+          }}
+        >
           <button
             type="button"
             className="tab-btn"
@@ -142,6 +158,7 @@ export function AuthPage() {
             role="tab"
             aria-selected={activeTab === 'register'}
             aria-controls="panel-register"
+            tabIndex={activeTab === 'register' ? 0 : -1}
             onClick={() => {
               setActiveTab('register');
               setFormError('');
@@ -156,6 +173,7 @@ export function AuthPage() {
             role="tab"
             aria-selected={activeTab === 'login'}
             aria-controls="panel-login"
+            tabIndex={activeTab === 'login' ? 0 : -1}
             onClick={() => {
               setActiveTab('login');
               setFormError('');

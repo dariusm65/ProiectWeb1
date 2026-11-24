@@ -1,4 +1,4 @@
-// Recurring ride routes: POST /api/recurring-rides, POST /api/recurring-rides/:ruleId/exceptions
+// Recurring ride routes: GET /api/recurring-rides/me, POST /api/recurring-rides, POST /api/recurring-rides/:ruleId/exceptions
 // (D-006, D-013, D-014, D-018).
 import { Router } from 'express';
 import { z } from 'zod';
@@ -76,7 +76,7 @@ export function createRecurringRidesRouter({ pool, jwtSecret, nowFn }) {
 
   router.post(
     '/:ruleId/exceptions',
-    requireAuth(pool, jwtSecret),
+    auth,
     validateParams(ruleIdParams),
     validateBody(exceptionSchema),
     async (req, res, next) => {

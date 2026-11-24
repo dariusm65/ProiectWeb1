@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   bookingsApi,
   emitNotificationsRefresh,
+  geocodingApi,
   notificationsApi,
   recurringRidesApi,
   ridesApi,
@@ -13,11 +14,14 @@ import { ReviewModal } from '../components/ReviewModal.jsx';
 import {
   buildIsoTimestampFromDateAndTime,
   formatBucharestDate,
+  formatBucharestIsoDate,
   formatBucharestTime,
+  resolveKnownSurveyPlace,
 } from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+const DASHBOARD_TAB_ORDER = ['passenger', 'driver', 'notifications'];
 
 function isWithinFourHoursOfDeparture(departureIso) {
   if (!departureIso) return false;
@@ -34,7 +38,7 @@ function hasArrivalPassed(arrivalIso) {
 
 function isSameBucharestDay(departureIso) {
   if (!departureIso) return false;
-  return formatBucharestDate(departureIso) === formatBucharestDate(new Date().toISOString());
+  return formatBucharestIsoDate(departureIso) === formatBucharestIsoDate(new Date().toISOString());
 }
 
 function formatBookingStatusBadge(booking) {
@@ -94,57 +98,119 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
   // Review modal target
   const [reviewTarget, setReviewTarget] = useState(null);
 
+  const activeControllerRef = useRef(null);
+  const notifControllerRef = useRef(null);
+  const unreadOnlyRef = useRef(unreadOnlyFilter);
+
+  useEffect(() => {
+    unreadOnlyRef.current = unreadOnlyFilter;
+  }, [unreadOnlyFilter]);
+
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
+  const pageHeading =
+    activeTab === 'notifications'
+      ? 'Notificările mele'
+      : activeTab === 'driver'
+        ? 'Cursele publicate ca șofer'
+        : 'Cursele și rezervările mele';
+
   useDocumentMeta({
     title:
-      defaultTab === 'notifications'
+      activeTab === 'notifications'
         ? 'StudRide · Notificările Mele în Aplicație'
-        : 'StudRide · Cursele și Rezervările Mele',
+        : activeTab === 'driver'
+          ? 'StudRide · Cursele Publicate ca Șofer'
+          : 'StudRide · Cursele și Rezervările Mele',
     description:
       'Gestionează rezervările tale pe segmente, reconfirmările de traseu, cursele publicate ca șofer, excepțiile recurente și notificările din aplicație.',
   });
 
   const loadDashboardData = useCallback(
-    async (signal) => {
+    async (isInitial = false) => {
       if (!user) {
         setLoading(false);
         return;
       }
-      setLoading(true);
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeControllerRef.current = controller;
+      const { signal } = controller;
+
+      if (isInitial) {
+        setLoading(true);
+      }
       setErrorMsg('');
       try {
         const [bookingsRes, ridesRes, rulesRes, notifsRes] = await Promise.all([
           bookingsApi.listMine({ fetchFn, signal }),
           ridesApi.listMine({ fetchFn, signal }),
           recurringRidesApi.listMine({ fetchFn, signal }),
-          notificationsApi.list({ unreadOnly: unreadOnlyFilter }, { fetchFn, signal }),
+          notificationsApi.list({ unreadOnly: unreadOnlyRef.current }, { fetchFn, signal }),
         ]);
-        if (signal?.aborted) return;
+        if (signal.aborted) return;
         setMyBookings(Array.isArray(bookingsRes?.bookings) ? bookingsRes.bookings : []);
         setMyRides(Array.isArray(ridesRes?.rides) ? ridesRes.rides : []);
         setMyRules(Array.isArray(rulesRes?.rules) ? rulesRes.rules : []);
         setNotifications(Array.isArray(notifsRes?.notifications) ? notifsRes.notifications : []);
         setUnreadCount(typeof notifsRes?.unread_count === 'number' ? notifsRes.unread_count : 0);
       } catch (err) {
-        if (signal?.aborted || err?.name === 'AbortError') return;
+        if (signal.aborted || err?.name === 'AbortError') return;
         setErrorMsg(err?.message || 'Datele panoului nu au putut fi încărcate.');
       } finally {
-        if (!signal?.aborted) {
+        if (!signal.aborted) {
           setLoading(false);
         }
       }
     },
-    [user, fetchFn, unreadOnlyFilter],
+    [user, fetchFn],
   );
 
-  useEffect(() => {
+  // Dedicated notifications-only reload when unreadOnlyFilter is toggled (HIGH-1)
+  const handleToggleUnreadOnly = async () => {
+    const nextUnreadOnly = !unreadOnlyFilter;
+    setUnreadOnlyFilter(nextUnreadOnly);
+    unreadOnlyRef.current = nextUnreadOnly;
+
+    if (notifControllerRef.current) {
+      notifControllerRef.current.abort();
+    }
     const controller = new AbortController();
-    loadDashboardData(controller.signal);
+    notifControllerRef.current = controller;
+    const { signal } = controller;
+
+    try {
+      const notifsRes = await notificationsApi.list(
+        { unreadOnly: nextUnreadOnly },
+        { fetchFn, signal },
+      );
+      if (signal.aborted) return;
+      setNotifications(Array.isArray(notifsRes?.notifications) ? notifsRes.notifications : []);
+      if (typeof notifsRes?.unread_count === 'number') {
+        setUnreadCount(notifsRes.unread_count);
+      }
+    } catch (err) {
+      if (signal.aborted || err?.name === 'AbortError') return;
+      setActionBanner({
+        type: 'error',
+        text: err?.message || 'Notificările nu au putut fi filtrate.',
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData(true);
     return () => {
-      controller.abort();
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      if (notifControllerRef.current) {
+        notifControllerRef.current.abort();
+      }
     };
   }, [loadDashboardData]);
 
@@ -175,7 +241,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
         text: 'Rezervarea a fost reconfirmată cu succes! Prețul tău blocat a rămas neschimbat.',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -198,7 +264,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
             : 'Rezervarea a fost anulată fără penalități.',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -220,7 +286,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
             : 'Rezervarea pasagerului a fost acceptată!',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -238,7 +304,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
         text: 'Cererea de rezervare a fost respinsă.',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -259,7 +325,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
           : 'Cursa a fost anulată și pasagerii au fost notificați.',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -276,7 +342,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
         type: 'success',
         text: 'Cursa a fost marcată ca finalizată! Acum poți evalua pasagerii confirmați.',
       });
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -288,11 +354,11 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
   const openStopEditor = (rideItem) => {
     const depIso = rideItem.ride.departure_time;
     const depMs = new Date(depIso).getTime();
-    const isoDate = new Date(depIso).toISOString().slice(0, 10);
+    const buchIsoDate = formatBucharestIsoDate(depIso) || new Date(depIso).toISOString().slice(0, 10);
     const buchTime = formatBucharestTime(depIso);
 
     setEditingRideId(rideItem.ride.id);
-    setEditDate(isoDate);
+    setEditDate(buchIsoDate);
     setEditTime(/^\d{2}:\d{2}$/.test(buchTime) ? buchTime : '16:00');
     setEditableStops(
       rideItem.stops.map((s, idx) => {
@@ -313,8 +379,53 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
 
   const handleEditStopField = (idx, field, val) => {
     setEditableStops((prev) =>
-      prev.map((s, i) => (i === idx ? { ...s, [field]: val } : s)),
+      prev.map((s, i) => {
+        if (i !== idx) return s;
+        if (field === 'city_name') {
+          const matched = resolveKnownSurveyPlace(val);
+          if (matched) {
+            return {
+              ...s,
+              city_name: val,
+              location_name: matched.location_name,
+              latitude: matched.latitude,
+              longitude: matched.longitude,
+            };
+          }
+        }
+        return { ...s, [field]: val };
+      }),
     );
+  };
+
+  const handleGeocodeEditorStop = async (idx) => {
+    const s = editableStops[idx];
+    if (!s) return;
+    const matched = resolveKnownSurveyPlace(s.city_name);
+    if (matched && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)) {
+      return;
+    }
+    const q = `${s.city_name || ''} ${s.location_name || ''}`.trim();
+    if (q.length < 2) return;
+    try {
+      const hit = await geocodingApi.search(q, { fetchFn });
+      if (hit && Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) {
+        setEditableStops((prev) =>
+          prev.map((item, i) =>
+            i === idx
+              ? {
+                  ...item,
+                  latitude: Number(hit.lat),
+                  longitude: Number(hit.lng),
+                  location_name: hit.display_name || item.location_name,
+                }
+              : item,
+          ),
+        );
+      }
+    } catch {
+      // keep existing coordinates if offline
+    }
   };
 
   const handleAddEditorStop = () => {
@@ -385,7 +496,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
         text: 'Traseul și opririle au fost actualizate! Pasagerii confirmați afectați au fost notificați pentru reconfirmare (cu prețul lor blocat neschimbat).',
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -419,7 +530,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
         text: `Data ${exceptionDate} a fost exclusă din regula recurentă.`,
       });
       emitNotificationsRefresh();
-      await loadDashboardData();
+      await loadDashboardData(false);
     } catch (err) {
       setActionBanner({
         type: 'error',
@@ -464,13 +575,35 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
     }
   };
 
+  const handleTabListKeyDown = (e) => {
+    const idx = DASHBOARD_TAB_ORDER.indexOf(activeTab);
+    if (idx === -1) return;
+    let nextIdx = -1;
+    if (e.key === 'ArrowRight') {
+      nextIdx = (idx + 1) % DASHBOARD_TAB_ORDER.length;
+    } else if (e.key === 'ArrowLeft') {
+      nextIdx = (idx - 1 + DASHBOARD_TAB_ORDER.length) % DASHBOARD_TAB_ORDER.length;
+    } else if (e.key === 'Home') {
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      nextIdx = DASHBOARD_TAB_ORDER.length - 1;
+    }
+    if (nextIdx !== -1) {
+      e.preventDefault();
+      const nextTab = DASHBOARD_TAB_ORDER[nextIdx];
+      setActiveTab(nextTab);
+      const tabEl = document.getElementById(`tab-${nextTab}`);
+      tabEl?.focus();
+    }
+  };
+
   return (
     <div className="dashboard-shell">
       <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-2xl)', letterSpacing: '-0.02em' }}>
-              {defaultTab === 'notifications' ? 'Notificările mele' : 'Cursele și rezervările mele'}
+              {pageHeading}
             </h1>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
               Gestionează rezervările ca pasager, cursele publicate ca șofer, reconfirmările de traseu și alertele din aplicație.
@@ -481,7 +614,12 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
           </Link>
         </div>
 
-        <div className="tabs-three" role="tablist" aria-label="Secțiuni panou utilizator">
+        <div
+          className="tabs-three"
+          role="tablist"
+          aria-label="Secțiuni panou utilizator"
+          onKeyDown={handleTabListKeyDown}
+        >
           <button
             id="tab-passenger"
             type="button"
@@ -489,6 +627,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
             role="tab"
             aria-selected={activeTab === 'passenger'}
             aria-controls="panel-passenger"
+            tabIndex={activeTab === 'passenger' ? 0 : -1}
             onClick={() => setActiveTab('passenger')}
           >
             Rezervările mele ca pasager ({myBookings.length})
@@ -500,6 +639,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
             role="tab"
             aria-selected={activeTab === 'driver'}
             aria-controls="panel-driver"
+            tabIndex={activeTab === 'driver' ? 0 : -1}
             onClick={() => setActiveTab('driver')}
           >
             Cursele publicate ca șofer ({myRides.length})
@@ -511,6 +651,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
             role="tab"
             aria-selected={activeTab === 'notifications'}
             aria-controls="panel-notifications"
+            tabIndex={activeTab === 'notifications' ? 0 : -1}
             onClick={() => setActiveTab('notifications')}
           >
             Notificări ({unreadCount} necitite)
@@ -536,7 +677,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
       </section>
 
       {loading && (
-        <section className="card">
+        <section className="card" role="status" aria-live="polite">
           <p>Se încarcă datele panoului...</p>
         </section>
       )}
@@ -616,7 +757,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                   </div>
 
                   {booking.cancellation_fee_lei != null && (
-                    <div className="status-banner error">
+                    <div className="status-banner error" role="status">
                       <span>
                         <strong>Taxă de anulare târzie datorată șoferului:</strong>{' '}
                         {booking.cancellation_fee_lei} lei (50% din prețul segmentului, plafonat la 20 lei, de achitat direct între studenți în afara aplicației).
@@ -625,7 +766,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                   )}
 
                   {isPendingReconfirm && (
-                    <div className="status-banner warning">
+                    <div className="status-banner warning" role="status">
                       <div>
                         <strong>Modificare traseu sau orar:</strong> Șoferul a modificat opririle cursei. Prețul tău blocat (
                         <strong>{booking.price_lei} lei</strong>) rămâne neschimbat.
@@ -960,6 +1101,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                                 className="input"
                                 value={st.city_name}
                                 onChange={(e) => handleEditStopField(idx, 'city_name', e.target.value)}
+                                onBlur={() => handleGeocodeEditorStop(idx)}
                               />
                             </div>
                             <div className="field">
@@ -970,6 +1112,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                                 className="input"
                                 value={st.location_name}
                                 onChange={(e) => handleEditStopField(idx, 'location_name', e.target.value)}
+                                onBlur={() => handleGeocodeEditorStop(idx)}
                               />
                             </div>
                             <div className="field">
@@ -1221,7 +1364,7 @@ export function DashboardPage({ defaultTab = 'passenger' }) {
                 type="button"
                 className={unreadOnlyFilter ? 'chip-btn active' : 'chip-btn'}
                 aria-pressed={unreadOnlyFilter}
-                onClick={() => setUnreadOnlyFilter((prev) => !prev)}
+                onClick={handleToggleUnreadOnly}
               >
                 {unreadOnlyFilter ? 'Afișează toate notificările' : 'Doar necitite'}
               </button>

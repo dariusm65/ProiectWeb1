@@ -307,6 +307,7 @@ export function SearchResultsPage() {
                 key={ride.ride_id}
                 className={selectedRide?.ride_id === ride.ride_id ? 'ticket-card selected' : 'ticket-card'}
                 onClick={() => setSelectedRideId(ride.ride_id)}
+                onFocus={() => setSelectedRideId(ride.ride_id)}
               >
                 <div className="ticket-main">
                   <div className="driver-row">
@@ -325,7 +326,6 @@ export function SearchResultsPage() {
                           </Link>
                           <UniversityBadge
                             hasBadge={ride.driver?.has_university_badge}
-                            note={ride.driver?.university_badge_note}
                           />
                           <WomenOnlyBadge womenOnly={ride.women_only} />
                           <RecentCancellationBadge

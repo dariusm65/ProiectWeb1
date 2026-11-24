@@ -234,6 +234,18 @@ export const openapiSpec = {
             },
           },
           stops: { type: 'array', items: { $ref: '#/components/schemas/RuleStop' } },
+          exceptions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                rule_id: { type: 'integer' },
+                exception_date: { type: 'string', format: 'date' },
+                reason: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
         },
       },
       StopEditInput: {
