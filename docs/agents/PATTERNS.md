@@ -14,6 +14,7 @@
 
 ## PATTERN-001 · Modular separation of concerns for lab assignments
 - **Status:** approved
+- **Confirmed:** 2026-11-23
 - **Use when:** Creating or structuring a new laboratory exercise.
 - **How:** Keep HTML (structure), CSS (styling), and JavaScript (behavior) separated into distinct files or folders per assignment.
 - **Example:** `lab1/index.html`, `lab1/style.css`, `lab1/script.js`

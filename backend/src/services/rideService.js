@@ -263,10 +263,14 @@ export async function searchRides(pool, params, now) {
   const { originLat, originLng, destLat, destLng, date, radiusKm } = params;
   const origin = { lat: originLat, lng: originLng };
   const dest = { lat: destLat, lng: destLng };
-  const { start, end } = bucharestDayBounds(date);
 
-  const conditions = ["r.status = 'active'", 'r.departure_time >= ?', 'r.departure_time < ?', 'r.departure_time > ?'];
-  const args = [start, end, now];
+  const conditions = ["r.status = 'active'", 'r.departure_time > ?'];
+  const args = [now];
+  if (date) {
+    const { start, end } = bucharestDayBounds(date);
+    conditions.push('r.departure_time >= ?', 'r.departure_time < ?');
+    args.push(start, end);
+  }
   if (params.universityOnly) conditions.push('u.university_domain IS NOT NULL');
   for (const [param, column] of [
     ['womenOnly', 'women_only'],
@@ -323,22 +327,47 @@ export async function searchRides(pool, params, now) {
   );
   const [driverInfractions] = await pool.query(
     `SELECT user_id, infraction_type, penalty_percentage_points, occurred_at
-     FROM user_infractions WHERE user_id IN (?) AND infraction_type = 'driver_late_cancel'`,
+     FROM user_infractions WHERE user_id IN (?) ORDER BY occurred_at ASC, id ASC`,
     [driverIds],
   );
-  const recentCancelDrivers = new Set(
-    driverIds.filter((id) =>
-      hasRecentCancellationBadge(
-        driverInfractions.filter((i) => i.user_id === id),
-        now,
-      ),
-    ),
+  const [driverRatings] = await pool.query(
+    `SELECT reviewed_user_id, AVG(rating_stars) AS avg_stars, COUNT(*) AS n
+     FROM reviews WHERE reviewed_user_id IN (?) GROUP BY reviewed_user_id`,
+    [driverIds],
   );
+  const ratingByDriver = new Map(
+    driverRatings.map((r) => [
+      r.reviewed_user_id,
+      {
+        rating_average: Number(r.n) > 0 ? Math.round(Number(r.avg_stars) * 10) / 10 : null,
+        rating_count: Number(r.n),
+      },
+    ]),
+  );
+  const infractionsByDriver = new Map(driverIds.map((id) => [id, []]));
+  for (const inf of driverInfractions) {
+    if (infractionsByDriver.has(inf.user_id)) {
+      infractionsByDriver.get(inf.user_id).push(inf);
+    }
+  }
+
+  const allStopsByRide = new Map(matchedIds.map((id) => [id, []]));
+  for (const s of allStops) {
+    if (allStopsByRide.has(s.ride_id)) {
+      allStopsByRide.get(s.ride_id).push(s);
+    }
+  }
+  const allBookingsByRide = new Map(matchedIds.map((id) => [id, []]));
+  for (const b of allBookings) {
+    if (allBookingsByRide.has(b.ride_id)) {
+      allBookingsByRide.get(b.ride_id).push(b);
+    }
+  }
 
   const results = [];
   for (const { ride, pairs } of matches) {
-    const stops = allStops.filter((s) => s.ride_id === ride.id);
-    const bookings = allBookings.filter((b) => b.ride_id === ride.id);
+    const stops = allStopsByRide.get(ride.id) || [];
+    const bookings = allBookingsByRide.get(ride.id) || [];
     let chosen = null;
     for (const candidate of pairs) {
       const freeSeats = getAvailableSeatsForRange({
@@ -360,6 +389,16 @@ export async function searchRides(pool, params, now) {
     const dropoff = pair.dropoff.stop;
 
     const active = activeStops(stops);
+    const priceLei = calculateSegmentPrice({
+      declaredTripCost: ride.declared_trip_cost,
+      availableSeats: ride.available_seats,
+      pickupDistKm: pickup.distance_from_origin_km,
+      dropoffDistKm: dropoff.distance_from_origin_km,
+      totalDistKm: active[active.length - 1].distance_from_origin_km,
+    });
+    const dInfs = infractionsByDriver.get(ride.driver_id) || [];
+    const dRating = ratingByDriver.get(ride.driver_id) || { rating_average: null, rating_count: 0 };
+
     results.push({
       ride_id: ride.id,
       recurring_rule_id: ride.recurring_rule_id,
@@ -368,6 +407,7 @@ export async function searchRides(pool, params, now) {
       departure_time: ride.departure_time,
       estimated_arrival_time: ride.estimated_arrival_time,
       available_seats: ride.available_seats,
+      declared_trip_cost: Number(ride.declared_trip_cost),
       luggage_allowed: Boolean(ride.luggage_allowed),
       pets_allowed: Boolean(ride.pets_allowed),
       smoking_allowed: Boolean(ride.smoking_allowed),
@@ -376,20 +416,19 @@ export async function searchRides(pool, params, now) {
         id: ride.driver_id,
         full_name: ride.driver_name,
         ...badge(ride.driver_domain),
-        has_recent_cancellation_badge: recentCancelDrivers.has(ride.driver_id),
+        rating_average: dRating.rating_average,
+        rating_count: dRating.rating_count,
+        seriousness_score: computeSeriousnessScore(dInfs, now),
+        has_recent_cancellation_badge: hasRecentCancellationBadge(dInfs, now),
       },
       pickup_stop: formatStop(pickup),
       dropoff_stop: formatStop(dropoff),
+      stops: active.map(formatStop),
       pickup_distance_km: Math.round(pair.pickup.walkKm * 1000) / 1000,
       dropoff_distance_km: Math.round(pair.dropoff.walkKm * 1000) / 1000,
       free_seats: freeSeats,
-      segment_price_lei: calculateSegmentPrice({
-        declaredTripCost: ride.declared_trip_cost,
-        availableSeats: ride.available_seats,
-        pickupDistKm: pickup.distance_from_origin_km,
-        dropoffDistKm: dropoff.distance_from_origin_km,
-        totalDistKm: active[active.length - 1].distance_from_origin_km,
-      }),
+      price_lei: priceLei,
+      segment_price_lei: priceLei,
     });
   }
   return results;

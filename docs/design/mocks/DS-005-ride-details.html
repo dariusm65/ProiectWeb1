@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ro" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudRide · Detalii Cursă &amp; Segmente (DS-005)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-size-xs: 0.75rem;
+      --font-size-sm: 0.875rem;
+      --font-size-base: 1rem;
+      --font-size-lg: 1.125rem;
+      --font-size-xl: 1.375rem;
+      --font-size-2xl: 1.875rem;
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+      --transition-fast: 150ms ease-in-out;
+    }
+
+    [data-theme="light"] {
+      --color-bg: #F5EFE6;
+      --color-surface: #FCF9F4;
+      --color-surface-subtle: #EAE1D3;
+      --color-header: rgba(245, 239, 230, 0.94);
+      --color-border: rgba(20, 61, 43, 0.14);
+      --color-border-subtle: rgba(20, 61, 43, 0.08);
+      --color-text: #13261D;
+      --color-text-muted: #53665C;
+      --color-primary: #143D2B;
+      --color-primary-hover: #1D543C;
+      --color-primary-contrast: #FCF9F4;
+      --color-primary-soft: #E3EDE7;
+      --color-primary-wordmark: #143D2B;
+      --color-primary-ink: #143D2B;
+      --color-accent: #C88228;
+      --color-node-terminal: #143D2B;
+      --color-node-terminal-ring: #B7DEC9;
+      --color-node-intermediate: #5E7368;
+      --color-success: #1D6F4B;
+      --color-warning: #C88228;
+      --color-error: #B91C1C;
+      --shadow-sm: 0 1px 2px rgba(19, 38, 29, 0.06);
+      --shadow-md: 0 4px 10px -2px rgba(19, 38, 29, 0.10);
+      --shadow-lg: 0 12px 24px -4px rgba(19, 38, 29, 0.14);
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0E100F;
+      --color-surface: #171A18;
+      --color-surface-subtle: #1F2321;
+      --color-header: rgba(19, 22, 21, 0.94);
+      --color-border: rgba(244, 240, 232, 0.09);
+      --color-border-subtle: rgba(244, 240, 232, 0.05);
+      --color-text: #F4F0E8;
+      --color-text-muted: #9CA39F;
+      --color-primary: #1F6B47;
+      --color-primary-hover: #278257;
+      --color-primary-contrast: #F4F0E8;
+      --color-primary-soft: rgba(31, 107, 71, 0.18);
+      --color-primary-wordmark: #34A86B;
+      --color-primary-ink: #57C48B;
+      --color-accent: #E5A94C;
+      --color-node-terminal: #34A86B;
+      --color-node-terminal-ring: rgba(52, 168, 107, 0.28);
+      --color-node-intermediate: #8C9992;
+      --color-success: #34A86B;
+      --color-warning: #E5A94C;
+      --color-error: #EF4444;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 14px -2px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 14px 28px -4px rgba(0, 0, 0, 0.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-base);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .tabular { font-variant-numeric: tabular-nums; }
+    .mock-toolbar {
+      background: var(--color-surface-subtle);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.4rem var(--space-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-xs);
+    }
+    .mock-btn {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .mock-btn.active {
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+    }
+    .app-header {
+      background: var(--color-header);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem var(--space-lg);
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-link { display: inline-flex; align-items: center; gap: 0.65rem; text-decoration: none; color: inherit; }
+    .brand-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+    .brand-title .ride { color: var(--color-primary-wordmark); }
+    .brand-subtitle { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.14em; color: var(--color-text-muted); display: block; }
+
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-xl) var(--space-lg);
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    h1 { font-family: var(--font-display); font-size: var(--font-size-2xl); letter-spacing: -0.02em; }
+    h2 { font-family: var(--font-display); font-size: var(--font-size-xl); letter-spacing: -0.02em; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 0.22rem 0.6rem;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-soft);
+      color: var(--color-primary-ink);
+      border: 1px solid var(--color-border);
+    }
+    .timeline { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .timeline-stop {
+      display: grid;
+      grid-template-columns: 64px 20px 1fr auto;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 0.6rem 0.75rem;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      font-variant-numeric: tabular-nums;
+    }
+    .node-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-node-intermediate); justify-self: center; }
+    .node-dot.terminal { background: var(--color-node-terminal); box-shadow: 0 0 0 3px var(--color-node-terminal-ring); }
+    .segment-connector {
+      margin-left: 84px;
+      padding: 0.35rem 0.75rem;
+      border-left: 2px dashed var(--color-primary);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      display: flex;
+      justify-content: space-between;
+      font-variant-numeric: tabular-nums;
+    }
+    .btn-primary {
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border: 1px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      padding: 0.65rem 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+    @media (max-width: 900px) { .shell { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="mock-toolbar">
+    <div>
+      <strong>DS-005 Mock · Detalii Cursă (/rides/:rideId):</strong>
+      <button type="button" class="mock-btn active">Default</button>
+    </div>
+    <button type="button" class="mock-btn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')">Comută Temă</button>
+  </div>
+
+  <header class="app-header">
+    <div class="nav-container">
+      <a href="DS-004-search-results.html" class="brand-link">
+        <svg width="38" height="38" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <rect width="44" height="44" rx="10" fill="var(--color-primary)"/>
+          <path d="M22 8.5L8 15L22 21.5L36 15L22 8.5Z" fill="#FCF9F4"/>
+          <path d="M14.5 19.5V25L22 28.5L29.5 25V19.5L22 23L14.5 19.5Z" fill="#FCF9F4"/>
+        </svg>
+        <div>
+          <span class="brand-title">Stud<span class="ride">Ride</span></span>
+          <span class="brand-subtitle">STUDENT CARPOOLING</span>
+        </div>
+      </a>
+      <a href="DS-004-search-results.html" style="color: var(--color-primary-ink); font-weight: 600; font-size: var(--font-size-sm);">← Înapoi la rezultate</a>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="card" aria-labelledby="ride-title">
+      <div>
+        <span class="badge">Traseu pe segmente · D-005 &amp; D-010</span>
+        <h1 id="ride-title" style="margin-top: 0.4rem;">Cluj-Napoca → Turda → Alba Iulia → Sibiu</h1>
+        <p class="tabular" style="color: var(--color-text-muted); font-size: var(--font-size-sm);">
+          20 Nov 2026 · Plecare 16:30 · Sosire estimată 19:15 · 160 km total · Cost declarat: 120 lei
+        </p>
+      </div>
+
+      <h2>Cronologie opriri &amp; disponibilitate pe segmente</h2>
+      <div class="timeline">
+        <div class="timeline-stop">
+          <strong>16:30</strong>
+          <span class="node-dot terminal"></span>
+          <div><strong>Cluj-Napoca</strong> · Campus Hașdeu</div>
+          <span class="badge">0 km · Origine</span>
+        </div>
+        <div class="segment-connector">
+          <span>Segment 1: Cluj-Napoca → Turda (32 km)</span>
+          <strong>8 lei · 2 locuri libere din 2</strong>
+        </div>
+        <div class="timeline-stop">
+          <strong>17:05</strong>
+          <span class="node-dot"></span>
+          <div><strong>Turda</strong> · Centru Turda</div>
+          <span class="badge">32 km</span>
+        </div>
+        <div class="segment-connector">
+          <span>Segment 2: Turda → Alba Iulia (68 km)</span>
+          <strong>17 lei · 1 loc liber din 2</strong>
+        </div>
+        <div class="timeline-stop">
+          <strong>17:55</strong>
+          <span class="node-dot"></span>
+          <div><strong>Alba Iulia</strong> · Gara Alba Iulia</div>
+          <span class="badge">100 km</span>
+        </div>
+        <div class="segment-connector">
+          <span>Segment 3: Alba Iulia → Sibiu (60 km)</span>
+          <strong>15 lei · 2 locuri libere din 2</strong>
+        </div>
+        <div class="timeline-stop">
+          <strong>19:15</strong>
+          <span class="node-dot terminal"></span>
+          <div><strong>Sibiu</strong> · Gara Sibiu</div>
+          <span class="badge">160 km · Destinație</span>
+        </div>
+      </div>
+    </section>
+
+    <aside style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <section class="card" aria-labelledby="driver-heading">
+        <h2 id="driver-heading">Reputație șofer (D-016)</h2>
+        <div>
+          <strong>Dana Driver</strong>
+          <div style="margin-top: 0.3rem;">
+            <span class="badge">Validat pe domeniu (nu identitate verificată)</span>
+          </div>
+          <p class="tabular" style="margin-top: 0.45rem; font-size: var(--font-size-sm);">
+            <strong style="color: var(--color-accent);">★ 4.8</strong> (14 evaluări) · <strong style="color: var(--color-success);">100% seriozitate</strong>
+          </p>
+        </div>
+        <a href="DS-010-public-profile.html" style="color: var(--color-primary-ink); font-size: var(--font-size-sm); font-weight: 600;">Vezi profilul public și recenziile →</a>
+      </section>
+
+      <section class="card" aria-labelledby="booking-heading">
+        <h2 id="booking-heading">Previzualizare segment &amp; cost (D-010)</h2>
+        <p class="tabular" style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
+          Segment selectat: <strong>Turda → Sibiu</strong> (128 km din 160 km)
+        </p>
+        <div class="tabular" style="font-size: 1.75rem; font-weight: 700;">
+          32 lei <span style="font-size: var(--font-size-xs); color: var(--color-text-muted); font-weight: 500;">(1 loc / pasager · D-019)</span>
+        </div>
+        <button type="button" class="btn-primary">Solicită rezervare pe acest segment</button>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>

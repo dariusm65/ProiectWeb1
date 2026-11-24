@@ -107,6 +107,9 @@ docker compose up
 
 # Development (MySQL in Docker, backend and frontend on host)
 npm run dev          # or: cd backend && npm run dev  |  cd frontend && npm run dev
+
+# Optional: populate idempotent local demo drivers, upcoming rides & sample reviews
+npm run seed:demo --prefix backend
 ```
 
 ---

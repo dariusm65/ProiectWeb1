@@ -6,42 +6,54 @@ designs:
   - id: DS-001
     name: Design Foundation & Tokens
     kind: foundation
-    status: approved
+    status: implemented
+    source: frontend/src/tokens.css
+    mock: docs/design/mocks/DS-001-tokens-brand.html
     description: StudRide brand mark (inline SVG), color tokens, typography scales, spacing, and CSS custom properties.
 
   - id: DS-002
     name: Landing & Search Screen
     kind: screen
-    status: approved
+    status: implemented
     route: "/"
+    source: frontend/src/pages/LandingSearchPage.jsx
+    mock: docs/design/mocks/DS-002-landing-search.html
     description: Hero banner with brand intro, quick origin/destination/date search widget, radius selector (1–5 km), and top navbar with auth links.
 
   - id: DS-003
     name: Auth Screen (Login & Register)
     kind: screen
-    status: approved
+    status: implemented
     route: "/login"
+    source: frontend/src/pages/AuthPage.jsx
+    mock: docs/design/mocks/DS-003-auth.html
     description: Email & password authentication forms, live university email domain validation feedback, and domain-validated university badge explanation.
 
   - id: DS-004
     name: Search Results & Map View
     kind: screen
-    status: approved
+    status: implemented
     route: "/rides"
+    source: frontend/src/pages/SearchResultsPage.jsx
+    mock: docs/design/mocks/DS-004-search-results.html
     description: Split layout featuring filtered ride result cards (segment price, segment availability, driver seriousness score % and star rating, university badge, women-only filter) alongside an interactive route map view showing route paths, stops, and radius search.
 
   - id: DS-005
     name: Ride Details & Segment Booking
     kind: screen
-    status: draft
+    status: implemented
     route: "/rides/:rideId"
+    source: frontend/src/pages/RideDetailsPage.jsx
+    mock: docs/design/mocks/DS-005-ride-details.html
     description: Ordered intermediate stop timeline, segment pickup/drop-off stop selector, transparent passenger price calculation (under declared trip cost cap), booking request trigger, and driver accept/reject controls.
 
   - id: DS-006
     name: Publish Ride Screen
     kind: screen
-    status: draft
+    status: implemented
     route: "/publish"
+    source: frontend/src/pages/PublishRidePage.jsx
+    mock: docs/design/mocks/DS-006-publish-ride.html
     description: Driver form with interactive Leaflet map (typed autocomplete + click-to-add stops), seat count, trip cost declaration, passenger preference toggles, and optional recurrence rule configuration (days + exceptions).
 
   - id: DS-007
@@ -68,6 +80,8 @@ designs:
   - id: DS-010
     name: Student Profile & Reputation
     kind: screen
-    status: draft
+    status: implemented
     route: "/profile/:userId"
+    source: frontend/src/pages/PublicProfilePage.jsx
+    mock: docs/design/mocks/DS-010-public-profile.html
     description: Student public profile showing star rating average with ride count, seriousness score %, domain-validated university badge, and 30-day "Anulare recentă" badge if applicable.
