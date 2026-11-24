@@ -1143,6 +1143,110 @@ body {
   flex-wrap: wrap;
 }
 
+/* Dashboard, Notifications, Chat & Review Modal (DS-007 & DS-008) */
+.dashboard-shell {
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  flex: 1;
+}
+
+.tabs-three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  background: var(--color-bg);
+  padding: 0.3rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.dashboard-item {
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.dashboard-item.unread {
+  border-color: var(--color-accent-border);
+  background: var(--color-surface);
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.38rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-primary-contrast);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.3rem;
+}
+
+.chat-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 460px;
+  overflow-y: auto;
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.chat-bubble {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.chat-bubble.own {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(14, 16, 15, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.modal-card {
+  max-width: 520px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 @media (max-width: 1040px) {
   .hero-section,
   .auth-shell,
@@ -1160,7 +1264,8 @@ body {
 @media (max-width: 680px) {
   .search-grid,
   .ticket-card,
-  .gender-options {
+  .gender-options,
+  .tabs-three {
     grid-template-columns: 1fr;
   }
   .ticket-stub {

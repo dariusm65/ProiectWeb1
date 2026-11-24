@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validateBody, validateParams } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
-import { createRule, addException } from '../services/recurringRideService.js';
+import { createRule, addException, listMyRecurringRules } from '../services/recurringRideService.js';
 import { MAX_STOPS, dateString, sharedRideFields, stopBaseFields, checkDistances } from './rides.js';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -55,8 +55,18 @@ const ruleIdParams = z.object({ ruleId: z.coerce.number().int().positive() });
 
 export function createRecurringRidesRouter({ pool, jwtSecret, nowFn }) {
   const router = Router();
+  const auth = requireAuth(pool, jwtSecret);
 
-  router.post('/', requireAuth(pool, jwtSecret), validateBody(ruleSchema), async (req, res, next) => {
+  router.get('/me', auth, async (req, res, next) => {
+    try {
+      const rules = await listMyRecurringRules(pool, req.user);
+      return res.status(200).json({ rules });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/', auth, validateBody(ruleSchema), async (req, res, next) => {
     try {
       return res.status(201).json(await createRule(pool, req.user, req.body, nowFn()));
     } catch (err) {

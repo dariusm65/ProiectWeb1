@@ -681,4 +681,97 @@ describe.skipIf(!admin)('integration: bookings lifecycle, stop edits & cancellat
       expect(bannedPublish.body.error).toBe('PUBLISHING_BANNED');
     });
   });
+
+  describe('4. Driver dashboard batched reads & post-arrival ride completion (GET /api/rides/me, GET /api/recurring-rides/me, POST /api/rides/:rideId/complete)', () => {
+    it('lists driver rides with batched stops, segments, and zero-PII bookings, lists recurring rules with exceptions, and marks ride completed only after estimated_arrival_time', async () => {
+      const driver = await createUser({ name: 'Driver Diana', domain: 'ulbsibiu.ro' });
+      const otherDriver = await createUser({ name: 'Other Driver' });
+      const pax = await createUser({ name: 'Pax Paul', domain: 'stud.ubbcluj.ro' });
+
+      const created = await publish(driver, '2026-12-04');
+      await publish(otherDriver, '2026-12-05');
+      const [cluj, , , sibiu] = created.stops;
+      const rideId = created.ride.id;
+
+      const bRes = await request(app)
+        .post(`/api/rides/${rideId}/bookings`)
+        .set(auth(pax))
+        .send({ pickup_stop_id: cluj.id, dropoff_stop_id: sibiu.id });
+      expect(bRes.status).toBe(201);
+      await request(app).post(`/api/bookings/${bRes.body.booking.id}/accept`).set(auth(driver)).expect(200);
+
+      // GET /api/rides/me returns only driver's rides with stops, segments, and non-PII bookings
+      const myRidesRes = await request(app).get('/api/rides/me').set(auth(driver));
+      expect(myRidesRes.status).toBe(200);
+      expect(myRidesRes.body.rides).toHaveLength(1);
+      const item = myRidesRes.body.rides[0];
+      expect(item.ride.id).toBe(rideId);
+      expect(item.stops).toHaveLength(4);
+      expect(item.segments).toHaveLength(3);
+      expect(item.bookings).toHaveLength(1);
+      expect(item.bookings[0].passenger.full_name).toBe('Pax Paul');
+      expect(item.bookings[0].passenger.email).toBeUndefined();
+      expect(item.bookings[0].passenger.phone).toBeUndefined();
+      expect(item.bookings[0].passenger.gender).toBeUndefined();
+      expect(item.bookings[0].passenger.password_hash).toBeUndefined();
+      expect(item.bookings[0].ride.driver_name).toBe('Driver Diana');
+
+      // Recurring rule + exception listed via GET /api/recurring-rides/me
+      const ruleRes = await request(app)
+        .post('/api/recurring-rides')
+        .set(auth(driver))
+        .send({
+          departure_time: '18:00',
+          start_date: '2026-12-01',
+          end_date: '2027-01-31',
+          days_of_week: ['friday'],
+          available_seats: 2,
+          declared_trip_cost: 120,
+          luggage_allowed: true,
+          pets_allowed: false,
+          smoking_allowed: false,
+          women_only: false,
+          stops: STOP_DEFS.map(([city, loc, lat, lng, km, offset]) => ({
+            city_name: city,
+            location_name: loc,
+            latitude: lat,
+            longitude: lng,
+            distance_from_origin_km: km,
+            estimated_offset_minutes: offset,
+          })),
+        });
+      expect(ruleRes.status).toBe(201);
+      const ruleId = ruleRes.body.rule.id;
+      await request(app)
+        .post(`/api/recurring-rides/${ruleId}/exceptions`)
+        .set(auth(driver))
+        .send({ exception_date: '2026-12-11', reason: 'Sesiune' })
+        .expect(201);
+
+      const myRulesRes = await request(app).get('/api/recurring-rides/me').set(auth(driver));
+      expect(myRulesRes.status).toBe(200);
+      expect(myRulesRes.body.rules).toHaveLength(1);
+      expect(myRulesRes.body.rules[0].rule.id).toBe(ruleId);
+      expect(myRulesRes.body.rules[0].stops).toHaveLength(4);
+      expect(myRulesRes.body.rules[0].exceptions).toHaveLength(1);
+      expect(myRulesRes.body.rules[0].exceptions[0].exception_date).toBe('2026-12-11');
+
+      // POST /api/rides/:rideId/complete blocked before estimated_arrival_time (2026-12-04T19:00:00Z)
+      const earlyComplete = await request(app).post(`/api/rides/${rideId}/complete`).set(auth(driver));
+      expect(earlyComplete.status).toBe(409);
+      expect(earlyComplete.body.error).toBe('RIDE_BEFORE_ARRIVAL');
+
+      // Non-driver cannot complete ride -> 403
+      currentNow = new Date('2026-12-04T19:05:00Z');
+      expect((await request(app).post(`/api/rides/${rideId}/complete`).set(auth(otherDriver))).status).toBe(403);
+
+      // Driver marks ride completed after arrival -> 200
+      const completeRes = await request(app).post(`/api/rides/${rideId}/complete`).set(auth(driver));
+      expect(completeRes.status).toBe(200);
+      expect(completeRes.body.ride.status).toBe('completed');
+
+      // Repeating complete on already-completed ride -> 409 RIDE_NOT_ACTIVE
+      expect((await request(app).post(`/api/rides/${rideId}/complete`).set(auth(driver))).status).toBe(409);
+    });
+  });
 });

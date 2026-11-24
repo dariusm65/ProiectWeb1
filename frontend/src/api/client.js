@@ -124,6 +124,14 @@ export const geocodingApi = {
   },
 };
 
+export const NOTIFY_REFRESH_EVENT = 'studride:notifications-refresh';
+
+export function emitNotificationsRefresh() {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new CustomEvent(NOTIFY_REFRESH_EVENT));
+  }
+}
+
 export const ridesApi = {
   search: (query, opts) => {
     const params = new URLSearchParams();
@@ -138,11 +146,86 @@ export const ridesApi = {
     apiRequest(`/api/rides/${encodeURIComponent(rideId)}`, { ...opts, method: 'GET' }),
   publish: (payload, opts) =>
     apiRequest('/api/rides', { ...opts, method: 'POST', body: payload }),
+  listMine: (opts) =>
+    apiRequest('/api/rides/me', { ...opts, method: 'GET' }),
+  createBooking: (rideId, payload, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/bookings`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+  listBookings: (rideId, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/bookings`, { ...opts, method: 'GET' }),
+  editStops: (rideId, payload, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/stops`, {
+      ...opts,
+      method: 'PATCH',
+      body: payload,
+    }),
+  cancel: (rideId, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/cancel`, { ...opts, method: 'POST' }),
+  complete: (rideId, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/complete`, { ...opts, method: 'POST' }),
 };
 
 export const recurringRidesApi = {
   createRule: (payload, opts) =>
     apiRequest('/api/recurring-rides', { ...opts, method: 'POST', body: payload }),
+  listMine: (opts) =>
+    apiRequest('/api/recurring-rides/me', { ...opts, method: 'GET' }),
+  addException: (ruleId, payload, opts) =>
+    apiRequest(`/api/recurring-rides/${encodeURIComponent(ruleId)}/exceptions`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+};
+
+export const bookingsApi = {
+  listMine: (opts) =>
+    apiRequest('/api/bookings/me', { ...opts, method: 'GET' }),
+  accept: (bookingId, opts) =>
+    apiRequest(`/api/bookings/${encodeURIComponent(bookingId)}/accept`, { ...opts, method: 'POST' }),
+  reject: (bookingId, opts) =>
+    apiRequest(`/api/bookings/${encodeURIComponent(bookingId)}/reject`, { ...opts, method: 'POST' }),
+  reconfirm: (bookingId, opts) =>
+    apiRequest(`/api/bookings/${encodeURIComponent(bookingId)}/reconfirm`, { ...opts, method: 'POST' }),
+  cancel: (bookingId, opts) =>
+    apiRequest(`/api/bookings/${encodeURIComponent(bookingId)}/cancel`, { ...opts, method: 'POST' }),
+};
+
+export const chatApi = {
+  listMessages: (rideId, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/messages`, { ...opts, method: 'GET' }),
+  postMessage: (rideId, payload, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/messages`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+};
+
+export const notificationsApi = {
+  list: ({ unreadOnly = false } = {}, opts) => {
+    const query = unreadOnly ? '?unreadOnly=true' : '';
+    return apiRequest(`/api/notifications${query}`, { ...opts, method: 'GET' });
+  },
+  markRead: (notificationId, opts) =>
+    apiRequest(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
+      ...opts,
+      method: 'PATCH',
+    }),
+  markAllRead: (opts) =>
+    apiRequest('/api/notifications/read-all', { ...opts, method: 'POST' }),
+};
+
+export const reviewsApi = {
+  create: (rideId, payload, opts) =>
+    apiRequest(`/api/rides/${encodeURIComponent(rideId)}/reviews`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
 };
 
 export const usersApi = {

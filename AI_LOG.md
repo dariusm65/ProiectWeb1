@@ -359,3 +359,29 @@ Parallel read-only review (Performance Specialist, Security Engineer, SEO & GEO 
 10. **WAI-ARIA combobox/listbox attributes (`frontend/src/components/GeocodeAutocomplete.jsx`):** Added `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, and `aria-controls` on the `<input>` and `role="option"` on suggestion items.
 11. **Clean Romanian labels (`frontend/src/pages/PublishRidePage.jsx`):** Replaced `Valabil de la (start_date)`, `Până la (end_date opțional)`, `Ora plecării (Europe/Bucharest)`, and `Additivitate exactă` with `Valabil de la`, `Până la (opțional)`, `Ora plecării (ora României)`, and `Aditivitate exactă`.
 12. **`aria-pressed` on toggle chips (`LandingSearchPage.jsx`, `SearchResultsPage.jsx`, `PublishRidePage.jsx`):** Added `aria-pressed` to radius chips and recurring weekday toggle buttons.
+
+---
+
+## Session 2026-11-24 — Slice 7: Frontend Bookings, Passenger & Driver Dashboard (`D-007`, `D-016`), Ride Chat & Notifications (`D-011`), and Post-Arrival Mutual Reviews (`D-008`) (`feat/frontend-bookings-dashboard-chat-reviews`)
+
+### What was planned & built
+1. **Design Mocks & Registry (`DS-007`, `DS-008`):**
+   - Created theme-toggleable HTML mocks `docs/design/mocks/DS-007-dashboard-notifications.html` and `docs/design/mocks/DS-008-ride-chat-reviews.html` using `DS-001` tokens.
+   - Updated `docs/design/registry.yaml` (`DS-007` and `DS-008` marked `implemented`; `DS-009` kept as `draft` for Slice 8) and `docs/design/DESIGN.md`.
+2. **Backend Batched Dashboard Reads & Post-Arrival Ride Completion (`backend/src/services/rideService.js`, `recurringRideService.js`, `bookingService.js`, `routes/rides.js`, `routes/recurringRides.js`, `openapi.js`):**
+   - Added `GET /api/rides/me` (`listMyDrivenRides`): runs `reconcileRidesLazily` on the caller's published rides and batches `ride_stops` and non-PII `bookings` via `IN (?)` + `Map` grouping (zero N+1 SQL queries).
+   - Added `GET /api/recurring-rides/me` (`listMyRecurringRules`): lists the caller's recurring rules with batched template `stops` and `exceptions` via `IN (?)` + `Map` grouping.
+   - Added `POST /api/rides/:rideId/complete` (`completeRide`): inside a `FOR UPDATE` transaction (after `reconcileRideBookings`), requires `ride.status === 'active'` and `estimated_arrival_time <= now` (`409 RIDE_BEFORE_ARRIVAL`, consistent with `D-008` review eligibility) and transitions `rides.status` to `'completed'`.
+   - Enriched `BOOKING_SELECT_SQL` (`booking.ride`) with `driver_name` and `driver_has_university_badge`, documented the 3 endpoints in `backend/src/openapi.js`, and added an integration test in `backend/tests/bookings.test.js` (leaving all 145 existing backend test assertions untouched).
+3. **Real Booking Submission on `/rides/:rideId` (`frontend/src/pages/RideDetailsPage.jsx`, `D-005`, `D-010`, `D-018`, `D-019`):**
+   - Replaced the Slice 6 preview CTA with live `POST /api/rides/:rideId/bookings` (`ridesApi.createBooking`), computing minimum `free_seats` across the selected stop range, enforcing `women_only` and self-booking guards, redirecting unauthenticated visitors to `/login`, refreshing ride details with `AbortController`, and linking directly to `/rides/:rideId/chat` and `/dashboard`.
+4. **Passenger & Driver Dashboard + Notifications Inbox (`frontend/src/pages/DashboardPage.jsx`, `frontend/src/components/Navbar.jsx`, `D-006`, `D-007`, `D-011`, `D-016`):**
+   - Built WAI-ARIA tabbed `/dashboard` (`role="tablist"`, `role="tab"`, `aria-selected`, `role="tabpanel"`) and `/notifications` route:
+     - *Passenger tab:* displays bookings (`GET /api/bookings/me`) across all lifecycle statuses, `D-007` reconfirmation (`POST /api/bookings/:id/reconfirm`) and free cancellation, two-step cancellation confirmation with explicit `< 4h` Romanian penalty & fee warning (`-3` pp and `50%` capped at `20` lei per `D-016`), chat links, and post-arrival driver rating trigger.
+     - *Driver tab:* lists published rides (`GET /api/rides/me`) and recurring rules (`GET /api/recurring-rides/me`), supports accepting/rejecting pending requests (`POST /api/bookings/:id/accept` & `/reject`), inline stop/schedule editing (`PATCH /api/rides/:rideId/stops`), ride cancellation with same-day penalty warning (`POST /api/rides/:rideId/cancel`), marking rides completed after arrival (`POST /api/rides/:rideId/complete`), post-arrival passenger rating trigger, and recurring rule skip-date exceptions (`POST /api/recurring-rides/:ruleId/exceptions`).
+     - *Notifications tab & Navbar badge:* polls unread count in `Navbar.jsx` with `AbortController`, supports unread-only filtering, single mark-as-read (`PATCH /api/notifications/:id/read`), and mark-all-read (`POST /api/notifications/read-all`).
+5. **Ride Chat & Mutual Review Modal (`frontend/src/pages/RideChatPage.jsx`, `frontend/src/components/ReviewModal.jsx`, `D-008`, `D-011`, `D-014`):**
+   - Built `/rides/:rideId/chat` with `AbortController`-backed 8-second polling (`GET / POST /api/rides/:rideId/messages`), inline `pending_reconfirmation` deadline banner, `403` access-revoked view with `<h1>`, and zero `dangerouslySetInnerHTML`.
+   - Built accessible `ReviewModal.jsx` (`role="dialog"`, `aria-modal="true"`, `Escape`-key close) submitting `POST /api/rides/:rideId/reviews` (`1–5` stars + optional comment) and linking to the reviewed user's public profile.
+6. **Tests (`frontend/tests/BookingsDashboardChatReviews.test.jsx`):**
+   - Added 4 comprehensive Vitest component tests covering real booking submission, passenger dashboard (reconfirm, `< 4h` late-cancel warning, review modal), driver dashboard (accept booking, edit stops, complete ride, mark notification read), ride chat (message sending + XSS escaping), and zero internal spec/ledger IDs in user-facing DOM copy.

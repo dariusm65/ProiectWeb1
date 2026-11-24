@@ -16,6 +16,8 @@ import {
   searchRides,
   editRideStops,
   cancelRide,
+  listMyDrivenRides,
+  completeRide,
 } from '../services/rideService.js';
 import { createBooking, listRideBookings } from '../services/bookingService.js';
 import { materialiseForDate } from '../services/recurringRideService.js';
@@ -183,6 +185,15 @@ export function createRidesRouter({ pool, jwtSecret, nowFn }) {
     }
   });
 
+  router.get('/me', auth, async (req, res, next) => {
+    try {
+      const rides = await listMyDrivenRides(pool, req.user, nowFn());
+      return res.status(200).json({ rides });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   router.get('/:rideId', validateParams(rideIdParams), async (req, res, next) => {
     try {
       return res.status(200).json(await getRideDetails(pool, req.params.rideId, nowFn()));
@@ -234,6 +245,15 @@ export function createRidesRouter({ pool, jwtSecret, nowFn }) {
   router.post('/:rideId/cancel', auth, validateParams(rideIdParams), async (req, res, next) => {
     try {
       const result = await cancelRide(pool, req.user, req.params.rideId, nowFn());
+      return res.status(200).json(result);
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post('/:rideId/complete', auth, validateParams(rideIdParams), async (req, res, next) => {
+    try {
+      const result = await completeRide(pool, req.user, req.params.rideId, nowFn());
       return res.status(200).json(result);
     } catch (err) {
       return next(err);

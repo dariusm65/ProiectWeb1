@@ -14,6 +14,7 @@ import {
 import { computeSegmentAvailability, getAvailableSeatsForRange } from '../domain/segmentAvailability.js';
 import { calculateSegmentPrice, computeReconfirmDeadline } from '../domain/segmentPricing.js';
 import { reconcileRideBookings } from './bookingAcceptanceService.js';
+import { BOOKING_SELECT_SQL, formatEnrichedBooking } from './bookingService.js';
 
 const DRIVER_LATE_CANCEL_PENALTY = 5; // D-016
 
@@ -896,6 +897,131 @@ export async function cancelRide(pool, user, rideId, now) {
       cancelled_ride_id: ride.id,
       cancelled_bookings: activeBookings.length,
       infraction_recorded: infractionRecorded,
+    };
+  } catch (err) {
+    if (err instanceof ApiError && hasReconciledChanges && !hasMutatedTarget) {
+      await conn.commit();
+    } else {
+      try {
+        await conn.rollback();
+      } catch {
+        // preserve original error
+      }
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/**
+ * GET /api/rides/me (authenticated driver):
+ * Reconciles lazy expirations/lapses on all rides published by the caller first, then batches
+ * stops and non-PII bookings with IN (?) + Map grouping (zero N+1 SQL queries).
+ */
+export async function listMyDrivenRides(pool, user, now) {
+  const [initialRides] = await pool.query(
+    'SELECT id FROM rides WHERE driver_id = ? ORDER BY departure_time DESC, id DESC',
+    [user.id],
+  );
+  if (initialRides.length === 0) return [];
+
+  const rideIds = initialRides.map((r) => r.id);
+  await reconcileRidesLazily(pool, rideIds, now);
+
+  const [rides] = await pool.query(
+    'SELECT * FROM rides WHERE driver_id = ? ORDER BY departure_time DESC, id DESC',
+    [user.id],
+  );
+  const [allStops] = await pool.query(
+    'SELECT * FROM ride_stops WHERE ride_id IN (?) ORDER BY ride_id ASC, stop_order ASC',
+    [rideIds],
+  );
+  const [allBookingRows] = await pool.query(
+    `${BOOKING_SELECT_SQL} WHERE b.ride_id IN (?) ORDER BY b.ride_id ASC, b.id ASC`,
+    [rideIds],
+  );
+
+  const stopsByRide = new Map(rideIds.map((id) => [id, []]));
+  for (const s of allStops) {
+    if (stopsByRide.has(s.ride_id)) {
+      stopsByRide.get(s.ride_id).push(s);
+    }
+  }
+
+  const bookingsByRide = new Map(rideIds.map((id) => [id, []]));
+  for (const row of allBookingRows) {
+    if (bookingsByRide.has(row.ride_id)) {
+      bookingsByRide.get(row.ride_id).push(formatEnrichedBooking(row));
+    }
+  }
+
+  return rides.map((ride) => {
+    const stops = stopsByRide.get(ride.id) || [];
+    const bookings = bookingsByRide.get(ride.id) || [];
+    return {
+      ride: formatRide(ride),
+      stops: activeStops(stops).map(formatStop),
+      segments: buildSegments({ ride, stops, bookings }),
+      bookings,
+    };
+  });
+}
+
+/**
+ * POST /api/rides/:rideId/complete (driver only, D-008):
+ * Marks an active ride as completed inside a FOR UPDATE transaction (after reconcileRideBookings),
+ * strictly requiring estimated_arrival_time <= now (consistent with D-008 review eligibility).
+ */
+export async function completeRide(pool, user, rideId, now) {
+  const conn = await pool.getConnection();
+  let hasReconciledChanges = false;
+  let hasMutatedTarget = false;
+
+  try {
+    await conn.beginTransaction();
+
+    const [rideRows] = await conn.query('SELECT * FROM rides WHERE id = ? FOR UPDATE', [rideId]);
+    if (rideRows.length === 0) {
+      throw new ApiError(404, 'RIDE_NOT_FOUND', 'Ride not found');
+    }
+    const ride = rideRows[0];
+
+    if (ride.driver_id !== user.id) {
+      throw new ApiError(403, 'FORBIDDEN', 'Only the ride driver can mark this ride completed');
+    }
+
+    const [allBookings] = await conn.query(
+      'SELECT * FROM bookings WHERE ride_id = ? FOR UPDATE',
+      [rideId],
+    );
+    allBookings.sort((a, b) => a.id - b.id);
+
+    const { expiredIds, lapsedIds } = await reconcileRideBookings(conn, {
+      rideId,
+      ride,
+      bookings: allBookings,
+      now,
+    });
+    hasReconciledChanges = expiredIds.length > 0 || lapsedIds.length > 0;
+
+    if (ride.status !== 'active') {
+      throw new ApiError(409, 'RIDE_NOT_ACTIVE', `Ride is not active (status: ${ride.status})`);
+    }
+    if (new Date(ride.estimated_arrival_time).getTime() > now.getTime()) {
+      throw new ApiError(
+        409,
+        'RIDE_BEFORE_ARRIVAL',
+        'Ride can only be marked completed after its estimated arrival time has passed',
+      );
+    }
+
+    hasMutatedTarget = true;
+    await conn.query("UPDATE rides SET status = 'completed' WHERE id = ?", [rideId]);
+    await conn.commit();
+
+    return {
+      ride: formatRide({ ...ride, status: 'completed' }),
     };
   } catch (err) {
     if (err instanceof ApiError && hasReconciledChanges && !hasMutatedTarget) {
