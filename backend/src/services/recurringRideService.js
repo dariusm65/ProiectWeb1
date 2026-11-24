@@ -282,3 +282,50 @@ export async function addException(pool, user, ruleId, { exception_date: dateStr
     conn.release();
   }
 }
+
+/**
+ * GET /api/recurring-rides/me (authenticated driver):
+ * Lists the caller's recurring ride rules with batched stops and exceptions using IN (?) + Map grouping (zero N+1 SQL queries).
+ */
+export async function listMyRecurringRules(pool, user) {
+  const [rules] = await pool.query(
+    'SELECT * FROM recurring_ride_rules WHERE driver_id = ? ORDER BY id DESC',
+    [user.id],
+  );
+  if (rules.length === 0) return [];
+
+  const ruleIds = rules.map((r) => r.id);
+  const [allStops] = await pool.query(
+    'SELECT * FROM recurring_rule_stops WHERE rule_id IN (?) ORDER BY rule_id ASC, stop_order ASC',
+    [ruleIds],
+  );
+  const [allExceptions] = await pool.query(
+    'SELECT rule_id, exception_date, reason, created_at FROM recurring_ride_exceptions WHERE rule_id IN (?) ORDER BY rule_id ASC, exception_date ASC',
+    [ruleIds],
+  );
+
+  const stopsByRule = new Map(ruleIds.map((id) => [id, []]));
+  for (const s of allStops) {
+    if (stopsByRule.has(s.rule_id)) {
+      stopsByRule.get(s.rule_id).push(formatRuleStop(s));
+    }
+  }
+
+  const exceptionsByRule = new Map(ruleIds.map((id) => [id, []]));
+  for (const ex of allExceptions) {
+    if (exceptionsByRule.has(ex.rule_id)) {
+      exceptionsByRule.get(ex.rule_id).push({
+        rule_id: ex.rule_id,
+        exception_date: toDateString(ex.exception_date),
+        reason: ex.reason,
+        created_at: ex.created_at,
+      });
+    }
+  }
+
+  return rules.map((rule) => ({
+    rule: formatRule(rule),
+    stops: stopsByRule.get(rule.id) || [],
+    exceptions: exceptionsByRule.get(rule.id) || [],
+  }));
+}

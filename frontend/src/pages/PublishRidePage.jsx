@@ -329,21 +329,42 @@ export function PublishRidePage() {
             </div>
           )}
 
-          <div className="tabs" role="tablist" aria-label="Mod publicare cursă">
+          <div
+            className="tabs"
+            role="tablist"
+            aria-label="Mod publicare cursă"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                const nextMode = mode === 'single' ? 'recurring' : 'single';
+                setMode(nextMode);
+                const nextEl = document.getElementById(
+                  nextMode === 'single' ? 'tab-mode-single' : 'tab-mode-recurring',
+                );
+                nextEl?.focus();
+              }
+            }}
+          >
             <button
+              id="tab-mode-single"
               type="button"
               className="tab-btn"
               role="tab"
               aria-selected={mode === 'single'}
+              aria-controls="publish-mode-schedule"
+              tabIndex={mode === 'single' ? 0 : -1}
               onClick={() => setMode('single')}
             >
               Cursă unică
             </button>
             <button
+              id="tab-mode-recurring"
               type="button"
               className="tab-btn"
               role="tab"
               aria-selected={mode === 'recurring'}
+              aria-controls="publish-mode-schedule"
+              tabIndex={mode === 'recurring' ? 0 : -1}
               onClick={() => setMode('recurring')}
             >
               Cursă recurentă
@@ -365,7 +386,12 @@ export function PublishRidePage() {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-            <section aria-labelledby="schedule-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+            <section
+              id="publish-mode-schedule"
+              role="tabpanel"
+              aria-labelledby="schedule-heading"
+              style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}
+            >
               <h2 id="schedule-heading" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-lg)' }}>
                 1. Program plecare ({mode === 'single' ? 'Cursă unică' : 'Regulă săptămânală, ora României'})
               </h2>
@@ -601,7 +627,7 @@ export function PublishRidePage() {
                     checked={luggageAllowed}
                     onChange={(e) => setLuggageAllowed(e.target.checked)}
                   />
-                  <span>Bagaj permis</span>
+                  <span>Bagaj acceptat</span>
                 </label>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
                   <input
@@ -609,7 +635,7 @@ export function PublishRidePage() {
                     checked={petsAllowed}
                     onChange={(e) => setPetsAllowed(e.target.checked)}
                   />
-                  <span>Animale de companie permise</span>
+                  <span>Animale acceptate</span>
                 </label>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: 'var(--font-size-xs)', fontWeight: 600 }}>
                   <input
@@ -631,7 +657,7 @@ export function PublishRidePage() {
               </div>
               {!canPublishWomenOnly && (
                 <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                  Notă: Opțiunea „Women-only” este activă exclusiv pentru șoferii cu genul auto-declarat „Femeie”.
+                  Opțiunea Women-only este disponibilă doar pentru femei.
                 </p>
               )}
             </section>
@@ -648,10 +674,10 @@ export function PublishRidePage() {
       </section>
 
       <aside className="map-column" aria-label="Previzualizare plafon cost și hartă">
-        <section className="fuel-box" aria-labelledby="d010-preview-heading">
+        <section className="fuel-box" aria-labelledby="cost-cap-preview-heading">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2
-              id="d010-preview-heading"
+              id="cost-cap-preview-heading"
               style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}
             >
               Previzualizare plafon cost

@@ -59,15 +59,19 @@ designs:
   - id: DS-007
     name: My Rides Dashboard & Notifications
     kind: screen
-    status: draft
+    status: implemented
     route: "/dashboard"
+    source: frontend/src/pages/DashboardPage.jsx
+    mock: docs/design/mocks/DS-007-dashboard-notifications.html
     description: Tabbed view for passenger bookings and driver published rides, booking statuses, recurring instance exceptions (skip date), and chronological in-app notification feed.
 
   - id: DS-008
     name: Ride Chat, Reconfirmation & Rating Modal
     kind: screen
-    status: draft
+    status: implemented
     route: "/rides/:rideId/chat"
+    source: frontend/src/pages/RideChatPage.jsx
+    mock: docs/design/mocks/DS-008-ride-chat-reviews.html
     description: REST-polled ride group chat, pending_reconfirmation banner with deadline countdown, post-arrival mutual star rating modal, and report modal.
 
   - id: DS-009

@@ -234,6 +234,18 @@ export const openapiSpec = {
             },
           },
           stops: { type: 'array', items: { $ref: '#/components/schemas/RuleStop' } },
+          exceptions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                rule_id: { type: 'integer' },
+                exception_date: { type: 'string', format: 'date' },
+                reason: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
         },
       },
       StopEditInput: {
@@ -297,6 +309,8 @@ export const openapiSpec = {
             properties: {
               id: { type: 'integer' },
               driver_id: { type: 'integer' },
+              driver_name: { type: 'string' },
+              driver_has_university_badge: { type: 'boolean' },
               origin_name: { type: 'string' },
               destination_name: { type: 'string' },
               departure_time: { type: 'string', format: 'date-time' },
@@ -627,6 +641,40 @@ export const openapiSpec = {
         },
       },
     },
+    '/api/rides/me': {
+      get: {
+        summary: "List the authenticated driver's published rides with batched stops, segments, and non-PII bookings",
+        tags: ['Rides'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Driver published rides',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    rides: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          ride: { $ref: '#/components/schemas/Ride' },
+                          stops: { type: 'array', items: { $ref: '#/components/schemas/Stop' } },
+                          segments: { type: 'array', items: { $ref: '#/components/schemas/SegmentAvailability' } },
+                          bookings: { type: 'array', items: { $ref: '#/components/schemas/Booking' } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
     '/api/rides/{rideId}': {
       get: {
         summary: 'Ride details (public): stops, per-segment availability and price, driver summary, confirmed passengers',
@@ -803,6 +851,33 @@ export const openapiSpec = {
         },
       },
     },
+    '/api/rides/{rideId}/complete': {
+      post: {
+        summary: 'Mark an active ride completed after estimated_arrival_time (driver only, D-008)',
+        tags: ['Rides'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'rideId', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: {
+            description: 'Ride marked completed',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ride: { $ref: '#/components/schemas/Ride' },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Not the ride driver' },
+          404: { description: 'Ride not found' },
+          409: { description: 'RIDE_NOT_ACTIVE or RIDE_BEFORE_ARRIVAL' },
+        },
+      },
+    },
     '/api/bookings/me': {
       get: {
         summary: "List the authenticated passenger's bookings after lazy reconciliation",
@@ -927,6 +1002,32 @@ export const openapiSpec = {
           403: { description: 'Not the booking passenger' },
           404: { description: 'Booking not found' },
           409: { description: 'Booking is already in a terminal status' },
+        },
+      },
+    },
+    '/api/recurring-rides/me': {
+      get: {
+        summary: "List the authenticated driver's recurring ride rules with batched stops and exceptions",
+        tags: ['Recurring rides'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Caller recurring ride rules',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    rules: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/RecurringRule' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
         },
       },
     },

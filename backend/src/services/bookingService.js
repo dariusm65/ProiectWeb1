@@ -57,7 +57,7 @@ const badge = (domain) => ({
   university_badge_note: domain ? UNIVERSITY_BADGE_NOTE : null,
 });
 
-function formatEnrichedBooking(row) {
+export function formatEnrichedBooking(row) {
   return {
     id: row.id,
     ride_id: row.ride_id,
@@ -86,6 +86,8 @@ function formatEnrichedBooking(row) {
     ride: {
       id: row.ride_id,
       driver_id: row.driver_id,
+      driver_name: row.driver_name,
+      driver_has_university_badge: Boolean(row.driver_domain),
       origin_name: row.origin_name,
       destination_name: row.destination_name,
       departure_time: row.ride_departure_time,
@@ -96,11 +98,12 @@ function formatEnrichedBooking(row) {
   };
 }
 
-const BOOKING_SELECT_SQL = `
+export const BOOKING_SELECT_SQL = `
   SELECT b.*,
          ps.location_name AS pickup_stop_name, ps.stop_order AS pickup_stop_order, ps.removed_at AS pickup_removed_at,
          ds.location_name AS dropoff_stop_name, ds.stop_order AS dropoff_stop_order, ds.removed_at AS dropoff_removed_at,
          u.full_name AS passenger_name, u.university_domain AS passenger_domain,
+         du.full_name AS driver_name, du.university_domain AS driver_domain,
          r.driver_id, r.origin_name, r.destination_name,
          r.departure_time AS ride_departure_time, r.estimated_arrival_time AS ride_arrival_time,
          r.status AS ride_status, r.women_only
@@ -109,6 +112,7 @@ const BOOKING_SELECT_SQL = `
   JOIN ride_stops ds ON ds.id = b.dropoff_stop_id
   JOIN users u ON u.id = b.passenger_id
   JOIN rides r ON r.id = b.ride_id
+  JOIN users du ON du.id = r.driver_id
 `;
 
 export async function getBookingById(pool, bookingId) {

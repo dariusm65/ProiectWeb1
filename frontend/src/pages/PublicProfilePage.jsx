@@ -89,7 +89,7 @@ export function PublicProfilePage() {
               {profile.full_name}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-              <UniversityBadge hasBadge={profile.has_university_badge} note={profile.university_badge_note} />
+              <UniversityBadge hasBadge={profile.has_university_badge} />
               <RecentCancellationBadge hasRecentCancellation={profile.has_recent_cancellation_badge} />
             </div>
           </div>
@@ -144,7 +144,6 @@ export function PublicProfilePage() {
                     <strong>{rev.reviewer?.full_name}</strong>
                     <UniversityBadge
                       hasBadge={rev.reviewer?.has_university_badge}
-                      note={rev.reviewer?.university_badge_note}
                     />
                   </div>
                   <span className="tabular" style={{ color: 'var(--color-accent)', fontWeight: 700, fontSize: 'var(--font-size-sm)' }}>

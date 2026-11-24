@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ro" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudRide · Chatul Cursei, Reconfirmare &amp; Evaluare Mutuală</title>
+  <meta name="description" content="Grup de comunicare pentru șoferul și pasagerii confirmați ai cursei StudRide, cu reconfirmare rapidă și evaluare mutuală după sosire.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-size-xs: 0.75rem;
+      --font-size-sm: 0.875rem;
+      --font-size-base: 1rem;
+      --font-size-lg: 1.125rem;
+      --font-size-xl: 1.375rem;
+      --font-size-2xl: 1.875rem;
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+    }
+
+    [data-theme="light"] {
+      --color-bg: #F5EFE6;
+      --color-surface: #FCF9F4;
+      --color-surface-subtle: #EAE1D3;
+      --color-header: rgba(245, 239, 230, 0.94);
+      --color-border: rgba(20, 61, 43, 0.14);
+      --color-border-subtle: rgba(20, 61, 43, 0.08);
+      --color-text: #13261D;
+      --color-text-muted: #53665C;
+      --color-primary: #143D2B;
+      --color-primary-contrast: #FCF9F4;
+      --color-primary-soft: #E3EDE7;
+      --color-primary-wordmark: #143D2B;
+      --color-primary-ink: #143D2B;
+      --color-accent: #C88228;
+      --color-accent-soft: rgba(200, 130, 40, 0.14);
+      --color-accent-border: rgba(200, 130, 40, 0.38);
+      --shadow-sm: 0 1px 2px rgba(19, 38, 29, 0.06);
+      --shadow-lg: 0 12px 24px -4px rgba(19, 38, 29, 0.14);
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0E100F;
+      --color-surface: #171A18;
+      --color-surface-subtle: #1F2321;
+      --color-header: rgba(19, 22, 21, 0.94);
+      --color-border: rgba(244, 240, 232, 0.09);
+      --color-border-subtle: rgba(244, 240, 232, 0.05);
+      --color-text: #F4F0E8;
+      --color-text-muted: #9CA39F;
+      --color-primary: #1F6B47;
+      --color-primary-contrast: #F4F0E8;
+      --color-primary-soft: rgba(31, 107, 71, 0.18);
+      --color-primary-wordmark: #34A86B;
+      --color-primary-ink: #57C48B;
+      --color-accent: #E5A94C;
+      --color-accent-soft: rgba(229, 169, 76, 0.14);
+      --color-accent-border: rgba(229, 169, 76, 0.38);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 14px 28px -4px rgba(0, 0, 0, 0.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-size: var(--font-size-base);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .mock-toolbar {
+      background: var(--color-surface-subtle);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.4rem var(--space-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-xs);
+    }
+    .mock-btn {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .app-header {
+      background: var(--color-header);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem var(--space-lg);
+    }
+    .nav-container {
+      max-width: 1140px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+    .brand-title .ride { color: var(--color-primary-wordmark); }
+    .shell {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: var(--space-xl) var(--space-lg);
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    h1 { font-family: var(--font-display); font-size: var(--font-size-2xl); letter-spacing: -0.02em; }
+    h2 { font-family: var(--font-display); font-size: var(--font-size-xl); letter-spacing: -0.02em; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-soft);
+      color: var(--color-primary-ink);
+      border: 1px solid var(--color-border);
+    }
+    .chat-feed {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      max-height: 420px;
+      overflow-y: auto;
+      padding: var(--space-sm);
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+    }
+    .msg-bubble {
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .msg-bubble.own {
+      background: var(--color-primary-soft);
+      border-color: var(--color-primary);
+    }
+    .input {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.55rem 0.85rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-sans);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      padding: 0.55rem 1.05rem;
+      min-height: 44px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--color-primary);
+      color: var(--color-primary-contrast);
+      border-color: var(--color-primary);
+    }
+    @media (max-width: 900px) { .shell { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="mock-toolbar">
+    <strong>Mock · Chatul Cursei &amp; Evaluare Mutuală (/rides/:rideId/chat)</strong>
+    <button type="button" class="mock-btn" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')">Comută Temă</button>
+  </div>
+
+  <header class="app-header">
+    <div class="nav-container">
+      <span class="brand-title">Stud<span class="ride">Ride</span></span>
+      <a href="DS-007-dashboard-notifications.html" style="color: var(--color-primary-ink); font-weight: 600; font-size: var(--font-size-sm);">← Înapoi la cursele mele</a>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="card" aria-labelledby="chat-heading">
+      <div>
+        <span class="badge">Acces rezervat șoferului și pasagerilor confirmați</span>
+        <h1 id="chat-heading" style="margin-top: 0.35rem;">Chat cursă: Cluj-Napoca → Sibiu</h1>
+        <p class="tabular" style="font-size: var(--font-size-xs); color: var(--color-text-muted);">
+          04 Dec 2026 · Plecare 16:30 · Șofer: Dana Driver
+        </p>
+      </div>
+
+      <div class="chat-feed" role="log" aria-label="Mesajele cursei">
+        <article class="msg-bubble">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: var(--font-size-xs);">
+            <div><strong>Dana Driver</strong> <span class="badge">✓ Email universitar</span></div>
+            <span class="tabular" style="color: var(--color-text-muted);">16:05</span>
+          </div>
+          <p style="font-size: var(--font-size-sm);">Salut! Plecăm la 16:30 fix din fața Gării Cluj. Am loc pentru un rucsac și o geantă de cabină.</p>
+        </article>
+
+        <article class="msg-bubble own">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: var(--font-size-xs);">
+            <div><strong>Paul Passenger</strong> <span class="badge">✓ Email universitar</span></div>
+            <span class="tabular" style="color: var(--color-text-muted);">16:07</span>
+          </div>
+          <p style="font-size: var(--font-size-sm);">Mulțumesc! Voi fi la oprirea din Centru Turda cu 5 minute înainte de 17:05.</p>
+        </article>
+      </div>
+
+      <form style="display: flex; gap: 0.5rem;">
+        <input class="input" type="text" placeholder="Scrie un mesaj pentru participanții la cursă..." aria-label="Mesaj nou în chatul cursei" />
+        <button type="button" class="btn btn-primary">Trimite mesajul</button>
+      </form>
+    </section>
+
+    <aside class="card" aria-labelledby="review-modal-heading" style="box-shadow: var(--shadow-lg);">
+      <h2 id="review-modal-heading">Evaluează participantul după sosire</h2>
+      <p style="font-size: var(--font-size-xs); color: var(--color-text-muted);">
+        Evaluarea mutuală (1–5 stele) este activă exclusiv după ora estimată a sosirii pentru cursele finalizate.
+      </p>
+      <div style="display: flex; gap: 0.35rem;" role="group" aria-label="Selectează numărul de stele">
+        <button type="button" class="btn btn-primary">★ 5 stele</button>
+        <button type="button" class="btn">★ 4</button>
+        <button type="button" class="btn">★ 3</button>
+        <button type="button" class="btn">★ 2</button>
+        <button type="button" class="btn">★ 1</button>
+      </div>
+      <textarea class="input" rows="3" aria-label="Comentariu opțional" placeholder="Comentariu opțional (de exemplu: punctualitate, comunicare pe traseu)..."></textarea>
+      <button type="button" class="btn btn-primary">Trimite evaluarea</button>
+    </aside>
+  </main>
+</body>
+</html>

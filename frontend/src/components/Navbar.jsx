@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { notificationsApi, NOTIFY_REFRESH_EVENT } from '../api/client.js';
 
 export function BrandMarkSvg() {
   return (
@@ -69,7 +70,48 @@ export function BrandMarkSvg() {
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, token, fetchFn, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || !token) {
+      setUnreadCount(0);
+      return undefined;
+    }
+
+    let activeController = null;
+
+    const loadUnread = async () => {
+      if (activeController) {
+        activeController.abort();
+      }
+      const controller = new AbortController();
+      activeController = controller;
+      try {
+        const data = await notificationsApi.list(
+          { unreadOnly: true },
+          { fetchFn, signal: controller.signal },
+        );
+        if (!controller.signal.aborted && typeof data?.unread_count === 'number') {
+          setUnreadCount(data.unread_count);
+        }
+      } catch {
+        // Ignore network/abort errors in navbar badge polling
+      }
+    };
+
+    loadUnread();
+    const intervalId = window.setInterval(loadUnread, 15000);
+    window.addEventListener(NOTIFY_REFRESH_EVENT, loadUnread);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener(NOTIFY_REFRESH_EVENT, loadUnread);
+      if (activeController) {
+        activeController.abort();
+      }
+    };
+  }, [user, token, fetchFn]);
 
   return (
     <header className="app-header">
@@ -95,6 +137,33 @@ export function Navbar() {
           <NavLink to="/publish" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
             + Publică cursă
           </NavLink>
+
+          {user && (
+            <>
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+              >
+                Cursele mele
+              </NavLink>
+              <NavLink
+                to="/notifications"
+                className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                aria-label={
+                  unreadCount > 0
+                    ? `Notificări (${unreadCount} necitite)`
+                    : 'Notificări'
+                }
+              >
+                Notificări
+                {unreadCount > 0 && (
+                  <span className="nav-badge" data-testid="navbar-unread-badge">
+                    {unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            </>
+          )}
 
           <button
             type="button"

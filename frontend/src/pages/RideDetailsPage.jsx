@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ridesApi } from '../api/client.js';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { emitNotificationsRefresh, ridesApi } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   UniversityBadge,
@@ -15,6 +15,7 @@ import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 export function RideDetailsPage() {
   const { rideId } = useParams();
+  const navigate = useNavigate();
   const { user, fetchFn } = useAuth();
 
   const [details, setDetails] = useState(null);
@@ -22,7 +23,10 @@ export function RideDetailsPage() {
   const [error, setError] = useState('');
   const [pickupStopId, setPickupStopId] = useState(null);
   const [dropoffStopId, setDropoffStopId] = useState(null);
-  const [ctaNotice, setCtaNotice] = useState('');
+  const [submittingBooking, setSubmittingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const activeControllerRef = useRef(null);
 
   useDocumentMeta({
     title: details
@@ -32,31 +36,47 @@ export function RideDetailsPage() {
       'Cronologia opririlor intermediare, disponibilitatea locurilor pe fiecare segment, prețul proporțional și reputația șoferului.',
   });
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      setLoading(true);
+  const loadDetails = useCallback(
+    async (preserveStops = false) => {
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeControllerRef.current = controller;
+      const { signal } = controller;
+
+      if (!preserveStops) {
+        setLoading(true);
+      }
       setError('');
       try {
-        const data = await ridesApi.getDetails(rideId, { fetchFn });
-        if (!active) return;
+        const data = await ridesApi.getDetails(rideId, { fetchFn, signal });
+        if (signal.aborted) return;
         setDetails(data);
-        if (data?.stops?.length >= 2) {
+        if (!preserveStops && data?.stops?.length >= 2) {
           setPickupStopId(data.stops[0].id);
           setDropoffStopId(data.stops[data.stops.length - 1].id);
         }
       } catch (err) {
-        if (!active) return;
+        if (signal.aborted || err?.name === 'AbortError') return;
         setError(err.message || 'Cursa nu a putut fi încărcată.');
       } finally {
-        if (active) setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
-    }
-    load();
+    },
+    [rideId, fetchFn],
+  );
+
+  useEffect(() => {
+    loadDetails(false);
     return () => {
-      active = false;
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
     };
-  }, [rideId, fetchFn]);
+  }, [loadDetails]);
 
   if (loading) {
     return (
@@ -105,28 +125,100 @@ export function RideDetailsPage() {
         })
       : 0;
 
-  const handleBookingCta = () => {
+  // Compute minimum free seats across elementary segments between pickupStop and dropoffStop
+  const stopOrderById = new Map(stops.map((s) => [s.id, s.stop_order]));
+  const traversedSegments = segments.filter((seg) => {
+    const fromOrder = stopOrderById.get(seg.from_stop_id);
+    const toOrder = stopOrderById.get(seg.to_stop_id);
+    if (fromOrder === undefined || toOrder === undefined || !pickupStop || !dropoffStop) {
+      return false;
+    }
+    return fromOrder >= pickupStop.stop_order && toOrder <= dropoffStop.stop_order;
+  });
+  const minFreeSeatsOnSelection =
+    traversedSegments.length > 0
+      ? Math.min(...traversedSegments.map((s) => Number(s.free_seats ?? 0)))
+      : Number(ride.available_seats ?? 0);
+
+  const isDriverOfRide = Boolean(user && Number(user.id) === Number(ride.driver_id));
+  const isWomenOnlyBlocked = Boolean(user && ride.women_only && user.gender !== 'female');
+  const isSegmentFull = minFreeSeatsOnSelection < 1;
+  const isRideInactive = ride.status !== 'active';
+
+  const handleBookingSubmit = async () => {
+    setBookingError('');
+    setCreatedBooking(null);
+
     if (!user) {
-      setCtaNotice('Pentru a trimite o cerere de rezervare pe acest segment, autentifică-te în contul tău StudRide.');
+      navigate('/login');
       return;
     }
-    if (ride.women_only && user.gender !== 'female') {
-      setCtaNotice('Această cursă este marcată Women-only: doar conturile cu genul Femeie pot rezerva un loc.');
+    if (isDriverOfRide) {
+      setBookingError('Nu poți rezerva un loc pe propria ta cursă.');
       return;
     }
-    setCtaNotice(
-      `Segment pregătit pentru rezervare (${pickupStop?.city_name} → ${dropoffStop?.city_name}, 1 loc, preț blocat ${dynamicPriceLei} lei). Rezervarea directă și chatul cursei vor fi disponibile în curând.`,
-    );
+    if (isWomenOnlyBlocked) {
+      setBookingError('Această cursă este destinată exclusiv femeilor.');
+      return;
+    }
+    if (!pickupStop || !dropoffStop || pickupStop.stop_order >= dropoffStop.stop_order) {
+      setBookingError('Selectează o oprire de urcare situată înaintea opririi de coborâre.');
+      return;
+    }
+    if (isSegmentFull) {
+      setBookingError('Nu mai sunt locuri disponibile pe segmentul selectat.');
+      return;
+    }
+
+    setSubmittingBooking(true);
+    try {
+      const res = await ridesApi.createBooking(
+        ride.id,
+        {
+          pickup_stop_id: Number(pickupStop.id),
+          dropoff_stop_id: Number(dropoffStop.id),
+        },
+        { fetchFn },
+      );
+      setCreatedBooking(res.booking);
+      emitNotificationsRefresh();
+      await loadDetails(true);
+    } catch (err) {
+      if (err?.code === 'DUPLICATE_ACTIVE_BOOKING') {
+        setBookingError('Ai deja o rezervare activă sau în așteptare pentru această cursă.');
+      } else if (err?.code === 'WOMEN_ONLY_NOT_ALLOWED') {
+        setBookingError('Această cursă este destinată exclusiv femeilor.');
+      } else if (err?.code === 'NO_SEATS_AVAILABLE') {
+        setBookingError('Locurile pe acest segment s-au ocupat între timp.');
+      } else if (err?.code === 'TRIP_COST_CAP_EXCEEDED') {
+        setBookingError('Această rezervare ar depăși plafonul costului declarat al cursei.');
+      } else if (err?.code === 'SELF_BOOKING_NOT_ALLOWED') {
+        setBookingError('Șoferul nu poate rezerva un loc la propria cursă.');
+      } else {
+        setBookingError(err?.message || 'Cererea de rezervare nu a putut fi trimisă.');
+      }
+    } finally {
+      setSubmittingBooking(false);
+    }
   };
 
   return (
     <div className="main-layout">
       <section className="results-column" aria-labelledby="ride-details-heading">
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-uni">Traseu pe segmente</span>
-            <WomenOnlyBadge womenOnly={ride.women_only} />
-            {ride.recurring_rule_id && <span className="badge badge-amber">Cursă recurentă</span>}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.45rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-uni">Traseu pe segmente</span>
+              <WomenOnlyBadge womenOnly={ride.women_only} />
+              {ride.recurring_rule_id && <span className="badge badge-amber">Cursă recurentă</span>}
+              {ride.status === 'cancelled' && <span className="badge badge-cancel">Cursă anulată</span>}
+              {ride.status === 'completed' && <span className="badge badge-uni">Cursă finalizată</span>}
+            </div>
+            {user && (
+              <Link to={`/rides/${ride.id}/chat`} className="btn">
+                Deschide chatul cursei
+              </Link>
+            )}
           </div>
 
           <h1
@@ -139,7 +231,10 @@ export function RideDetailsPage() {
           <p className="tabular" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
             {formatBucharestDate(ride.departure_time)} · Plecare {formatBucharestTime(ride.departure_time)} · Sosire
             estimată {formatBucharestTime(ride.estimated_arrival_time)} · {totalDistKm} km total · Cost declarat:{' '}
-            <strong>{ride.declared_trip_cost} lei</strong>
+            <strong>{ride.declared_trip_cost} lei</strong> ·{' '}
+            {ride.luggage_allowed ? 'Bagaj acceptat' : 'Fără bagaj'} ·{' '}
+            {ride.pets_allowed ? 'Animale acceptate' : 'Fără animale'} ·{' '}
+            {ride.smoking_allowed ? 'Fumat permis' : 'Fără fumat'}
           </p>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-xl)' }}>
@@ -193,7 +288,7 @@ export function RideDetailsPage() {
                       </span>
                       <span>
                         <strong style={{ color: 'var(--color-primary-ink)' }}>{seg.price_lei} lei</strong> ·{' '}
-                        <strong style={{ color: 'var(--color-success)' }}>
+                        <strong style={{ color: seg.free_seats > 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
                           {seg.free_seats} locuri libere din {ride.available_seats}
                         </strong>
                       </span>
@@ -233,7 +328,7 @@ export function RideDetailsPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                     <strong>{p.full_name}</strong>
-                    <UniversityBadge hasBadge={p.has_university_badge} note={p.university_badge_note} />
+                    <UniversityBadge hasBadge={p.has_university_badge} />
                   </div>
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
                     {p.pickup_stop_name} → {p.dropoff_stop_name}
@@ -252,7 +347,7 @@ export function RideDetailsPage() {
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <strong style={{ fontSize: 'var(--font-size-base)' }}>{driver?.full_name}</strong>
-            <UniversityBadge hasBadge={driver?.has_university_badge} note={driver?.university_badge_note} />
+            <UniversityBadge hasBadge={driver?.has_university_badge} />
             <RecentCancellationBadge hasRecentCancellation={driver?.has_recent_cancellation_badge} />
           </div>
           <ReputationRow
@@ -279,7 +374,17 @@ export function RideDetailsPage() {
               id="pickup-select"
               className="select"
               value={pickupStopId ?? ''}
-              onChange={(e) => setPickupStopId(Number(e.target.value))}
+              onChange={(e) => {
+                const nextPickupId = Number(e.target.value);
+                setPickupStopId(nextPickupId);
+                const nextPickup = stops.find((s) => s.id === nextPickupId);
+                if (nextPickup && dropoffStop && dropoffStop.stop_order <= nextPickup.stop_order) {
+                  const firstValidDropoff = stops.find((s) => s.stop_order > nextPickup.stop_order);
+                  if (firstValidDropoff) {
+                    setDropoffStopId(firstValidDropoff.id);
+                  }
+                }
+              }}
             >
               {stops.slice(0, -1).map((s) => (
                 <option key={s.id} value={s.id}>
@@ -316,13 +421,64 @@ export function RideDetailsPage() {
             <strong style={{ fontSize: '1.75rem', color: 'var(--color-primary-ink)' }}>{dynamicPriceLei} lei</strong>
           </div>
 
-          <button type="button" className="btn btn-primary" onClick={handleBookingCta}>
-            Solicită rezervare pe acest segment (1 loc)
-          </button>
+          <div className="tabular" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+            Disponibilitate pe intervalul selectat:{' '}
+            <strong style={{ color: minFreeSeatsOnSelection > 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
+              {minFreeSeatsOnSelection} {minFreeSeatsOnSelection === 1 ? 'loc liber' : 'locuri libere'}
+            </strong>
+          </div>
 
-          {ctaNotice && (
-            <div className="status-banner warning" role="status" aria-live="polite">
-              <span>{ctaNotice}</span>
+          {isDriverOfRide ? (
+            <div className="status-banner warning" role="status">
+              <span>Aceasta este cursa publicată de tine. Poți gestiona cererile și opririle din panoul tău.</span>
+              <Link to="/dashboard" className="btn btn-primary">
+                Cursele mele
+              </Link>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={submittingBooking || isSegmentFull || isRideInactive || isWomenOnlyBlocked}
+              onClick={handleBookingSubmit}
+            >
+              {submittingBooking
+                ? 'Se trimite cererea...'
+                : isRideInactive
+                  ? 'Cursa nu mai este activă'
+                  : isSegmentFull
+                    ? 'Niciun loc liber pe acest segment'
+                    : 'Solicită rezervare pe acest segment (1 loc)'}
+            </button>
+          )}
+
+          {!bookingError && isWomenOnlyBlocked && (
+            <div className="status-banner warning" role="status">
+              <span>Această cursă este destinată exclusiv femeilor.</span>
+            </div>
+          )}
+
+          {bookingError && (
+            <div className="status-banner error" role="alert">
+              <span>
+                <strong>Eroare:</strong> {bookingError}
+              </span>
+            </div>
+          )}
+
+          {createdBooking && (
+            <div className="status-banner success" role="status" aria-live="polite">
+              <div>
+                <strong>Cerere trimisă!</strong> Rezervarea ta pe segmentul{' '}
+                <strong>
+                  {createdBooking.pickup_stop_name || pickupStop?.location_name} →{' '}
+                  {createdBooking.dropoff_stop_name || dropoffStop?.location_name}
+                </strong>{' '}
+                (preț blocat <strong>{createdBooking.price_lei} lei</strong>) așteaptă confirmarea șoferului.
+              </div>
+              <Link to="/dashboard" className="btn">
+                Vezi rezervările mele
+              </Link>
             </div>
           )}
         </section>
