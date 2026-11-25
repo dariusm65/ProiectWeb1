@@ -45,7 +45,7 @@ services:
       FORCE_HTTPS: ${FORCE_HTTPS:-false}
       EXTRA_UNIVERSITY_DOMAINS: ${EXTRA_UNIVERSITY_DOMAINS:-}
     ports:
-      - "${PORT:-3001}:3001"
+      - "127.0.0.1:${PORT:-3001}:3001"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/api/health || exit 1"]
       interval: 10s

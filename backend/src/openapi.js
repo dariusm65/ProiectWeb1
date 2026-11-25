@@ -471,17 +471,16 @@ export const openapiSpec = {
       },
       AdminUserSummary: {
         type: 'object',
-        description: 'Moderation user summary with email and dual reputation metrics; never exposes password_hash',
+        description:
+          'Moderation user summary with email and dual reputation metrics; never exposes password_hash, phone, or private gender (D-013, D-018)',
         properties: {
           id: { type: 'integer' },
           email: { type: 'string', format: 'email' },
           full_name: { type: 'string' },
-          phone: { type: 'string', nullable: true },
           university_domain: { type: 'string', nullable: true },
           has_university_badge: { type: 'boolean' },
           university_badge_note: { type: 'string', nullable: true },
           role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
-          gender: { type: 'string', enum: ['female', 'male', 'prefer_not_to_say'] },
           is_suspended: { type: 'boolean' },
           rating_average: { type: 'number', nullable: true },
           rating_count: { type: 'integer' },

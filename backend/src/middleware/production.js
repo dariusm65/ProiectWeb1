@@ -52,16 +52,26 @@ export function buildHelmetOptions({ forceHttps = false } = {}) {
   };
 }
 
+const SAFE_HOST_HEADER_REGEX = /^[a-zA-Z0-9.-]+(?::\d{1,5})?$/;
+
 /**
  * Redirects plain-HTTP requests to HTTPS (308 keeps method + body). Relies on `trust proxy`
  * so `req.secure` reflects X-Forwarded-Proto. `/api/health` is exempt for platform probes.
+ * Validates the `Host` header format and normalizes leading slashes on `req.originalUrl`
+ * to prevent Host-header / protocol-relative open-redirect injection.
  */
 export function httpsRedirect() {
   return (req, res, next) => {
     if (req.secure || req.path === '/api/health') return next();
-    const host = req.get('host');
-    if (!host) return next();
-    return res.redirect(308, `https://${host}${req.originalUrl}`);
+    const host = String(req.get('host') || '').trim();
+    if (!host || !SAFE_HOST_HEADER_REGEX.test(host)) {
+      return res.status(400).json({
+        error: 'INVALID_HOST_HEADER',
+        message: 'Invalid Host header',
+      });
+    }
+    const safePath = String(req.originalUrl || '/').replace(/^\/+/, '/');
+    return res.redirect(308, `https://${host}${safePath.startsWith('/') ? safePath : `/${safePath}`}`);
   };
 }
 

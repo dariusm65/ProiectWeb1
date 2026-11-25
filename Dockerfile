@@ -27,7 +27,6 @@ COPY backend/src ./src
 COPY backend/database ./database
 COPY --from=frontend-build /build/frontend/dist /app/frontend/dist
 
-RUN chown -R node:node /app
 USER node
 
 EXPOSE 3001

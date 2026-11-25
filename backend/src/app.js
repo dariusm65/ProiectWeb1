@@ -33,7 +33,7 @@ export function createApp({
   fetchFn = globalThis.fetch, // injected in tests so Nominatim is never called live (D-009)
   geocodingThrottleMs = 1100, // C-001: <= 1 outbound Nominatim request per second
   nowFn = () => new Date(), // injectable clock for deterministic ban / late-cancel / search tests
-  trustProxy = process.env.TRUST_PROXY, // D-021: e.g. '1' behind Render's single TLS-terminating proxy
+  trustProxy, // D-021: e.g. '1' behind Render's single TLS-terminating proxy
   forceHttps = parseBooleanEnv(process.env.FORCE_HTTPS),
   frontendDistDir = process.env.FRONTEND_DIST_DIR, // D-021: serve built SPA + fallback from this dir
   // In-memory per-user limit on POST /api/reports; disabled under NODE_ENV=test so suites never flake.
@@ -48,8 +48,17 @@ export function createApp({
 
   const app = express();
 
+  const resolvedTrustProxy =
+    trustProxy !== undefined
+      ? trustProxy
+      : process.env.TRUST_PROXY !== undefined && String(process.env.TRUST_PROXY).trim() !== ''
+        ? process.env.TRUST_PROXY
+        : forceHttps
+          ? '1'
+          : false;
+
   app.disable('x-powered-by');
-  app.set('trust proxy', parseTrustProxy(trustProxy));
+  app.set('trust proxy', parseTrustProxy(resolvedTrustProxy));
   if (forceHttps) {
     app.use(httpsRedirect());
   }

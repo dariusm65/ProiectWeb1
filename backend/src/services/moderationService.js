@@ -40,11 +40,9 @@ function formatModerationUser(u, { ratingAverage, ratingCount, seriousnessScore,
     id: u.id,
     email: u.email,
     full_name: u.full_name,
-    phone: u.phone ?? null,
     university_domain: u.university_domain ?? null,
     ...badge(u.university_domain),
     role: u.role,
-    gender: u.gender,
     is_suspended: Boolean(u.is_suspended),
     rating_average: ratingAverage,
     rating_count: ratingCount,
@@ -53,6 +51,32 @@ function formatModerationUser(u, { ratingAverage, ratingCount, seriousnessScore,
     has_recent_cancellation_badge: hasBadge,
     created_at: u.created_at,
   };
+}
+
+/**
+ * Runs `fn(conn)` inside a database transaction when `pool.getConnection` is available
+ * (real mysql2 pool), falling back to `fn(pool)` for lightweight single-query unit-test stubs.
+ */
+async function withTransaction(pool, fn) {
+  if (typeof pool.getConnection !== 'function') {
+    return fn(pool);
+  }
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch {
+      // preserve original error
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 /**
@@ -130,62 +154,86 @@ export async function createReport(
     message_id,
   });
 
-  if (reported_user_id != null) {
-    const [uRows] = await pool.query('SELECT id FROM users WHERE id = ?', [reported_user_id]);
-    if (uRows.length === 0) {
-      throw new ApiError(404, 'REPORTED_USER_NOT_FOUND', 'Reported user not found');
+  return withTransaction(pool, async (db) => {
+    // Lock reporter's user row when running inside a transaction so concurrent POST /api/reports
+    // from the same reporter serialize cleanly against the pending duplicate check (C-002).
+    if (typeof pool.getConnection === 'function') {
+      await db.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [user.id]);
     }
-  }
-  if (ride_id != null) {
-    const [rRows] = await pool.query('SELECT id, driver_id FROM rides WHERE id = ?', [ride_id]);
-    if (rRows.length === 0) {
-      throw new ApiError(404, 'RIDE_NOT_FOUND', 'Reported ride not found');
+
+    if (reported_user_id != null) {
+      const [uRows] = await db.query('SELECT id FROM users WHERE id = ?', [reported_user_id]);
+      if (uRows.length === 0) {
+        throw new ApiError(404, 'REPORTED_USER_NOT_FOUND', 'Reported user not found');
+      }
     }
-    if (rRows[0].driver_id === user.id && reported_user_id == null && message_id == null) {
-      throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own ride is not allowed');
+    if (ride_id != null) {
+      const [rRows] = await db.query('SELECT id, driver_id FROM rides WHERE id = ?', [ride_id]);
+      if (rRows.length === 0) {
+        throw new ApiError(404, 'RIDE_NOT_FOUND', 'Reported ride not found');
+      }
+      if (rRows[0].driver_id === user.id && reported_user_id == null && message_id == null) {
+        throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own ride is not allowed');
+      }
     }
-  }
-  if (message_id != null) {
-    const [mRows] = await pool.query('SELECT id, ride_id, sender_id FROM chat_messages WHERE id = ?', [message_id]);
-    if (mRows.length === 0) {
-      throw new ApiError(404, 'MESSAGE_NOT_FOUND', 'Reported chat message not found');
+    if (message_id != null) {
+      const [mRows] = await db.query('SELECT id, ride_id, sender_id FROM chat_messages WHERE id = ?', [message_id]);
+      if (mRows.length === 0) {
+        throw new ApiError(404, 'MESSAGE_NOT_FOUND', 'Reported chat message not found');
+      }
+      if (mRows[0].sender_id === user.id) {
+        throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own chat message is not allowed');
+      }
+      if (ride_id != null && mRows[0].ride_id !== ride_id) {
+        throw new ApiError(
+          400,
+          'REPORT_TARGET_MISMATCH',
+          'Reported chat message does not belong to the specified ride_id',
+        );
+      }
+      // D-011 privacy guard: only the ride's driver or a booking participant on that ride may report its chat messages.
+      const [msgRideRows] = await db.query('SELECT driver_id FROM rides WHERE id = ?', [mRows[0].ride_id]);
+      const isDriverOfMsgRide = msgRideRows.length > 0 && msgRideRows[0].driver_id === user.id;
+      if (!isDriverOfMsgRide) {
+        const [partRows] = await db.query(
+          'SELECT id FROM bookings WHERE ride_id = ? AND passenger_id = ? LIMIT 1',
+          [mRows[0].ride_id, user.id],
+        );
+        if (partRows.length === 0) {
+          throw new ApiError(
+            403,
+            'FORBIDDEN',
+            'Only ride participants may report chat messages from this ride',
+          );
+        }
+      }
     }
-    if (mRows[0].sender_id === user.id) {
-      throw new ApiError(400, 'SELF_REPORT_NOT_ALLOWED', 'Self-reporting your own chat message is not allowed');
-    }
-    if (ride_id != null && mRows[0].ride_id !== ride_id) {
+
+    // C-002: one pending report per (reporter, exact target) pair keeps the moderation queue spam-free.
+    const [dupRows] = await db.query(
+      `SELECT id FROM reports
+       WHERE reporter_id = ? AND status = 'pending'
+         AND reported_user_id <=> ? AND ride_id <=> ? AND message_id <=> ?
+       LIMIT 1`,
+      [user.id, reported_user_id, ride_id, message_id],
+    );
+    if (dupRows.length > 0) {
       throw new ApiError(
-        400,
-        'REPORT_TARGET_MISMATCH',
-        'Reported chat message does not belong to the specified ride_id',
+        409,
+        'REPORT_ALREADY_PENDING',
+        'You already have a pending report for this target',
       );
     }
-  }
 
-  // C-002: one pending report per (reporter, exact target) pair keeps the moderation queue spam-free.
-  const [dupRows] = await pool.query(
-    `SELECT id FROM reports
-     WHERE reporter_id = ? AND status = 'pending'
-       AND reported_user_id <=> ? AND ride_id <=> ? AND message_id <=> ?
-     LIMIT 1`,
-    [user.id, reported_user_id, ride_id, message_id],
-  );
-  if (dupRows.length > 0) {
-    throw new ApiError(
-      409,
-      'REPORT_ALREADY_PENDING',
-      'You already have a pending report for this target',
+    const [res] = await db.query(
+      `INSERT INTO reports (reporter_id, reported_user_id, ride_id, message_id, reason, details, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [user.id, reported_user_id, ride_id, message_id, reason, details, now],
     );
-  }
 
-  const [res] = await pool.query(
-    `INSERT INTO reports (reporter_id, reported_user_id, ride_id, message_id, reason, details, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
-    [user.id, reported_user_id, ride_id, message_id, reason, details, now],
-  );
-
-  const [[created]] = await pool.query('SELECT * FROM reports WHERE id = ?', [res.insertId]);
-  return formatReport(created);
+    const [[created]] = await db.query('SELECT * FROM reports WHERE id = ?', [res.insertId]);
+    return formatReport(created);
+  });
 }
 
 export const REPORT_MESSAGE_EXCERPT_CHARS = 280;
@@ -280,39 +328,64 @@ export async function listReports(pool, { status, limit = DEFAULT_ADMIN_LIST_LIM
 
 /**
  * PATCH /api/admin/reports/:reportId (moderator / admin):
- * Resolves or dismisses a report, recording `resolved_by` and `resolved_at`.
+ * Resolves or dismisses a report inside a `FOR UPDATE` transaction, blocking self-resolution
+ * when the report targets the acting moderator/admin (or their own ride/message).
  */
 export async function resolveOrDismissReport(pool, actor, reportId, { status }, now) {
-  const [rows] = await pool.query('SELECT * FROM reports WHERE id = ?', [reportId]);
-  if (rows.length === 0) {
-    throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
-  }
-  await pool.query(
-    'UPDATE reports SET status = ?, resolved_by = ?, resolved_at = ? WHERE id = ?',
-    [status, actor.id, now, reportId],
-  );
-  const [[updated]] = await pool.query('SELECT * FROM reports WHERE id = ?', [reportId]);
-  return formatReport(updated);
+  return withTransaction(pool, async (db) => {
+    const [rows] = await db.query(
+      `SELECT r.*,
+              rd.driver_id AS ride_driver_id,
+              cm.sender_id AS message_sender_id
+       FROM reports r
+       LEFT JOIN rides rd ON rd.id = r.ride_id
+       LEFT JOIN chat_messages cm ON cm.id = r.message_id
+       WHERE r.id = ?
+       FOR UPDATE`,
+      [reportId],
+    );
+    if (rows.length === 0) {
+      throw new ApiError(404, 'REPORT_NOT_FOUND', 'Report not found');
+    }
+    const rep = rows[0];
+    if (
+      rep.reported_user_id === actor.id ||
+      rep.ride_driver_id === actor.id ||
+      rep.message_sender_id === actor.id
+    ) {
+      throw new ApiError(
+        400,
+        'SELF_MODERATION_NOT_ALLOWED',
+        'You cannot resolve or dismiss a report targeting yourself',
+      );
+    }
+    await db.query(
+      'UPDATE reports SET status = ?, resolved_by = ?, resolved_at = ? WHERE id = ?',
+      [status, actor.id, now, reportId],
+    );
+    const [[updated]] = await db.query('SELECT * FROM reports WHERE id = ?', [reportId]);
+    return formatReport(updated);
+  });
 }
 
 /**
  * GET /api/admin/users (moderator / admin):
  * Returns users with computed `seriousness_score`, `infraction_count`, `rating_average`, `rating_count`,
- * and `is_suspended`. Includes `email` for moderation lookup, never `password_hash` (Guardrail 4).
+ * and `is_suspended`. Includes `email` for moderation lookup, never `password_hash`, `phone`, or private `gender` (Guardrail 4, D-018).
  */
 export async function listUsersForModeration(pool, now, { q, limit = DEFAULT_ADMIN_LIST_LIMIT } = {}) {
   const conditions = [];
   const args = [];
   if (q) {
-    // Escape LIKE wildcards so the search term is matched literally.
+    // Escape LIKE wildcards with explicit ESCAPE clause so search is literal regardless of SQL mode.
     const pattern = `%${String(q).replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
-    conditions.push('(full_name LIKE ? OR email LIKE ?)');
+    conditions.push("(full_name LIKE ? ESCAPE '\\\\' OR email LIKE ? ESCAPE '\\\\')");
     args.push(pattern, pattern);
   }
   const whereSql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   args.push(Number(limit));
   const [users] = await pool.query(
-    `SELECT id, email, full_name, phone, university_domain, role, gender, is_suspended, created_at
+    `SELECT id, email, full_name, university_domain, role, is_suspended, created_at
      FROM users ${whereSql} ORDER BY id ASC LIMIT ?`,
     args,
   );
@@ -351,9 +424,9 @@ export async function listUsersForModeration(pool, now, { q, limit = DEFAULT_ADM
   });
 }
 
-async function getModerationUserById(pool, userId, now) {
-  const [users] = await pool.query(
-    `SELECT id, email, full_name, phone, university_domain, role, gender, is_suspended, created_at
+async function getModerationUserById(db, userId, now) {
+  const [users] = await db.query(
+    `SELECT id, email, full_name, university_domain, role, is_suspended, created_at
      FROM users WHERE id = ?`,
     [userId],
   );
@@ -361,11 +434,11 @@ async function getModerationUserById(pool, userId, now) {
     throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
   }
   const u = users[0];
-  const [[r]] = await pool.query(
+  const [[r]] = await db.query(
     'SELECT AVG(rating_stars) AS avg_stars, COUNT(*) AS n FROM reviews WHERE reviewed_user_id = ?',
     [userId],
   );
-  const [userInfs] = await pool.query(
+  const [userInfs] = await db.query(
     'SELECT infraction_type, penalty_percentage_points, occurred_at FROM user_infractions WHERE user_id = ?',
     [userId],
   );
@@ -553,37 +626,43 @@ export async function suspendUser(pool, actor, targetUserId, { reason = null } =
  * Restores `is_suspended = FALSE` subject to role hierarchy checks.
  */
 export async function unsuspendUser(pool, actor, targetUserId, now) {
-  const [targetRows] = await pool.query('SELECT id, role, is_suspended FROM users WHERE id = ?', [targetUserId]);
-  if (targetRows.length === 0) {
-    throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
-  }
-  const target = targetRows[0];
-
-  canModerateTargetUser({ actor, target });
-  const wasSuspended = Boolean(target.is_suspended);
-
-  await pool.query('UPDATE users SET is_suspended = FALSE WHERE id = ?', [targetUserId]);
-  if (wasSuspended) {
-    await pool.query(
-      `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
-       VALUES (?, 'account_unsuspended', 'Cont reactivat', 'Contul tău StudRide a fost reactivat.', ?)
-       ON DUPLICATE KEY UPDATE id = id`,
-      [targetUserId, `account_unsuspended:${targetUserId}:${now.toISOString()}`],
+  return withTransaction(pool, async (db) => {
+    const [targetRows] = await db.query(
+      'SELECT id, role, is_suspended FROM users WHERE id = ? FOR UPDATE',
+      [targetUserId],
     );
-  }
+    if (targetRows.length === 0) {
+      throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
+    }
+    const target = targetRows[0];
 
-  return {
-    user: await getModerationUserById(pool, targetUserId, now),
-  };
+    canModerateTargetUser({ actor, target });
+    const wasSuspended = Boolean(target.is_suspended);
+
+    await db.query('UPDATE users SET is_suspended = FALSE WHERE id = ?', [targetUserId]);
+    if (wasSuspended) {
+      await db.query(
+        `INSERT INTO notifications (user_id, type, title, message, idempotency_key)
+         VALUES (?, 'account_unsuspended', 'Cont reactivat', 'Contul tău StudRide a fost reactivat.', ?)
+         ON DUPLICATE KEY UPDATE id = id`,
+        [targetUserId, `account_unsuspended:${targetUserId}:${now.toISOString()}`],
+      );
+    }
+
+    return {
+      user: await getModerationUserById(db, targetUserId, now),
+    };
+  });
 }
 
 /**
  * POST /api/admin/rides/:rideId/cancel (moderator / admin, CONTEXT.md, D-013, D-016):
- * Moderators/admins can cancel an active future ride without recording a `driver_late_cancel` infraction.
+ * Moderators/admins can cancel an active future ride without recording a `driver_late_cancel` infraction,
+ * subject to role hierarchy (`canModerateTargetUser` against the ride's driver, blocking self-cancellation).
  * Runs `reconcileRideBookings` first inside the `FOR UPDATE` transaction (Guardrail 1) and commits
  * reconciled expirations/lapses before rethrowing if a domain guard fails.
  */
-export async function moderateCancelRide(pool, _actor, rideId, { reason = null } = {}, now) {
+export async function moderateCancelRide(pool, actor, rideId, { reason = null } = {}, now) {
   const conn = await pool.getConnection();
   let hasReconciledChanges = false;
   let hasMutatedTarget = false;
@@ -596,6 +675,13 @@ export async function moderateCancelRide(pool, _actor, rideId, { reason = null }
       throw new ApiError(404, 'RIDE_NOT_FOUND', 'Ride not found');
     }
     const ride = rideRows[0];
+
+    const [driverRows] = await conn.query('SELECT id, role FROM users WHERE id = ?', [ride.driver_id]);
+    if (driverRows.length > 0) {
+      canModerateTargetUser({ actor, target: driverRows[0] });
+    } else if (actor && actor.id === ride.driver_id) {
+      throw new ApiError(400, 'SELF_MODERATION_NOT_ALLOWED', 'Self-moderation is not allowed');
+    }
 
     const [bookings] = await conn.query('SELECT * FROM bookings WHERE ride_id = ? FOR UPDATE', [rideId]);
     bookings.sort((a, b) => a.id - b.id);
@@ -681,48 +767,58 @@ export async function changeUserRole(pool, actor, targetUserId, { role }, now) {
   if (actor.id === targetUserId) {
     throw new ApiError(400, 'SELF_MODERATION_NOT_ALLOWED', 'You cannot change your own role');
   }
-  const [rows] = await pool.query('SELECT id, role FROM users WHERE id = ?', [targetUserId]);
-  if (rows.length === 0) {
-    throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
-  }
-  if (rows[0].role === 'admin') {
-    throw new ApiError(403, 'INSUFFICIENT_ROLE_HIERARCHY', 'Cannot change the role of an admin account');
-  }
+  return withTransaction(pool, async (db) => {
+    const [rows] = await db.query('SELECT id, role FROM users WHERE id = ? FOR UPDATE', [targetUserId]);
+    if (rows.length === 0) {
+      throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
+    }
+    if (rows[0].role === 'admin') {
+      throw new ApiError(403, 'INSUFFICIENT_ROLE_HIERARCHY', 'Cannot change the role of an admin account');
+    }
 
-  await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, targetUserId]);
-  return {
-    user: await getModerationUserById(pool, targetUserId, now),
-  };
+    await db.query('UPDATE users SET role = ? WHERE id = ?', [role, targetUserId]);
+    return {
+      user: await getModerationUserById(db, targetUserId, now),
+    };
+  });
 }
 
 /**
  * GET /api/admin/stats (admin only, CONTEXT.md, DS-009):
- * Platform statistics summary for the admin dashboard.
+ * Platform statistics summary for the admin dashboard (parallelized across tables).
  */
 export async function getPlatformStats(pool) {
-  const [[usersRow]] = await pool.query(
-    `SELECT COUNT(*) AS total_users,
-            SUM(CASE WHEN is_suspended = TRUE THEN 1 ELSE 0 END) AS suspended_users,
-            SUM(CASE WHEN university_domain IS NOT NULL THEN 1 ELSE 0 END) AS university_validated_users
-     FROM users`,
-  );
-  const [[ridesRow]] = await pool.query(
-    `SELECT COUNT(*) AS total_rides,
-            SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_rides,
-            SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_rides
-     FROM rides`,
-  );
-  const [[bookingsRow]] = await pool.query(
-    `SELECT COUNT(*) AS total_bookings,
-            SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_bookings
-     FROM bookings`,
-  );
-  const [[reportsRow]] = await pool.query(
-    `SELECT COUNT(*) AS total_reports,
-            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_reports
-     FROM reports`,
-  );
-  const [[reviewsRow]] = await pool.query('SELECT COUNT(*) AS total_reviews FROM reviews');
+  const [
+    [[usersRow]],
+    [[ridesRow]],
+    [[bookingsRow]],
+    [[reportsRow]],
+    [[reviewsRow]],
+  ] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*) AS total_users,
+              SUM(CASE WHEN is_suspended = TRUE THEN 1 ELSE 0 END) AS suspended_users,
+              SUM(CASE WHEN university_domain IS NOT NULL THEN 1 ELSE 0 END) AS university_validated_users
+       FROM users`,
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS total_rides,
+              SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_rides,
+              SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_rides
+       FROM rides`,
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS total_bookings,
+              SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_bookings
+       FROM bookings`,
+    ),
+    pool.query(
+      `SELECT COUNT(*) AS total_reports,
+              SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_reports
+       FROM reports`,
+    ),
+    pool.query('SELECT COUNT(*) AS total_reviews FROM reviews'),
+  ]);
 
   return {
     total_users: Number(usersRow.total_users ?? 0),

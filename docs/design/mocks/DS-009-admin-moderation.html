@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudRide · Panou Moderare &amp; Administrare (DS-009)</title>
+  <title>StudRide · Panou Moderare &amp; Administrare</title>
   <meta name="description" content="Panou de moderare și administrare StudRide pentru gestionarea raportărilor, suspendarea conturilor cu anulare în cascadă și statisticile platformei.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -92,12 +92,30 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
     body {
       background: var(--color-bg);
       color: var(--color-text);
       font-family: var(--font-sans);
       line-height: 1.5;
       min-height: 100vh;
+    }
+    :focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     .tabular { font-variant-numeric: tabular-nums; }
     .app-header {
@@ -251,6 +269,12 @@
       color: var(--color-text-muted);
       background: var(--color-surface-subtle);
     }
+    @media (max-width: 1040px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -319,6 +343,7 @@
       </h2>
       <div class="table-wrap">
         <table>
+          <caption class="sr-only">Tabel cu raportările de moderare și acțiunile disponibile</caption>
           <thead>
             <tr>
               <th scope="col">Dată &amp; Stare</th>
@@ -364,6 +389,7 @@
       </h2>
       <div class="table-wrap">
         <table>
+          <caption class="sr-only">Tabel cu utilizatorii platformei, reputația dublă și acțiunile de moderare</caption>
           <thead>
             <tr>
               <th scope="col">Utilizator &amp; E-mail</th>
@@ -375,7 +401,7 @@
           <tbody>
             <tr>
               <td>
-                <strong>Tudor Target</strong> <span class="badge badge-uni">Validat pe domeniu universitar</span>
+                <strong>Tudor Target</strong> <span class="badge badge-uni" title="Validat pe baza domeniului de email universitar — nu implică verificarea identității">Validat pe domeniu (nu identitate verificată)</span>
                 <span class="badge badge-cancel">Anulare recentă</span>
                 <div class="tabular" style="font-size: var(--font-size-xs); color: var(--color-text-muted);">tudor@ulbsibiu.ro</div>
               </td>

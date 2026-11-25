@@ -22,6 +22,7 @@ services:
         value: "true"
       - key: JWT_SECRET
         generateValue: true
+      # Used by backend/database/seed.js on initial system account creation (admin@studride.local, moderator@studride.local).
       - key: ADMIN_PASSWORD
         generateValue: true
       - key: MODERATOR_PASSWORD

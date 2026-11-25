@@ -55,6 +55,7 @@ export function AdminPage() {
   const statsControllerRef = useRef(null);
   const confirmModalRef = useRef(null);
   const confirmCloseRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useDocumentMeta({
     title: 'StudRide · Panou Moderare & Administrare',
@@ -138,7 +139,7 @@ export function AdminPage() {
     try {
       const res = await adminApi.getStats({ fetchFn, signal });
       if (signal.aborted) return;
-      setStats(res || null);
+      setStats(res?.stats ?? res ?? null);
     } catch (err) {
       if (signal.aborted || err?.name === 'AbortError') return;
     } finally {
@@ -178,9 +179,10 @@ export function AdminPage() {
     };
   }, [isAdmin, loadStats]);
 
-  // Escape & focus management for confirmation dialog
+  // WAI-ARIA dialog focus management, Tab focus trap, Escape close, and focus restoration
   useEffect(() => {
     if (!confirmAction) return undefined;
+    previousFocusRef.current = document.activeElement;
     if (confirmCloseRef.current) {
       confirmCloseRef.current.focus();
     }
@@ -188,10 +190,37 @@ export function AdminPage() {
       if (e.key === 'Escape') {
         e.preventDefault();
         setConfirmAction(null);
+        return;
+      }
+      if (e.key === 'Tab' && confirmModalRef.current) {
+        const focusable = Array.from(
+          confirmModalRef.current.querySelectorAll(
+            'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+          ),
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      if (
+        previousFocusRef.current &&
+        typeof previousFocusRef.current.focus === 'function' &&
+        document.contains(previousFocusRef.current)
+      ) {
+        previousFocusRef.current.focus();
+      }
+    };
   }, [confirmAction]);
 
   if (authStatus === 'loading') {
@@ -247,7 +276,37 @@ export function AdminPage() {
     );
   }
 
+  const selectTab = (nextTab) => {
+    setErrorMsg('');
+    setFeedbackMsg('');
+    setActiveTab(nextTab);
+  };
+
+  const handleTabListKeyDown = (e) => {
+    const tabOrder = ['reports', 'users'];
+    const currentIdx = tabOrder.indexOf(activeTab);
+    if (currentIdx === -1) return;
+    let nextIdx = -1;
+    if (e.key === 'ArrowRight') {
+      nextIdx = (currentIdx + 1) % tabOrder.length;
+    } else if (e.key === 'ArrowLeft') {
+      nextIdx = (currentIdx - 1 + tabOrder.length) % tabOrder.length;
+    } else if (e.key === 'Home') {
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      nextIdx = tabOrder.length - 1;
+    }
+    if (nextIdx !== -1) {
+      e.preventDefault();
+      const nextTab = tabOrder[nextIdx];
+      selectTab(nextTab);
+      const nextBtn = document.getElementById(`tab-admin-${nextTab}`);
+      if (nextBtn) nextBtn.focus();
+    }
+  };
+
   const handleResolveOrDismiss = async (reportId, nextStatus) => {
+    if (busyActionKey) return;
     const key = `report:${reportId}:${nextStatus}`;
     setBusyActionKey(key);
     setErrorMsg('');
@@ -260,7 +319,7 @@ export function AdminPage() {
           : `Raportarea #${reportId} a fost respinsă.`,
       );
       await loadReports(reportStatusFilter);
-      if (isAdmin) loadStats();
+      if (isAdmin) await loadStats();
     } catch (err) {
       setErrorMsg(err?.message || 'Starea raportării nu a putut fi actualizată.');
     } finally {
@@ -269,6 +328,7 @@ export function AdminPage() {
   };
 
   const handleUnsuspend = async (targetUser) => {
+    if (busyActionKey) return;
     const key = `unsuspend:${targetUser.id}`;
     setBusyActionKey(key);
     setErrorMsg('');
@@ -282,7 +342,7 @@ export function AdminPage() {
       } else {
         await loadReports(reportStatusFilter);
       }
-      if (isAdmin) loadStats();
+      if (isAdmin) await loadStats();
     } catch (err) {
       setErrorMsg(err?.message || 'Contul nu a putut fi reactivat.');
     } finally {
@@ -291,6 +351,7 @@ export function AdminPage() {
   };
 
   const handleRoleChange = async (targetUser, nextRole) => {
+    if (busyActionKey) return;
     const key = `role:${targetUser.id}:${nextRole}`;
     setBusyActionKey(key);
     setErrorMsg('');
@@ -310,7 +371,7 @@ export function AdminPage() {
 
   const handleExecuteConfirmAction = async (e) => {
     e.preventDefault();
-    if (!confirmAction) return;
+    if (!confirmAction || busyActionKey) return;
     const { type, targetId, targetName } = confirmAction;
     const key = `${type}:${targetId}`;
     setBusyActionKey(key);
@@ -345,7 +406,7 @@ export function AdminPage() {
       if (activeTab === 'users') {
         await loadUsers(appliedUserSearch);
       }
-      if (isAdmin) loadStats();
+      if (isAdmin) await loadStats();
     } catch (err) {
       setErrorMsg(err?.message || 'Acțiunea de moderare a eșuat.');
     } finally {
@@ -432,7 +493,7 @@ export function AdminPage() {
           </div>
         )}
         {isAdmin && loadingStats && !stats && (
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+          <p role="status" aria-live="polite" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
             Se încarcă statisticile platformei...
           </p>
         )}
@@ -451,15 +512,16 @@ export function AdminPage() {
           </div>
         )}
 
-        <div className="tabs" role="tablist" aria-label="Secțiuni moderare">
+        <div className="tabs" role="tablist" aria-label="Secțiuni moderare" onKeyDown={handleTabListKeyDown}>
           <button
             type="button"
             role="tab"
             id="tab-admin-reports"
+            tabIndex={activeTab === 'reports' ? 0 : -1}
             aria-selected={activeTab === 'reports'}
             aria-controls="panel-admin-reports"
             className="tab-btn"
-            onClick={() => setActiveTab('reports')}
+            onClick={() => selectTab('reports')}
           >
             Coada de raportări ({reports.length})
           </button>
@@ -467,10 +529,11 @@ export function AdminPage() {
             type="button"
             role="tab"
             id="tab-admin-users"
+            tabIndex={activeTab === 'users' ? 0 : -1}
             aria-selected={activeTab === 'users'}
             aria-controls="panel-admin-users"
             className="tab-btn"
-            onClick={() => setActiveTab('users')}
+            onClick={() => selectTab('users')}
           >
             Utilizatori &amp; Roluri
           </button>

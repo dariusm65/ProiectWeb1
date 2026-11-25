@@ -19,6 +19,7 @@ export function RideChatPage() {
   const [accessError, setAccessError] = useState('');
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
+  const [bookingActionBusy, setBookingActionBusy] = useState(false);
   const [actionFeedback, setActionFeedback] = useState('');
   const [reviewTarget, setReviewTarget] = useState(null);
   const [reportTarget, setReportTarget] = useState(null);
@@ -217,7 +218,8 @@ export function RideChatPage() {
   };
 
   const handleQuickReconfirm = async () => {
-    if (!myBookingOnRide) return;
+    if (!myBookingOnRide || bookingActionBusy) return;
+    setBookingActionBusy(true);
     setActionFeedback('');
     try {
       await bookingsApi.reconfirm(myBookingOnRide.id, { fetchFn });
@@ -226,11 +228,14 @@ export function RideChatPage() {
       await loadChatData(false);
     } catch (err) {
       setActionFeedback(err?.message || 'Reconfirmarea a eșuat.');
+    } finally {
+      setBookingActionBusy(false);
     }
   };
 
   const handleQuickCancel = async () => {
-    if (!myBookingOnRide) return;
+    if (!myBookingOnRide || bookingActionBusy) return;
+    setBookingActionBusy(true);
     setActionFeedback('');
     try {
       await bookingsApi.cancel(myBookingOnRide.id, { fetchFn });
@@ -238,6 +243,8 @@ export function RideChatPage() {
       await loadChatData(false);
     } catch (err) {
       setActionFeedback(err?.message || 'Anularea rezervării a eșuat.');
+    } finally {
+      setBookingActionBusy(false);
     }
   };
 
@@ -318,7 +325,7 @@ export function RideChatPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={stopWasRemoved}
+                disabled={stopWasRemoved || bookingActionBusy}
                 onClick={handleQuickReconfirm}
               >
                 Reconfirmă locul ({myBookingOnRide.price_lei} lei)
@@ -326,6 +333,7 @@ export function RideChatPage() {
               <button
                 type="button"
                 className="btn"
+                disabled={bookingActionBusy}
                 onClick={handleQuickCancel}
               >
                 Anulează gratuit

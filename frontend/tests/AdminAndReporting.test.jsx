@@ -298,7 +298,7 @@ describe('Slice 8: Admin & Moderation UI, Role-Based Navbar, and Shared ReportMo
         };
       }
       if (url === '/api/admin/stats') {
-        return { ok: true, status: 200, json: async () => SAMPLE_STATS };
+        return { ok: true, status: 200, json: async () => ({ stats: SAMPLE_STATS }) };
       }
       if (String(url).startsWith('/api/admin/reports') && (!init.method || init.method === 'GET')) {
         return { ok: true, status: 200, json: async () => ({ reports: reportsState }) };
@@ -380,9 +380,16 @@ describe('Slice 8: Admin & Moderation UI, Role-Based Navbar, and Shared ReportMo
       expect(screen.getByText(/a fost marcată ca rezolvată/i)).toBeInTheDocument();
     });
 
-    // Switch to Users tab, filter by query, promote role, and suspend user
-    await user.click(screen.getByRole('tab', { name: /Utilizatori & Roluri/i }));
+    // Keyboard roving tab navigation (ArrowRight switches from Reports tab to Users tab)
+    const reportsTab = screen.getByRole('tab', { name: /Coada de raportări/i });
+    const usersTab = screen.getByRole('tab', { name: /Utilizatori & Roluri/i });
+    expect(reportsTab).toHaveAttribute('tabindex', '0');
+    expect(usersTab).toHaveAttribute('tabindex', '-1');
+    reportsTab.focus();
+    await user.keyboard('{ArrowRight}');
     await waitFor(() => {
+      expect(usersTab).toHaveAttribute('aria-selected', 'true');
+      expect(usersTab).toHaveAttribute('tabindex', '0');
       expect(screen.getByText('tudor@ulbsibiu.ro')).toBeInTheDocument();
     });
 

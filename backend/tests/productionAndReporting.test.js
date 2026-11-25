@@ -17,6 +17,8 @@ import {
   createReport,
   listReports,
   listUsersForModeration,
+  moderateCancelRide,
+  resolveOrDismissReport,
 } from '../src/services/moderationService.js';
 
 const JWT_SECRET = 'studride-test-jwt-secret-key-at-least-32-chars';
@@ -146,6 +148,23 @@ describe('unit: in-memory rate limiter', () => {
     for (let i = 0; i < 5; i += 1) {
       await request(app).get('/').expect(200);
     }
+  });
+
+  it('evicts the oldest key in O(1) when active buckets reach maxKeys (no unbounded memory growth)', async () => {
+    const now = 1_000_000;
+    const app = express();
+    app.use(createRateLimiter({ windowMs: 60_000, max: 1, maxKeys: 2, keyFn: (req) => req.get('x-key'), clock: () => now }));
+    app.get('/', (req, res) => res.json({ ok: true }));
+
+    // Fill maxKeys = 2 with 'k1' and 'k2' (both hit their max=1 budget)
+    await request(app).get('/').set('x-key', 'k1').expect(200);
+    await request(app).get('/').set('x-key', 'k1').expect(429);
+    await request(app).get('/').set('x-key', 'k2').expect(200);
+
+    // Inserting 'k3' evicts oldest ('k1') while 'k2' remains tracked and blocked
+    await request(app).get('/').set('x-key', 'k3').expect(200);
+    await request(app).get('/').set('x-key', 'k2').expect(429);
+    await request(app).get('/').set('x-key', 'k1').expect(200);
   });
 });
 
@@ -337,6 +356,32 @@ describe('API: production SPA serving, CSP and HTTPS (D-021)', () => {
     const res = await request(app).get('/admin').set('X-Forwarded-Proto', 'https');
     expect(res.status).toBe(308);
   });
+
+  it('defaults trustProxy to 1 when forceHttps is enabled without explicit trustProxy, validates Host header, and normalizes protocol-relative originalUrl', async () => {
+    const app = createApp({
+      pool: createStubPool(),
+      jwtSecret: JWT_SECRET,
+      frontendDistDir: distDir,
+      forceHttps: true,
+    });
+    expect(app.get('trust proxy')).toBe(1);
+
+    // Protocol-relative path '//evil.example/x' is collapsed to '/evil.example/x' on the validated host
+    const norm = await request(app)
+      .get('//evil.example/x')
+      .set('Host', 'studride.example.com')
+      .set('X-Forwarded-Proto', 'http');
+    expect(norm.status).toBe(308);
+    expect(norm.headers.location).toBe('https://studride.example.com/evil.example/x');
+
+    // Malformed Host header is rejected with 400
+    const badHost = await request(app)
+      .get('/rides')
+      .set('Host', 'evil.com/injected@studride.ro')
+      .set('X-Forwarded-Proto', 'http');
+    expect(badHost.status).toBe(400);
+    expect(badHost.body.error).toBe('INVALID_HOST_HEADER');
+  });
 });
 
 describe('unit: moderationService single-query enrichment, 409 dedupe, and user search (C-002)', () => {
@@ -489,6 +534,7 @@ describe('unit: moderationService single-query enrichment, 409 dedupe, and user 
       { q: '100%_Student', limit: 25 },
     );
     expect(calls).toHaveLength(3);
+    expect(calls[0].sql).toContain("ESCAPE '\\\\'");
     expect(calls[0].params).toEqual(['%100\\%\\_Student%', '%100\\%\\_Student%', 25]);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -500,5 +546,97 @@ describe('unit: moderationService single-query enrichment, 409 dedupe, and user 
       seriousness_score: 100,
     });
     expect(result[0].password_hash).toBeUndefined();
+    expect(result[0].phone).toBeUndefined();
+    expect(result[0].gender).toBeUndefined();
+  });
+
+  it('blocks non-participant chat message reporting (403 FORBIDDEN), self-resolution in resolveOrDismissReport (400), and self/hierarchy bypass in moderateCancelRide', async () => {
+    // 1. Non-participant attempting to report a private ride chat message -> 403 FORBIDDEN
+    const nonPartPool = {
+      query: async (sql) => {
+        if (/FROM chat_messages/.test(sql)) return [[{ id: 555, ride_id: 42, sender_id: 9 }]];
+        if (/SELECT driver_id FROM rides/.test(sql)) return [[{ driver_id: 9 }]];
+        if (/SELECT id FROM bookings WHERE ride_id = \? AND passenger_id = \?/.test(sql)) return [[]];
+        throw new Error(`Unexpected query: ${sql}`);
+      },
+    };
+    await expect(
+      createReport(
+        nonPartPool,
+        { id: 99, role: 'user' },
+        { message_id: 555, reason: 'harassment' },
+        new Date('2026-12-04T11:00:00Z'),
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'FORBIDDEN',
+    });
+
+    // 2. Moderator attempting to resolve/dismiss a report targeting themselves or their own ride -> 400 SELF_MODERATION_NOT_ALLOWED
+    const selfReportPool = {
+      query: async (sql) => {
+        if (/FROM reports r/.test(sql)) {
+          return [[{ id: 101, reported_user_id: null, ride_id: 42, ride_driver_id: 2, message_sender_id: null }]];
+        }
+        throw new Error(`Unexpected query: ${sql}`);
+      },
+    };
+    await expect(
+      resolveOrDismissReport(
+        selfReportPool,
+        { id: 2, role: 'moderator' },
+        101,
+        { status: 'dismissed' },
+        new Date('2026-12-04T11:00:00Z'),
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      code: 'SELF_MODERATION_NOT_ALLOWED',
+    });
+
+    // 3. Moderator attempting to administratively cancel their own ride (or an admin's ride) -> 400 / 403
+    const makeCancelRidePool = (driverRow) => ({
+      getConnection: async () => ({
+        beginTransaction: async () => {},
+        commit: async () => {},
+        rollback: async () => {},
+        release: () => {},
+        query: async (sql) => {
+          if (/SELECT \* FROM rides WHERE id = \? FOR UPDATE/.test(sql)) {
+            return [[{ id: 42, driver_id: driverRow.id, status: 'active', departure_time: new Date('2026-12-05T12:00:00Z') }]];
+          }
+          if (/SELECT id, role FROM users WHERE id = \?/.test(sql)) {
+            return [[driverRow]];
+          }
+          throw new Error(`Unexpected query: ${sql}`);
+        },
+      }),
+    });
+
+    await expect(
+      moderateCancelRide(
+        makeCancelRidePool({ id: 2, role: 'moderator' }),
+        { id: 2, role: 'moderator' },
+        42,
+        { reason: 'Self cancel' },
+        new Date('2026-12-04T11:00:00Z'),
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      code: 'SELF_MODERATION_NOT_ALLOWED',
+    });
+
+    await expect(
+      moderateCancelRide(
+        makeCancelRidePool({ id: 1, role: 'admin' }),
+        { id: 2, role: 'moderator' },
+        42,
+        { reason: 'Cancel admin ride' },
+        new Date('2026-12-04T11:00:00Z'),
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'INSUFFICIENT_ROLE_HIERARCHY',
+    });
   });
 });

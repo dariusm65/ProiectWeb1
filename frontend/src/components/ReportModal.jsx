@@ -99,6 +99,7 @@ export function ReportModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setErrorMsg('');
     setSubmitting(true);
 
