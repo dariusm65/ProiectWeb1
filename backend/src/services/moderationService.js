@@ -162,6 +162,22 @@ export async function createReport(
     }
   }
 
+  // C-002: one pending report per (reporter, exact target) pair keeps the moderation queue spam-free.
+  const [dupRows] = await pool.query(
+    `SELECT id FROM reports
+     WHERE reporter_id = ? AND status = 'pending'
+       AND reported_user_id <=> ? AND ride_id <=> ? AND message_id <=> ?
+     LIMIT 1`,
+    [user.id, reported_user_id, ride_id, message_id],
+  );
+  if (dupRows.length > 0) {
+    throw new ApiError(
+      409,
+      'REPORT_ALREADY_PENDING',
+      'You already have a pending report for this target',
+    );
+  }
+
   const [res] = await pool.query(
     `INSERT INTO reports (reporter_id, reported_user_id, ride_id, message_id, reason, details, status, created_at)
      VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
@@ -172,23 +188,94 @@ export async function createReport(
   return formatReport(created);
 }
 
+export const REPORT_MESSAGE_EXCERPT_CHARS = 280;
+export const DEFAULT_ADMIN_LIST_LIMIT = 100;
+
 /**
- * GET /api/admin/reports (moderator / admin):
- * Lists reports ordered newest-first with optional `status` filter (`pending`, `resolved`, `dismissed`).
+ * Enriched moderation report (C-002): the base report fields plus display context for the
+ * reporter, reported user, ride and chat message. Names and ride/message context only —
+ * never emails, phones, gender or password hashes.
  */
-export async function listReports(pool, { status } = {}) {
+function formatEnrichedReport(row) {
+  return {
+    ...formatReport(row),
+    reporter: row.reporter_id != null && row.reporter_name != null
+      ? { id: row.reporter_id, full_name: row.reporter_name }
+      : null,
+    reported_user: row.reported_user_id != null && row.reported_user_name != null
+      ? {
+          id: row.reported_user_id,
+          full_name: row.reported_user_name,
+          role: row.reported_user_role,
+          is_suspended: Boolean(row.reported_user_is_suspended),
+        }
+      : null,
+    ride: row.ride_id != null && row.ride_origin_name != null
+      ? {
+          id: row.ride_id,
+          origin_name: row.ride_origin_name,
+          destination_name: row.ride_destination_name,
+          departure_time: row.ride_departure_time,
+          status: row.ride_status,
+          driver_id: row.ride_driver_id,
+        }
+      : null,
+    message: row.message_id != null && row.message_excerpt != null
+      ? {
+          id: row.message_id,
+          ride_id: row.message_ride_id,
+          excerpt: row.message_excerpt,
+          sender_id: row.message_sender_id ?? null,
+          sender_name: row.message_sender_name ?? null,
+        }
+      : null,
+    resolved_by_name: row.resolved_by_name ?? null,
+  };
+}
+
+/**
+ * GET /api/admin/reports (moderator / admin, C-002):
+ * Lists reports ordered newest-first with optional `status` filter and a `limit` cap.
+ * All display context is fetched in ONE LEFT-JOINed query (no per-row lookups / N+1).
+ */
+export async function listReports(pool, { status, limit = DEFAULT_ADMIN_LIST_LIMIT } = {}) {
   const conditions = [];
   const args = [];
   if (status) {
-    conditions.push('status = ?');
+    conditions.push('r.status = ?');
     args.push(status);
   }
   const whereSql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  args.push(Number(limit));
   const [rows] = await pool.query(
-    `SELECT * FROM reports ${whereSql} ORDER BY created_at DESC, id DESC`,
+    `SELECT r.*,
+            rep.full_name AS reporter_name,
+            ru.full_name AS reported_user_name,
+            ru.role AS reported_user_role,
+            ru.is_suspended AS reported_user_is_suspended,
+            rd.origin_name AS ride_origin_name,
+            rd.destination_name AS ride_destination_name,
+            rd.departure_time AS ride_departure_time,
+            rd.status AS ride_status,
+            rd.driver_id AS ride_driver_id,
+            LEFT(cm.message_text, ${REPORT_MESSAGE_EXCERPT_CHARS}) AS message_excerpt,
+            cm.ride_id AS message_ride_id,
+            cm.sender_id AS message_sender_id,
+            ms.full_name AS message_sender_name,
+            rb.full_name AS resolved_by_name
+     FROM reports r
+     LEFT JOIN users rep ON rep.id = r.reporter_id
+     LEFT JOIN users ru ON ru.id = r.reported_user_id
+     LEFT JOIN rides rd ON rd.id = r.ride_id
+     LEFT JOIN chat_messages cm ON cm.id = r.message_id
+     LEFT JOIN users ms ON ms.id = cm.sender_id
+     LEFT JOIN users rb ON rb.id = r.resolved_by
+     ${whereSql}
+     ORDER BY r.created_at DESC, r.id DESC
+     LIMIT ?`,
     args,
   );
-  return rows.map(formatReport);
+  return rows.map(formatEnrichedReport);
 }
 
 /**
@@ -213,20 +300,37 @@ export async function resolveOrDismissReport(pool, actor, reportId, { status }, 
  * Returns users with computed `seriousness_score`, `infraction_count`, `rating_average`, `rating_count`,
  * and `is_suspended`. Includes `email` for moderation lookup, never `password_hash` (Guardrail 4).
  */
-export async function listUsersForModeration(pool, now) {
+export async function listUsersForModeration(pool, now, { q, limit = DEFAULT_ADMIN_LIST_LIMIT } = {}) {
+  const conditions = [];
+  const args = [];
+  if (q) {
+    // Escape LIKE wildcards so the search term is matched literally.
+    const pattern = `%${String(q).replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+    conditions.push('(full_name LIKE ? OR email LIKE ?)');
+    args.push(pattern, pattern);
+  }
+  const whereSql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  args.push(Number(limit));
   const [users] = await pool.query(
     `SELECT id, email, full_name, phone, university_domain, role, gender, is_suspended, created_at
-     FROM users ORDER BY id ASC`,
+     FROM users ${whereSql} ORDER BY id ASC LIMIT ?`,
+    args,
   );
   if (users.length === 0) return [];
 
+  // Fixed number of aggregate queries scoped to the listed ids (no per-user lookups / N+1).
+  const ids = users.map((u) => u.id);
   const [ratings] = await pool.query(
-    'SELECT reviewed_user_id, AVG(rating_stars) AS avg_stars, COUNT(*) AS n FROM reviews GROUP BY reviewed_user_id',
+    `SELECT reviewed_user_id, AVG(rating_stars) AS avg_stars, COUNT(*) AS n
+     FROM reviews WHERE reviewed_user_id IN (?) GROUP BY reviewed_user_id`,
+    [ids],
   );
   const ratingByUser = new Map(ratings.map((r) => [r.reviewed_user_id, r]));
 
   const [infractions] = await pool.query(
-    'SELECT user_id, infraction_type, penalty_percentage_points, occurred_at FROM user_infractions',
+    `SELECT user_id, infraction_type, penalty_percentage_points, occurred_at
+     FROM user_infractions WHERE user_id IN (?)`,
+    [ids],
   );
   const infractionsByUser = new Map();
   for (const inf of infractions) {

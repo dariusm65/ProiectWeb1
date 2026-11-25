@@ -102,15 +102,24 @@ Anyone can register with any valid email so testers without a university address
 ## Running the project
 
 ```bash
-# Full stack (MySQL + backend + frontend)
-docker compose up
+# Full stack (MySQL 8 + Express API + built React SPA served on http://localhost:3001)
+docker compose up --build
 
-# Development (MySQL in Docker, backend and frontend on host)
-npm run dev          # or: cd backend && npm run dev  |  cd frontend && npm run dev
+# Development (MySQL in Docker, backend on :3001 and Vite dev server on :5173)
+docker compose up -d db
+npm run dev --prefix backend   # in terminal 1
+npm run dev --prefix frontend  # in terminal 2
 
 # Optional: populate idempotent local demo drivers, upcoming rides & sample reviews
 npm run seed:demo --prefix backend
 ```
+
+### Live deployment (Render + Managed MySQL)
+The root `Dockerfile` performs a multi-stage build that compiles `frontend/dist` and runs the Express backend as a non-root container (`USER node`), serving `/api/*`, `/api/docs`, and the SPA fallback from a single origin.
+1. Provision a managed MySQL 8 database and copy its `mysql://user:password@host:port/dbname?ssl=true` connection string (or individual `DB_*` + `DB_SSL=true` variables).
+2. Deploy the repository on Render using `render.yaml` (Blueprint) or a Docker Web Service pointing to `./Dockerfile`.
+3. Set `DATABASE_URL` (plus `JWT_SECRET` >= 32 bytes, `ADMIN_PASSWORD`, and `MODERATOR_PASSWORD`). On startup, `src/server.js` automatically runs sequential SQL migrations (`backend/database/migrations/`) and idempotently seeds `known_places` plus the `admin@studride.ro` and `moderator@studride.ro` system accounts.
+4. `TRUST_PROXY=1` and `FORCE_HTTPS=true` enable `X-Forwarded-Proto` awareness, HTTP→HTTPS `308` redirects (with `/api/health` exempt for health probes), HSTS, and a Helmet Content-Security-Policy allowing OpenStreetMap tiles (`https://*.tile.openstreetmap.org`).
 
 ---
 

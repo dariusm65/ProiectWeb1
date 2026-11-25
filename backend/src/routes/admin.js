@@ -22,8 +22,16 @@ import {
   getPlatformStats,
 } from '../services/moderationService.js';
 
+const listLimit = z.coerce.number().int().min(1).max(200).optional().default(100);
+
 const reportsQuerySchema = z.object({
   status: z.enum(['pending', 'resolved', 'dismissed']).optional(),
+  limit: listLimit,
+});
+
+const usersQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  limit: listLimit,
 });
 
 const reportIdParams = z.object({
@@ -96,9 +104,12 @@ export function createAdminRouter({ pool, jwtSecret, nowFn }) {
     },
   );
 
-  router.get('/users', auth, modOrAdmin, async (req, res, next) => {
+  router.get('/users', auth, modOrAdmin, validateQuery(usersQuerySchema), async (req, res, next) => {
     try {
-      const users = await listUsersForModeration(pool, nowFn());
+      const users = await listUsersForModeration(pool, nowFn(), {
+        q: req.query.q || undefined,
+        limit: req.query.limit,
+      });
       return res.status(200).json({ users });
     } catch (err) {
       return next(err);

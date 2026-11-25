@@ -9,6 +9,8 @@
 - PATTERN-001 · Modular separation of concerns for lab assignments · approved
 - PATTERN-002 · Isolated throwaway MySQL database per integration test file · approved
 - PATTERN-003 · Injectable fetchFn and nowFn for deterministic service and API tests · approved
+- PATTERN-004 · Accessible WAI-ARIA modal dialog with focus trap, Escape close, and focus restoration · candidate
+- PATTERN-005 · Single-query JOIN or IN-batched list endpoints to prevent UI N+1 fan-out · candidate
 
 ---
 
@@ -42,3 +44,23 @@
 - **Example:** `backend/src/app.js`, `backend/src/services/geocodingService.js`, `backend/tests/rides.test.js`, `backend/tests/bookings.test.js`, `backend/tests/communityModeration.test.js`
 - **Why:** Guarantees zero live internet traffic in automated tests (`D-009`) and makes time-sensitive logic (7-day publishing bans, late-cancel windows, lazy expirations, post-arrival ratings) deterministic.
 - **Source:** Slice 4A–5 implementation
+
+---
+
+## PATTERN-004 · Accessible WAI-ARIA modal dialog with focus trap, Escape close, and focus restoration
+- **Status:** candidate
+- **Use when:** Creating a modal dialog component in the React SPA (such as post-ride rating or moderation reporting).
+- **How:** Render `<div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="...">`, store `document.activeElement` before opening, move initial focus to the close button, trap `Tab` / `Shift+Tab` inside the modal card's focusable elements, close on `Escape` or backdrop click, restore focus to the trigger element on unmount/close, and abort any in-flight `AbortController` submission on unmount.
+- **Example:** `frontend/src/components/ReviewModal.jsx`, `frontend/src/components/ReportModal.jsx`
+- **Why:** Satisfies WCAG keyboard and screen-reader dialog requirements (`D-001`) without pulling in external UI kit dependencies.
+- **Source:** Slice 7–8 implementation
+
+---
+
+## PATTERN-005 · Single-query JOIN or IN-batched list endpoints to prevent UI N+1 fan-out
+- **Status:** candidate
+- **Use when:** Designing backend list endpoints consumed by rich dashboard or moderation tables.
+- **How:** Fetch all required display context in a single `LEFT JOIN` query (e.g. `listReports`) or a constant number of `WHERE id IN (?)` batch queries grouped via `Map` in memory (e.g. `listUsersForModeration`, `listMyDrivenRides`, `searchRides`) so the frontend renders the entire view from one REST call with zero per-row requests.
+- **Example:** `backend/src/services/moderationService.js` (`listReports`, `listUsersForModeration`), `backend/src/services/rideService.js` (`searchRides`, `listMyDrivenRides`)
+- **Why:** Prevents N+1 SQL queries on the backend and N+1 HTTP waterfall requests on the frontend while keeping sensitive fields excluded at the query projection boundary.
+- **Source:** Slice 6–8 implementation

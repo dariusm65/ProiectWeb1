@@ -4,6 +4,7 @@ import { bookingsApi, chatApi, emitNotificationsRefresh, ridesApi } from '../api
 import { useAuth } from '../context/AuthContext.jsx';
 import { UniversityBadge } from '../components/Badges.jsx';
 import { ReviewModal } from '../components/ReviewModal.jsx';
+import { ReportModal } from '../components/ReportModal.jsx';
 import { formatBucharestDate, formatBucharestTime } from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
@@ -20,6 +21,7 @@ export function RideChatPage() {
   const [sending, setSending] = useState(false);
   const [actionFeedback, setActionFeedback] = useState('');
   const [reviewTarget, setReviewTarget] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
 
   const activeControllerRef = useRef(null);
 
@@ -356,9 +358,28 @@ export function RideChatPage() {
                       <strong>{msg.sender?.full_name}</strong>
                       <UniversityBadge hasBadge={msg.sender?.has_university_badge} />
                     </div>
-                    <span className="tabular" style={{ color: 'var(--color-text-muted)' }}>
-                      {formatBucharestDate(msg.created_at)} {formatBucharestTime(msg.created_at)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span className="tabular" style={{ color: 'var(--color-text-muted)' }}>
+                        {formatBucharestDate(msg.created_at)} {formatBucharestTime(msg.created_at)}
+                      </span>
+                      {!isOwn && (
+                        <button
+                          type="button"
+                          className="chip-btn"
+                          aria-label={`Raportează mesajul de la ${msg.sender?.full_name || 'participant'}`}
+                          onClick={() =>
+                            setReportTarget({
+                              messageId: msg.id,
+                              rideId: Number(rideId),
+                              reportedUserId: msg.sender_id ?? null,
+                              targetLabel: `mesajul lui ${msg.sender?.full_name || 'participant'}`,
+                            })
+                          }
+                        >
+                          Raportează
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p style={{ fontSize: 'var(--font-size-sm)', whiteSpace: 'pre-wrap' }}>
                     {msg.message_text}
@@ -407,6 +428,15 @@ export function RideChatPage() {
         reviewedUserId={reviewTarget?.reviewedUserId}
         reviewedUserName={reviewTarget?.reviewedUserName}
         roleLabel={reviewTarget?.roleLabel}
+      />
+
+      <ReportModal
+        isOpen={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+        messageId={reportTarget?.messageId}
+        rideId={reportTarget?.rideId}
+        reportedUserId={reportTarget?.reportedUserId}
+        targetLabel={reportTarget?.targetLabel}
       />
     </div>
   );

@@ -68,5 +68,8 @@ jobs:
       - name: Build frontend production bundle
         run: npm run build --prefix frontend
 
+      - name: Build production Docker image
+        run: docker build -t studride-ci:test .
+
       - name: Run ledger lint
         run: python3 docs/agents/tools/ledger-lint.py

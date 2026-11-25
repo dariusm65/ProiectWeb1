@@ -407,13 +407,67 @@ export const openapiSpec = {
           reported_user_id: { type: 'integer', nullable: true },
           ride_id: { type: 'integer', nullable: true },
           message_id: { type: 'integer', nullable: true },
-          reason: { type: 'string' },
+          reason: {
+            type: 'string',
+            description: 'Fixed report reason (C-002). Legacy rows filed before the enum may hold free text.',
+          },
           details: { type: 'string', nullable: true },
           status: { type: 'string', enum: ['pending', 'resolved', 'dismissed'] },
           resolved_by: { type: 'integer', nullable: true },
           resolved_at: { type: 'string', format: 'date-time', nullable: true },
           created_at: { type: 'string', format: 'date-time' },
         },
+      },
+      EnrichedReport: {
+        description:
+          'Moderation report with display context fetched in one JOINed query (C-002). Contains names and ride/message context only — never emails, phones, gender or password hashes.',
+        allOf: [
+          { $ref: '#/components/schemas/Report' },
+          {
+            type: 'object',
+            properties: {
+              reporter: {
+                type: 'object',
+                nullable: true,
+                properties: { id: { type: 'integer' }, full_name: { type: 'string' } },
+              },
+              reported_user: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'integer' },
+                  full_name: { type: 'string' },
+                  role: { type: 'string', enum: ['user', 'moderator', 'admin'] },
+                  is_suspended: { type: 'boolean' },
+                },
+              },
+              ride: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'integer' },
+                  origin_name: { type: 'string' },
+                  destination_name: { type: 'string' },
+                  departure_time: { type: 'string', format: 'date-time' },
+                  status: { type: 'string' },
+                  driver_id: { type: 'integer' },
+                },
+              },
+              message: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  id: { type: 'integer' },
+                  ride_id: { type: 'integer' },
+                  excerpt: { type: 'string', maxLength: 280 },
+                  sender_id: { type: 'integer', nullable: true },
+                  sender_name: { type: 'string', nullable: true },
+                },
+              },
+              resolved_by_name: { type: 'string', nullable: true },
+            },
+          },
+        ],
       },
       AdminUserSummary: {
         type: 'object',
@@ -1346,7 +1400,7 @@ export const openapiSpec = {
       post: {
         summary: 'File a moderation report against a user, ride, or chat message (D-013, CONTEXT.md)',
         description:
-          'Requires at least one of reported_user_id, ride_id, or message_id. Verifies referenced entities exist and rejects self-reporting.',
+          'Requires at least one of reported_user_id, ride_id, or message_id. Verifies referenced entities exist, rejects self-reporting, rejects a duplicate pending report for the same target (409), and is rate limited per user (429).',
         tags: ['Moderation'],
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -1360,7 +1414,10 @@ export const openapiSpec = {
                   reported_user_id: { type: 'integer', nullable: true },
                   ride_id: { type: 'integer', nullable: true },
                   message_id: { type: 'integer', nullable: true },
-                  reason: { type: 'string', minLength: 1, maxLength: 100 },
+                  reason: {
+                    type: 'string',
+                    enum: ['spam', 'harassment', 'unsafe_driving', 'no_show', 'fake_profile', 'inappropriate_content', 'other'],
+                  },
                   details: { type: 'string', maxLength: 2000, nullable: true },
                 },
               },
@@ -1376,15 +1433,18 @@ export const openapiSpec = {
               },
             },
           },
-          400: { description: 'Validation error, missing target, or self-report' },
+          400: { description: 'Validation error (incl. unknown reason), missing target, or self-report' },
           401: { description: 'Unauthorized' },
           404: { description: 'Referenced user, ride, or message not found' },
+          409: { description: 'REPORT_ALREADY_PENDING — the reporter already has a pending report for this exact target' },
+          429: { description: 'RATE_LIMITED — too many reports from this account; see Retry-After' },
         },
       },
     },
     '/api/admin/reports': {
       get: {
-        summary: 'List moderation reports (moderator / admin only, D-013)',
+        summary: 'List moderation reports with display context (moderator / admin only, D-013, C-002)',
+        description: 'Single LEFT-JOINed query; newest first; capped by `limit`.',
         tags: ['Moderation'],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1392,6 +1452,11 @@ export const openapiSpec = {
             name: 'status',
             in: 'query',
             schema: { type: 'string', enum: ['pending', 'resolved', 'dismissed'] },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 100 },
           },
         ],
         responses: {
@@ -1401,11 +1466,12 @@ export const openapiSpec = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  properties: { reports: { type: 'array', items: { $ref: '#/components/schemas/Report' } } },
+                  properties: { reports: { type: 'array', items: { $ref: '#/components/schemas/EnrichedReport' } } },
                 },
               },
             },
           },
+          400: { description: 'Validation error' },
           401: { description: 'Unauthorized' },
           403: { description: 'Requires moderator or admin role' },
         },
@@ -1452,6 +1518,19 @@ export const openapiSpec = {
         summary: 'List users with seriousness scores, infraction counts, star ratings, and suspension status (moderator / admin only, D-013, D-016)',
         tags: ['Moderation'],
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            description: 'Case-insensitive substring match on full name or email',
+            schema: { type: 'string', maxLength: 100 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 200, default: 100 },
+          },
+        ],
         responses: {
           200: {
             description: 'Users list for moderation',

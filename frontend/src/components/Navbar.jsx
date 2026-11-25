@@ -162,6 +162,14 @@ export function Navbar() {
                   </span>
                 )}
               </NavLink>
+              {(user.role === 'moderator' || user.role === 'admin') && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  Moderare
+                </NavLink>
+              )}
             </>
           )}
 

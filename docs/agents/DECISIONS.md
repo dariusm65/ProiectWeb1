@@ -27,6 +27,7 @@
 - D-018 · Women-only ride preference and eligibility rule
 - D-019 · Single-seat booking constraint
 - D-020 · UTC storage with Europe/Bucharest wall-clock interpretation for recurring rules and search dates
+- D-021 · Single-image Express + Vite SPA production container and Render HTTPS topology
 
 ---
 
@@ -250,4 +251,15 @@
 - **Rule:** All MySQL `DATETIME` columns store UTC instants (`timezone: 'Z'` on the connection pool) and the REST API accepts/returns ISO-8601 timestamps with timezone offset. Recurring ride rule `departure_time` (`TIME`) and passenger search `date` (`YYYY-MM-DD`) are interpreted in the `Europe/Bucharest` timezone using native JS `Intl.DateTimeFormat` (DST-aware between UTC+2 and UTC+3, without extra third-party timezone dependencies). Driver late-cancellation day-of-departure checks (`D-016`) also evaluate calendar days in `Europe/Bucharest`.
 - **Why:** Prevents 2–3 hour drift and DST boundary bugs when materialising recurring ride instances or filtering rides by calendar date while keeping stored timestamps canonically in UTC.
 - **Evidence:** Slice 4A planning gate (Q-B1), 2026-11-23.
+- **Source:** user · confidence high
+
+---
+
+## D-021 · Single-image Express + Vite SPA production container and Render HTTPS topology
+- **Status:** approved
+- **Date:** 2026-11-25
+- **Confirmed:** 2026-11-25
+- **Rule:** In production and under `docker compose up`, a single multi-stage Docker image (root `Dockerfile`, running as non-root `USER node`) builds `frontend/dist` and runs the Express backend so one origin serves both `/api/*` (plus `/api/docs` and `/api/health`) and the built React SPA with an `index.html` fallback for non-`/api` GET/HEAD routes (`FRONTEND_DIST_DIR`). Behind a TLS-terminating reverse proxy (Render Web Service defined in `render.yaml`), `TRUST_PROXY` configures Express `trust proxy`, `FORCE_HTTPS=true` issues `308` HTTP→HTTPS redirects (exempting `/api/health` for platform probes) and enables HSTS, Helmet's Content-Security-Policy explicitly permits OpenStreetMap tiles (`https://*.tile.openstreetmap.org`) and Google Fonts without allowing `'unsafe-inline'` scripts, `backend/src/db.js` accepts either `DATABASE_URL` (`mysql://...`) or `DB_*` (+ `DB_SSL`), and `POST /api/reports` is protected by an in-memory per-user rate limiter (disabled by default when `NODE_ENV=test`).
+- **Why:** Eliminates cross-origin deployment complexity, satisfies `D-012` (`docker compose up` starts the full stack with one command and deploys cleanly to Render), and hardens HTTP headers and proxy handling for production HTTPS.
+- **Evidence:** Slice 8 planning gate (answers 1, 2, 5), 2026-11-25.
 - **Source:** user · confidence high

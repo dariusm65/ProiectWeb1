@@ -10,6 +10,7 @@ import { PublicProfilePage } from './pages/PublicProfilePage.jsx';
 import { PublishRidePage } from './pages/PublishRidePage.jsx';
 import { DashboardPage } from './pages/DashboardPage.jsx';
 import { RideChatPage } from './pages/RideChatPage.jsx';
+import { AdminPage } from './pages/AdminPage.jsx';
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage defaultTab="passenger" />} />
           <Route path="/notifications" element={<DashboardPage defaultTab="notifications" />} />
           <Route path="/profile/:userId" element={<PublicProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
       <Footer />

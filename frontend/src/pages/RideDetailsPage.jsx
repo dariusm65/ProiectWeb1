@@ -9,6 +9,7 @@ import {
   ReputationRow,
 } from '../components/Badges.jsx';
 import { RouteMap } from '../components/RouteMap.jsx';
+import { ReportModal } from '../components/ReportModal.jsx';
 import { calculateSegmentPrice } from '../domain/segmentPricing.js';
 import { formatBucharestDate, formatBucharestTime } from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
@@ -26,6 +27,7 @@ export function RideDetailsPage() {
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [createdBooking, setCreatedBooking] = useState(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const activeControllerRef = useRef(null);
 
   useDocumentMeta({
@@ -215,9 +217,20 @@ export function RideDetailsPage() {
               {ride.status === 'completed' && <span className="badge badge-uni">Cursă finalizată</span>}
             </div>
             {user && (
-              <Link to={`/rides/${ride.id}/chat`} className="btn">
-                Deschide chatul cursei
-              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <Link to={`/rides/${ride.id}/chat`} className="btn">
+                  Deschide chatul cursei
+                </Link>
+                {!isDriverOfRide && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setIsReportModalOpen(true)}
+                  >
+                    Raportează cursa
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -490,6 +503,14 @@ export function RideDetailsPage() {
           stops={stops}
         />
       </aside>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        rideId={ride.id}
+        reportedUserId={ride.driver_id}
+        targetLabel={`cursa ${ride.origin_name} → ${ride.destination_name}`}
+      />
     </div>
   );
 }

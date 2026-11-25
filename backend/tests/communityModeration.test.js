@@ -720,18 +720,18 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
     await request(app)
       .post('/api/reports')
       .set(auth(otherPax))
-      .send({ reason: 'Comportament neadecvat' })
+      .send({ reason: 'harassment' })
       .expect(400);
     await request(app)
       .post('/api/reports')
       .set(auth(otherPax))
-      .send({ reported_user_id: otherPax.id, reason: 'Self report' })
+      .send({ reported_user_id: otherPax.id, reason: 'other' })
       .expect(400);
     // Indirect self-report: driver reporting their own ride with reported_user_id omitted -> 400 SELF_REPORT_NOT_ALLOWED
     await request(app)
       .post('/api/reports')
       .set(auth(targetUser))
-      .send({ ride_id: targetDrivenRide.id, reason: 'Self ride report' })
+      .send({ ride_id: targetDrivenRide.id, reason: 'unsafe_driving' })
       .expect(400);
     // Indirect self-report & cross-ride message mismatch: post a chat message on targetDrivenRide
     const chatMsgRes = await request(app)
@@ -744,18 +744,18 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
     await request(app)
       .post('/api/reports')
       .set(auth(otherPax))
-      .send({ message_id: chatMsgId, reason: 'Self message report' })
+      .send({ message_id: chatMsgId, reason: 'inappropriate_content' })
       .expect(400);
     // Mismatched ride_id and message_id -> 400 REPORT_TARGET_MISMATCH
     await request(app)
       .post('/api/reports')
       .set(auth(targetUser))
-      .send({ ride_id: otherDrivenRide.id, message_id: chatMsgId, reason: 'Mismatched ride and message' })
+      .send({ ride_id: otherDrivenRide.id, message_id: chatMsgId, reason: 'inappropriate_content' })
       .expect(400);
     await request(app)
       .post('/api/reports')
       .set(auth(otherPax))
-      .send({ reported_user_id: 999999, reason: 'Missing user' })
+      .send({ reported_user_id: 999999, reason: 'fake_profile' })
       .expect(404);
 
     const reportRes = await request(app)
@@ -764,20 +764,35 @@ describe.skipIf(!admin)('integration: ride chat, notifications, mutual ratings &
       .send({
         reported_user_id: targetUser.id,
         ride_id: targetDrivenRide.id,
-        reason: 'Sofer agresiv in trafic',
+        reason: 'unsafe_driving',
         details: 'Detalii raport',
       });
     expect(reportRes.status).toBe(201);
     expect(reportRes.body.report.status).toBe('pending');
 
+    // Duplicate pending report for the exact same target -> 409 REPORT_ALREADY_PENDING (C-002)
+    const dupReportRes = await request(app)
+      .post('/api/reports')
+      .set(auth(otherPax))
+      .send({
+        reported_user_id: targetUser.id,
+        ride_id: targetDrivenRide.id,
+        reason: 'spam',
+      });
+    expect(dupReportRes.status).toBe(409);
+    expect(dupReportRes.body.error).toBe('REPORT_ALREADY_PENDING');
+
     // RBAC: regular user cannot access /api/admin/* (D-013)
     await request(app).get('/api/admin/reports').set(auth(otherPax)).expect(403);
     await request(app).get('/api/admin/users').set(auth(otherPax)).expect(403);
 
-    // Moderator lists and resolves the report
+    // Moderator lists and resolves the report (enriched C-002 context present)
     const modReports = await request(app).get('/api/admin/reports?status=pending').set(auth(modUser));
     expect(modReports.status).toBe(200);
     expect(modReports.body.reports).toHaveLength(1);
+    expect(modReports.body.reports[0].reporter).toMatchObject({ id: otherPax.id });
+    expect(modReports.body.reports[0].reported_user).toMatchObject({ id: targetUser.id });
+    expect(modReports.body.reports[0].ride).toMatchObject({ id: targetDrivenRide.id });
 
     const resolveRes = await request(app)
       .patch(`/api/admin/reports/${reportRes.body.report.id}`)

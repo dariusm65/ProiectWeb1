@@ -12,7 +12,7 @@
 - Q-001 · Which specific web lab assignment is currently being implemented? · _answered_
 - Q-002 · What university email domains are allowed at registration? · _answered_
 - Q-003 · Should the driver receive a notification when a passenger's reconfirmation deadline lapses (auto-cancel)? · _answered_
-- Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
+- Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL? · _answered_
 - Q-005 · What additional university email domains should be supported for Timișoara and Bucharest student clusters? · _answered_
 - Q-006 · How is the passenger cancellation fee collected, settled, and reconciled against the declared trip cost? · _answered_
 
@@ -49,12 +49,12 @@
 ---
 
 ## Q-004 · What live hosting platform will be used for the public demo supporting Node.js and MySQL?
-- **Status:** open
+- **Status:** answered
 - **Blocks:** Live deployment configuration and CI/CD
 - **Who answers:** User
 - **Proposed answer:** Railway is candidate only, pending verification of current pricing and managed MySQL availability, with Render or a small VPS as Plan B.
-- **Answer:**
-- **Recorded as:**
+- **Answer:** Render — single Docker Web Service built from root `Dockerfile` (serving both `/api/*` and the built Vite SPA `frontend/dist` with SPA fallback) defined in `render.yaml` and connected to a managed MySQL 8 database via `DATABASE_URL` / `DB_*` env vars (confirmed 2026-11-25).
+- **Recorded as:** D-021 (`Dockerfile`, `render.yaml`, `backend/src/middleware/production.js`, `backend/src/db.js`)
 
 ---
 

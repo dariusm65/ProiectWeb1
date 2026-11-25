@@ -1,0 +1,32 @@
+# Render Blueprint for StudRide (D-012, D-021, Q-004).
+# Deploys the single-image Express + React SPA container from root `Dockerfile`.
+# Connect `DATABASE_URL` (or `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL`)
+# to your managed MySQL 8 instance in the Render dashboard.
+services:
+  - type: web
+    name: studride-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: FRONTEND_DIST_DIR
+        value: /app/frontend/dist
+      - key: TRUST_PROXY
+        value: "1"
+      - key: FORCE_HTTPS
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: MODERATOR_PASSWORD
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: EXTRA_UNIVERSITY_DOMAINS
+        value: ""
