@@ -1269,6 +1269,88 @@ body {
   gap: var(--space-md);
 }
 
+/* Moderation & Admin Dashboard (DS-009) */
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.admin-metric-card {
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-metric-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.admin-metric-value {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  color: var(--color-primary-ink);
+  line-height: 1.15;
+}
+
+.admin-metric-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem var(--space-md);
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+}
+
+.admin-table th {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-surface-subtle);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 1040px) {
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1040px) {
   .hero-section,
   .auth-shell,
@@ -1287,6 +1369,7 @@ body {
   .search-grid,
   .ticket-card,
   .gender-options,
+  .tabs,
   .tabs-three {
     grid-template-columns: 1fr;
   }

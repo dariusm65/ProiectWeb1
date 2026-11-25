@@ -77,8 +77,10 @@ designs:
   - id: DS-009
     name: Moderation & Admin Dashboard
     kind: screen
-    status: draft
+    status: implemented
     route: "/admin"
+    source: frontend/src/pages/AdminPage.jsx
+    mock: docs/design/mocks/DS-009-admin-moderation.html
     description: Role-gated management view: summary metric cards, reports table (with user/ride/message context and resolve/dismiss actions), ride moderation, user suspension, and role promotion.
 
   - id: DS-010
@@ -89,3 +91,10 @@ designs:
     source: frontend/src/pages/PublicProfilePage.jsx
     mock: docs/design/mocks/DS-010-public-profile.html
     description: Student public profile showing star rating average with ride count, seriousness score %, domain-validated university badge, and 30-day "Anulare recentă" badge if applicable.
+
+  - id: DS-011
+    name: Moderation Report Modal
+    kind: component
+    status: implemented
+    source: frontend/src/components/ReportModal.jsx
+    description: Shared accessible dialog (WAI-ARIA role=dialog, Tab focus trap, Escape close, AbortController) for reporting a ride, a public user profile, or a ride chat message using fixed reason enums and optional details.

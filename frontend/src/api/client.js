@@ -232,3 +232,60 @@ export const usersApi = {
   getPublicProfileAndReviews: (userId, opts) =>
     apiRequest(`/api/users/${encodeURIComponent(userId)}/reviews`, { ...opts, method: 'GET' }),
 };
+
+export const reportsApi = {
+  create: (payload, opts) =>
+    apiRequest('/api/reports', {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+};
+
+export const adminApi = {
+  listReports: ({ status = '', limit = 100 } = {}, opts) => {
+    const qs = new URLSearchParams();
+    if (status) qs.set('status', status);
+    if (limit) qs.set('limit', String(limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiRequest(`/api/admin/reports${suffix}`, { ...opts, method: 'GET' });
+  },
+  resolveReport: (reportId, payload, opts) =>
+    apiRequest(`/api/admin/reports/${encodeURIComponent(reportId)}`, {
+      ...opts,
+      method: 'PATCH',
+      body: payload,
+    }),
+  listUsers: ({ q = '', limit = 100 } = {}, opts) => {
+    const qs = new URLSearchParams();
+    if (q && q.trim()) qs.set('q', q.trim());
+    if (limit) qs.set('limit', String(limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return apiRequest(`/api/admin/users${suffix}`, { ...opts, method: 'GET' });
+  },
+  suspendUser: (userId, payload = {}, opts) =>
+    apiRequest(`/api/admin/users/${encodeURIComponent(userId)}/suspend`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+  unsuspendUser: (userId, opts) =>
+    apiRequest(`/api/admin/users/${encodeURIComponent(userId)}/unsuspend`, {
+      ...opts,
+      method: 'POST',
+    }),
+  cancelRide: (rideId, payload = {}, opts) =>
+    apiRequest(`/api/admin/rides/${encodeURIComponent(rideId)}/cancel`, {
+      ...opts,
+      method: 'POST',
+      body: payload,
+    }),
+  changeUserRole: (userId, payload, opts) =>
+    apiRequest(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
+      ...opts,
+      method: 'PATCH',
+      body: payload,
+    }),
+  getStats: (opts) =>
+    apiRequest('/api/admin/stats', { ...opts, method: 'GET' }),
+};

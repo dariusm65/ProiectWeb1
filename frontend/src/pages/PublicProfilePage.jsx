@@ -5,19 +5,20 @@ import { useAuth } from '../context/AuthContext.jsx';
 import {
   UniversityBadge,
   RecentCancellationBadge,
-  ReputationRow,
 } from '../components/Badges.jsx';
+import { ReportModal } from '../components/ReportModal.jsx';
 import { formatBucharestDate } from '../domain/bucharestTime.js';
 import { useDocumentMeta } from '../hooks/useDocumentMeta.js';
 
 export function PublicProfilePage() {
   const { userId } = useParams();
-  const { fetchFn } = useAuth();
+  const { user, fetchFn } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useDocumentMeta({
     title: profile
@@ -28,25 +29,27 @@ export function PublicProfilePage() {
   });
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
+    const { signal } = controller;
+
     async function load() {
       setLoading(true);
       setError('');
       try {
-        const data = await usersApi.getPublicProfileAndReviews(userId, { fetchFn });
-        if (!active) return;
+        const data = await usersApi.getPublicProfileAndReviews(userId, { fetchFn, signal });
+        if (signal.aborted) return;
         setProfile(data.user);
         setReviews(Array.isArray(data.reviews) ? data.reviews : []);
       } catch (err) {
-        if (!active) return;
+        if (signal.aborted || err?.name === 'AbortError') return;
         setError(err.message || 'Profilul nu a putut fi încărcat.');
       } finally {
-        if (active) setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     }
     load();
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [userId, fetchFn]);
 
@@ -80,6 +83,8 @@ export function PublicProfilePage() {
     );
   }
 
+  const isOwnProfile = Boolean(user && Number(user.id) === Number(profile.id));
+
   return (
     <div style={{ maxWidth: '1040px', width: '100%', margin: '0 auto', padding: 'var(--space-xl) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
       <section className="card" aria-labelledby="profile-heading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
@@ -94,23 +99,35 @@ export function PublicProfilePage() {
             </div>
           </div>
 
-          <div className="tabular" style={{ display: 'flex', gap: 'var(--space-xl)' }}>
-            <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--color-accent)' }}>
-                ★ {profile.rating_average !== null ? Number(profile.rating_average).toFixed(1) : '—'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xl)', flexWrap: 'wrap' }}>
+            <div className="tabular" style={{ display: 'flex', gap: 'var(--space-xl)' }}>
+              <div>
+                <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--color-accent)' }}>
+                  ★ {profile.rating_average !== null ? Number(profile.rating_average).toFixed(1) : '—'}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                  {profile.rating_count} evaluări
+                </div>
               </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                {profile.rating_count} evaluări
+              <div>
+                <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--color-success)' }}>
+                  {profile.seriousness_score}%
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+                  Scor seriozitate
+                </div>
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--color-success)' }}>
-                {profile.seriousness_score}%
-              </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Scor seriozitate
-              </div>
-            </div>
+
+            {user && !isOwnProfile && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setIsReportModalOpen(true)}
+              >
+                Raportează utilizatorul
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -156,6 +173,13 @@ export function PublicProfilePage() {
           </div>
         )}
       </section>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        reportedUserId={profile.id}
+        targetLabel={`utilizatorul ${profile.full_name}`}
+      />
     </div>
   );
 }

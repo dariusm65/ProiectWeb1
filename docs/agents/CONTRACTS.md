@@ -9,11 +9,22 @@
 <!-- graffino-agentic:end -->
 
 ## Index
+- C-002 · Moderation report reason enum, pending deduplication, and single-query enriched admin reports · provided
 - C-001 · OpenStreetMap Nominatim usage policy and rate limiting · external
 
 ---
 
 ## Provided
+
+### C-002 · Moderation report reason enum, pending deduplication, and single-query enriched admin reports
+- **Status:** approved
+- **Confirmed:** 2026-11-25
+- **Interface:**
+  - `POST /api/reports` validates `reason` against the fixed enum `['spam', 'harassment', 'unsafe_driving', 'no_show', 'fake_profile', 'inappropriate_content', 'other']` (shared between `backend/src/domain/reportReasons.js` and `frontend/src/domain/reportReasons.js`), optional `details` (`<= 2000` chars), and at least one target (`reported_user_id`, `ride_id`, or `message_id`). If the authenticated reporter already has a `pending` report for the exact same `(reported_user_id, ride_id, message_id)` tuple, the server returns `409 REPORT_ALREADY_PENDING`.
+  - `GET /api/admin/reports` accepts optional `status` (`pending | resolved | dismissed`) and `limit` (`1..200`, default `100`) and executes a single `LEFT JOIN` query returning each report enriched with `reporter: { id, full_name }`, `reported_user: { id, full_name, role, is_suspended }`, `ride: { id, origin_name, destination_name, departure_time, status, driver_id }`, `message: { id, ride_id, excerpt, sender_id, sender_name }` (truncated to 280 chars), and `resolved_by_name` — exposing zero emails, phones, gender, or password hashes on report rows.
+- **Consumers:** `frontend/src/api/client.js`, `frontend/src/components/ReportModal.jsx`, `frontend/src/pages/AdminPage.jsx`.
+- **Evidence:** Slice 8 planning gate (answers 3, 4, 6), 2026-11-25; `CONTEXT.md` ("Report").
+- **Source:** user · confidence high
 
 ## Consumed
 
