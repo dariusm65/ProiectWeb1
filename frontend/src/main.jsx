@@ -6,21 +6,6 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { App } from './App.jsx';
 
-const fontsLink = document.getElementById('google-fonts-css');
-if (fontsLink && fontsLink.media !== 'all') {
-  if (fontsLink.sheet) {
-    fontsLink.media = 'all';
-  } else {
-    fontsLink.addEventListener(
-      'load',
-      () => {
-        fontsLink.media = 'all';
-      },
-      { once: true },
-    );
-  }
-}
-
 const rootEl = document.getElementById('root');
 if (rootEl) {
   createRoot(rootEl).render(

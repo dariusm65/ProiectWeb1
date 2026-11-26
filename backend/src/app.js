@@ -1,6 +1,7 @@
 // Express REST API app factory (D-002, D-013, D-014).
 // Accepts an injected MySQL pool and JWT secret for clean Supertest isolation.
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
@@ -63,6 +64,7 @@ export function createApp({
     app.use(httpsRedirect());
   }
   app.use(helmet(buildHelmetOptions({ forceHttps })));
+  app.use(compression());
   app.use(cors({ origin: corsOrigin }));
   app.use(express.json({ limit: '100kb' }));
 

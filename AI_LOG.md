@@ -430,18 +430,20 @@ Parallel read-only review (Security & RBAC Specialist, Performance/Query & Concu
 
 ---
 
-## Session 2026-11-26 — Lighthouse Mobile Performance Optimization on `/` (Non-Blocking Google Fonts & Route Code Splitting)
+## Session 2026-11-26 — Lighthouse Performance Optimization on `/` (Route Code Splitting & Express Gzip Compression)
 
 ### What was planned & built
-1. **Non-blocking Google Fonts loading (`frontend/index.html`, `frontend/src/main.jsx`, `D-021`):**
-   - Added `id="google-fonts-css"` and `media="print"` to the Google Fonts stylesheet `<link>` in `frontend/index.html` (with a `<noscript>` standard stylesheet fallback) so the browser fetches the stylesheet asynchronously without blocking initial FCP/LCP.
-   - Avoided inline `onload="..."` event attributes to strictly preserve the `D-021` Content-Security-Policy (`script-src 'self'`, no `'unsafe-inline'`).
-   - Added the `media = 'all'` flip in `frontend/src/main.jsx` (immediately if `fontsLink.sheet` is already available, or via a one-time `'load'` event listener).
-2. **Route-level code splitting (`frontend/src/App.jsx`):**
+1. **Route-level code splitting (`frontend/src/App.jsx`):**
    - Kept `Navbar`, `Footer`, and `LandingSearchPage` (`/`) eagerly loaded so the home search screen renders immediately without a suspense waterfall.
    - Converted all 8 secondary route pages (`AuthPage`, `SearchResultsPage`, `RideDetailsPage`, `PublicProfilePage`, `PublishRidePage`, `DashboardPage`, `RideChatPage`, `AdminPage`) to `React.lazy` dynamic imports wrapped in `<Suspense>` with an accessible `role="status" aria-live="polite"` fallback using `--space-xl`, `--space-lg`, and `--color-text-muted` tokens from `frontend/src/tokens.css`.
+2. **Standard Google Fonts stylesheet restored (`frontend/index.html`, `frontend/src/main.jsx`):**
+   - Tried deferring Google Fonts via `media="print"` + JS flip in `main.jsx`, which delayed font application until after React mounted and pushed Desktop LCP later. Restored the standard `<link rel="stylesheet">` with `preconnect` and `&display=swap` in `frontend/index.html` and removed the `google-fonts-css` media-flipping block from `frontend/src/main.jsx`.
+3. **Express HTTP Gzip Compression (`backend/package.json`, `backend/src/app.js`, `backend/tests/productionAndReporting.test.js`):**
+   - Installed `compression` in `backend` and mounted `app.use(compression())` in `backend/src/app.js` so static SPA assets (`~294 kB` JS -> `~93 kB` gzip; `~24 kB` CSS -> `~4.6 kB` gzip) and `/api/*` JSON responses are served with `Content-Encoding: gzip`.
+   - Added a Supertest test in `backend/tests/productionAndReporting.test.js` verifying `Content-Encoding: gzip` and `Vary: Accept-Encoding` on responses above the 1 KB threshold.
 
 ### Verification
+- `npm test --prefix backend`: **9 test files passed (101 passed, including 26/26 in `productionAndReporting.test.js`; 71 MySQL integration tests skipped in sandbox)**, 0 existing test assertions modified.
 - `npm test --prefix frontend`: **6 test files passed, 25/25 tests passed** (0 test assertions modified).
-- `npm run build --prefix frontend`: succeeded, splitting ~140 kB of secondary route and modal/map modules (`DashboardPage` 31.92 kB, `AdminPage` 22.62 kB, `PublishRidePage` 17.30 kB, `RideDetailsPage` 13.50 kB, `SearchResultsPage` 12.73 kB, `RideChatPage` 10.43 kB, `AuthPage` 9.34 kB, `ReportModal` 5.39 kB, `PublicProfilePage` 5.24 kB, `ReviewModal` 4.87 kB, `RouteMap` 3.65 kB) out of the entry bundle (`index-*.js` reduced to 293.92 kB / 93.10 kB gzip).
+- `npm run build --prefix frontend`: succeeded, splitting ~140 kB of secondary route and modal/map modules (`DashboardPage` 31.92 kB, `AdminPage` 22.62 kB, `PublishRidePage` 17.30 kB, `RideDetailsPage` 13.50 kB, `SearchResultsPage` 12.73 kB, `RideChatPage` 10.43 kB, `AuthPage` 9.34 kB, `ReportModal` 5.39 kB, `PublicProfilePage` 5.24 kB, `ReviewModal` 4.87 kB, `RouteMap` 3.65 kB) out of the entry bundle (`index-*.js` reduced to 293.76 kB / 93.04 kB gzip).
 - `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).

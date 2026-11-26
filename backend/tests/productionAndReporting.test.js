@@ -382,6 +382,26 @@ describe('API: production SPA serving, CSP and HTTPS (D-021)', () => {
     expect(badHost.status).toBe(400);
     expect(badHost.body.error).toBe('INVALID_HOST_HEADER');
   });
+
+  it('gzip-compresses static SPA assets and API JSON responses above the 1 KB threshold when Accept-Encoding: gzip is sent', async () => {
+    const largeJsPath = path.join(distDir, 'assets', 'large-bundle.js');
+    fs.writeFileSync(largeJsPath, `console.log("${'studride-segment-carpooling-'.repeat(80)}");`);
+
+    const app = makeApp({ frontendDistDir: distDir });
+
+    const assetRes = await request(app)
+      .get('/assets/large-bundle.js')
+      .set('Accept-Encoding', 'gzip')
+      .expect(200);
+    expect(assetRes.headers['content-encoding']).toBe('gzip');
+    expect(assetRes.headers.vary).toMatch(/Accept-Encoding/i);
+
+    const apiRes = await request(app)
+      .get('/api/openapi.json')
+      .set('Accept-Encoding', 'gzip')
+      .expect(200);
+    expect(apiRes.headers['content-encoding']).toBe('gzip');
+  });
 });
 
 describe('unit: moderationService single-query enrichment, 409 dedupe, and user search (C-002)', () => {
