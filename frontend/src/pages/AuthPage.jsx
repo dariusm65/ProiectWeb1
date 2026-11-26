@@ -109,26 +109,24 @@ export function AuthPage() {
     <div className="auth-shell">
       <section className="auth-aside" aria-labelledby="aside-heading">
         <h1 className="aside-title" id="aside-heading">
-          Acces transparent pentru comunitatea studențească
+          Călătorește cu alți studenți
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-          Oricine își poate crea un cont cu o adresă de email validă. Dacă adresa aparține unui domeniu universitar
-          acreditat din România, profilul primește automat badge-ul universitar pe domeniu.
+          Îți poți crea cont cu orice adresă de email, în câteva secunde, și poți rezerva sau publica curse pe segmente.
         </p>
         <ul className="policy-list">
           <li className="policy-item">
-            <strong>Badge universitar pe domeniu</strong>
-            Etichetat explicit ca „{UNIVERSITY_BADGE_LABEL_RO}”. Nu verificăm accesul la căsuța poștală sau actul de
-            identitate.
+            <strong>✓ Email universitar</strong>
+            Dacă folosești adresa de facultate, bifa apare automat pe profil — fără verificare de buletin sau confirmare
+            pe mail.
           </li>
           <li className="policy-item">
-            <strong>Opțiune privată pentru curse Women-only</strong>
-            Opțiunea Women-only este disponibilă doar pentru femei.
+            <strong>Curse Women-only</strong>
+            Atât șoferițele, cât și pasagerele pot alege curse dedicate exclusiv femeilor.
           </li>
           <li className="policy-item">
-            <strong>Reputație dublă din prima zi</strong>
-            Fiecare cont nou începe cu scor de seriozitate 100% și rating 1–5 stele acordat doar după finalizarea
-            cursei.
+            <strong>Reputație din prima zi</strong>
+            Pornești cu scor de seriozitate 100% și primești rating 1–5 stele după fiecare cursă finalizată.
           </li>
         </ul>
       </section>
@@ -249,12 +247,11 @@ export function AuthPage() {
               {matchedUni ? (
                 <>
                   <strong style={{ color: 'var(--color-primary-ink)' }}>
-                    ✓ {matchedUni.universityName} — {UNIVERSITY_BADGE_LABEL_RO}
+                    ✓ {matchedUni.universityName} — Email universitar
                   </strong>
                   <p style={{ color: 'var(--color-text-muted)' }}>
-                    Domeniul <strong>@{matchedUni.domain}</strong> este în lista universităților acreditate din
-                    România. Badge-ul indică exclusiv potrivirea formatului de domeniu, nu verificarea căsuței de
-                    email sau a identității fizice.
+                    Pe profil îți va apărea bifa „Email universitar” pe baza adresei de facultate (fără verificare de
+                    buletin).
                   </p>
                 </>
               ) : (

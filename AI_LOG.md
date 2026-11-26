@@ -447,3 +447,19 @@ Parallel read-only review (Security & RBAC Specialist, Performance/Query & Concu
 - `npm test --prefix frontend`: **6 test files passed, 25/25 tests passed** (0 test assertions modified).
 - `npm run build --prefix frontend`: succeeded, splitting ~140 kB of secondary route and modal/map modules (`DashboardPage` 31.92 kB, `AdminPage` 22.62 kB, `PublishRidePage` 17.30 kB, `RideDetailsPage` 13.50 kB, `SearchResultsPage` 12.73 kB, `RideChatPage` 10.43 kB, `AuthPage` 9.34 kB, `ReportModal` 5.39 kB, `PublicProfilePage` 5.24 kB, `ReviewModal` 4.87 kB, `RouteMap` 3.65 kB) out of the entry bundle (`index-*.js` reduced to 293.76 kB / 93.04 kB gzip).
 - `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).
+
+---
+
+## Session 2026-11-26 (Part 2) — AuthPage Registration & Login Copy Refinement
+
+### What was planned & built
+1. **Concise non-repetitive registration/login copy (`frontend/src/pages/AuthPage.jsx`):**
+   - Updated the aside heading (`Călătorește cu alți studenți`), intro paragraph (`Îți poți crea cont cu orice adresă de email, în câteva secunde, și poți rezerva sau publica curse pe segmente.`), and the 3 policy cards (`✓ Email universitar`, `Curse Women-only`, `Reputație din prima zi`) so the intro and first card no longer repeat each other while preserving the `D-004` transparency note (`fără verificare de buletin sau confirmare pe mail`).
+   - Updated the green live university domain preview box (`.domain-detector.matched`) to match the UI badge label (`✓ ${matchedUni.universityName} — Email universitar` / `Pe profil îți va apărea bifa „Email universitar” pe baza adresei de facultate (fără verificare de buletin).`).
+2. **Test assertion alignment (`frontend/tests/AuthPage.test.jsx`):**
+   - Updated the live university domain badge hint assertion in `frontend/tests/AuthPage.test.jsx` to match the new green domain preview wording.
+
+### Verification
+- `npm test --prefix frontend`: **6 test files passed, 25/25 tests passed** (`3/3` in `AuthPage.test.jsx`).
+- `npm run build --prefix frontend`: succeeded cleanly (`AuthPage-*.js` 9.14 kB / 3.31 kB gzip).
+- `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).

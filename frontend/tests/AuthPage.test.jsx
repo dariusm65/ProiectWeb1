@@ -28,8 +28,10 @@ describe('AuthPage (DS-003)', () => {
     await user.clear(emailInput);
     await user.type(emailInput, 'darius@stud.acs.upb.ro');
 
-    expect(screen.getByRole('status')).toHaveTextContent(/Validat pe domeniu \(nu identitate verificată\)/i);
-    expect(screen.getByRole('status')).toHaveTextContent(/stud\.acs\.upb\.ro/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/✓ UPB București — Email universitar/i);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /Pe profil îți va apărea bifa „Email universitar” pe baza adresei de facultate \(fără verificare de buletin\)\./i,
+    );
 
     await user.clear(emailInput);
     await user.type(emailInput, 'tester@gmail.com');
