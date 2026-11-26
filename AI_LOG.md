@@ -427,3 +427,21 @@ Parallel read-only review (Security & RBAC Specialist, Performance/Query & Concu
 4. **Transactional reporter lock & participant guard in `createReport` (`HIGH-4`, `MEDIUM-3`):** Wrapped `createReport` in `withTransaction` locking the reporter's `users` row (`FOR UPDATE`) to prevent duplicate-pending TOCTOU races, and verified that reporters of a `message_id` are either the driver or a booking participant on `message.ride_id` (`403 FORBIDDEN` otherwise).
 5. **WAI-ARIA confirm dialog focus trap / restoration & roving tab navigation in `AdminPage.jsx` (`HIGH-5`, `HIGH-6`, `MEDIUM-5`, `LOW-4`, `LOW-5`):** Added `previousFocusRef` focus restoration and `Tab`/`Shift+Tab` focus trapping to `confirmAction` in `AdminPage.jsx`, added roving `tabIndex` and `ArrowLeft`/`ArrowRight`/`Home`/`End` keyboard navigation on the `role="tablist"` container, awaited `loadStats()` in mutation handlers, cleared banners on tab switches, added `role="status" aria-live="polite"` to loading stats, and added synchronous double-submit guards (`if (busyActionKey) return;` / `if (submitting) return;` / `bookingActionBusy` in `RideChatPage.jsx`).
 6. **Hardened `httpsRedirect`, PII stripping, SQL `ESCAPE`, transactions, and Docker/mock polish (`HIGH-7`, `MEDIUM-1`, `MEDIUM-2`, `MEDIUM-4`, `MEDIUM-7`, `MEDIUM-8`, `MEDIUM-9`, `LOW-1`, `LOW-2`, `LOW-3`, `LOW-6`):** Validated `Host` header format and normalized protocol-relative paths in `httpsRedirect()`, defaulted `trustProxy` to `1` when `forceHttps` is enabled without explicit `TRUST_PROXY`, stripped private `gender` (`D-018`) and `phone` from `formatModerationUser` / `AdminUserSummary`, added explicit `ESCAPE '\\\\'` on `LIKE` in `listUsersForModeration`, wrapped `unsuspendUser`, `changeUserRole`, and `resolveOrDismissReport` in `FOR UPDATE` transactions, parallelized `getPlatformStats` with `Promise.all`, kept `/app` read-only for `USER node` in `Dockerfile`, bound `127.0.0.1` in `docker-compose.yml`, documented `DS-009` and `DS-011` in `docs/design/DESIGN.md`, and stripped `(DS-009)` from `<title>` while adding responsive rules, `:focus-visible`, `<caption class="sr-only">`, and `D-004` badge disclosure to `docs/design/mocks/DS-009-admin-moderation.html`.
+
+---
+
+## Session 2026-11-26 — Lighthouse Mobile Performance Optimization on `/` (Non-Blocking Google Fonts & Route Code Splitting)
+
+### What was planned & built
+1. **Non-blocking Google Fonts loading (`frontend/index.html`, `frontend/src/main.jsx`, `D-021`):**
+   - Added `id="google-fonts-css"` and `media="print"` to the Google Fonts stylesheet `<link>` in `frontend/index.html` (with a `<noscript>` standard stylesheet fallback) so the browser fetches the stylesheet asynchronously without blocking initial FCP/LCP.
+   - Avoided inline `onload="..."` event attributes to strictly preserve the `D-021` Content-Security-Policy (`script-src 'self'`, no `'unsafe-inline'`).
+   - Added the `media = 'all'` flip in `frontend/src/main.jsx` (immediately if `fontsLink.sheet` is already available, or via a one-time `'load'` event listener).
+2. **Route-level code splitting (`frontend/src/App.jsx`):**
+   - Kept `Navbar`, `Footer`, and `LandingSearchPage` (`/`) eagerly loaded so the home search screen renders immediately without a suspense waterfall.
+   - Converted all 8 secondary route pages (`AuthPage`, `SearchResultsPage`, `RideDetailsPage`, `PublicProfilePage`, `PublishRidePage`, `DashboardPage`, `RideChatPage`, `AdminPage`) to `React.lazy` dynamic imports wrapped in `<Suspense>` with an accessible `role="status" aria-live="polite"` fallback using `--space-xl`, `--space-lg`, and `--color-text-muted` tokens from `frontend/src/tokens.css`.
+
+### Verification
+- `npm test --prefix frontend`: **6 test files passed, 25/25 tests passed** (0 test assertions modified).
+- `npm run build --prefix frontend`: succeeded, splitting ~140 kB of secondary route and modal/map modules (`DashboardPage` 31.92 kB, `AdminPage` 22.62 kB, `PublishRidePage` 17.30 kB, `RideDetailsPage` 13.50 kB, `SearchResultsPage` 12.73 kB, `RideChatPage` 10.43 kB, `AuthPage` 9.34 kB, `ReportModal` 5.39 kB, `PublicProfilePage` 5.24 kB, `ReviewModal` 4.87 kB, `RouteMap` 3.65 kB) out of the entry bundle (`index-*.js` reduced to 293.92 kB / 93.10 kB gzip).
+- `python3 docs/agents/tools/ledger-lint.py`: passed (`✓ ledger ok`).
